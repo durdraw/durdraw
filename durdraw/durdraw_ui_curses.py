@@ -753,6 +753,10 @@ class UserInterface():  # Separate view (curses) from this controller
             except UnicodeEncodeError:
                 string = string.encode('ascii', 'replace').decode('ascii').replace('?', ' ')
                 self.stdscr.addstr(y, x, string, attr)
+            # TODO: sometimes, the 'string' value is actually an integer specifically, this happens in startSelecting
+            # at line 6733 -> mov.currentFrame.content[linenum][colnum]
+            except AttributeError as e:
+                self.log.error('addstr', {'error': e, 'string': string, 'attr': attr, 'y': y, 'x': x})
             except curses.error:
                 self.testWindowSize()
 
@@ -6943,15 +6947,16 @@ Can use ESC or META instead of ALT
             elif c == 27: # esc
                 selecting = False
 
-        new_state = self.applySegmentChange(
-            segment,
-            start_x = firstColNum-1,
-            start_y = firstLineNum,
-            frange  = frange
-        )
-        self.mov.undo_register.push(
-            UndoStates(previous = current_state, current = new_state)
-        )
+        if segment is not None:
+            new_state = self.applySegmentChange(
+                segment,
+                start_x = firstColNum-1,
+                start_y = firstLineNum,
+                frange  = frange
+            )
+            self.mov.undo_register.push(
+                UndoStates(previous = current_state, current = new_state)
+            )
 
         if self.playing:
             self.stdscr.nodelay(1)
