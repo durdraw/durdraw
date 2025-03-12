@@ -897,7 +897,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 FrameState(
                     delay   = self.mov.frames[fn].delay,
                     frame_n = fn,
-                    rows    = [FrameContent(content=[c], fg_colors=[fg], bg_colors=[bg])],
+                    rows    = [FrameContent(content=[chr(c)], fg_colors=[fg], bg_colors=[bg])],
                     start   = PixelCoord(x=x-1, y=y),
                     end     = PixelCoord(x=x, y=y)
                 )
