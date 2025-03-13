@@ -6576,24 +6576,40 @@ Can use ESC or META instead of ALT
             self.move_cursor_up()
 
     def addCol(self, frange=None):
-        """Insert column at position of cursor"""
-        fg, bg = self.appState.defaultFgColor, self.appState.defaultBgColor
-        self.undo.push()
-        if frange:  # framge range
-            for frameNum in range(frange[0] - 1, frange[1]):
-                for x in range(len(self.mov.frames[frameNum].content)):
-                    self.mov.frames[frameNum].content[x].insert(self.xy[1] - 1, ' ')
-                    self.mov.frames[frameNum].content[x].pop()
-                    self.mov.frames[frameNum].newColorMap[x].insert(self.xy[1] - 1, [fg,bg])
-                    self.mov.frames[frameNum].newColorMap[x].pop()
+        """
+        Insert column at position of cursor.
+        - The current vertical column in line with the cursor (and everything to the right of it)
+            is shuffled to the right by one column.
+        - A blank column is inserted in its place.
+        - This destructively removes the rightmost column of the frame content as it's pushed against the
+            canvas edge.
+        """
+        fgbg = [self.appState.defaultFgColor, self.appState.defaultBgColor]
+        if frange is None:
+            frange = [self.mov.currentFrameNumber-1, self.mov.currentFrameNumber-1]
         else:
-            for x in range(len(self.mov.currentFrame.content)):
-                self.mov.currentFrame.content[x].insert(self.xy[1] - 1, ' ')
-                self.mov.currentFrame.content[x].pop()
-                self.mov.currentFrame.newColorMap[x].insert(self.xy[1] - 1, [fg,bg])
-                self.mov.currentFrame.newColorMap[x].pop()
+            frange = [frange[0]-1, frange[1]]
+        colIndex = self.xy[1]-1
+
+        currentState = self.getFileState(
+            start_x=colIndex, start_y=0, end_x=self.mov.sizeX-1, end_y=self.mov.sizeY-1, frange=frange,
+        )
+
+        for frameNum in frange:
+            for x in range(len(self.mov.frames[frameNum].content)):
+                self.mov.frames[frameNum].content[x].insert(self.xy[1] - 1, ' ')
+                self.mov.frames[frameNum].content[x].pop()
+                self.mov.frames[frameNum].newColorMap[x].insert(self.xy[1] - 1, fgbg)
+                self.mov.frames[frameNum].newColorMap[x].pop()
+
+        newState = self.getFileState(
+            start_x=colIndex, start_y=0, end_x=self.mov.sizeX-1, end_y=self.mov.sizeY-1, frange=frange,
+        )
+        self.mov.undo_register.push(
+            UndoStates(previous = currentState, current = newState)
+        )
         # insert bit here to shift color map to the right from the column
-        # onward. how: start at top right character, work down to bottom 
+        # onward. how: start at top right character, work down to bottom
         # copying the color from the character to the left.
         # Then move left a column and repeat, etc, until you're at self.xy[1] -1 :).
         self.refresh()
@@ -7129,18 +7145,30 @@ Can use ESC or META instead of ALT
         )
 
     @line_profiler.profile
-    def segmentState(self, segment, start_x, start_y) -> FileState:
-        'Returns the state of the segment in the current frame'
+    def getFileState(self, start_x, start_y, end_x, end_y, frange) -> FileState:
         return FileState(
             mouse  = MouseCoord(
                 pixel = PixelCoord(x=self.xy[1], y=self.xy[0]),
                 frame = self.mov.currentFrameNumber-1
             ),
             frames = self.mov.current_states(
-                start_x=start_x, start_y=start_y,
-                end_x=start_x+segment.width, end_y=start_y+segment.height-1,
-                frame_numbers=[self.mov.currentFrameNumber-1, self.mov.currentFrameNumber-1],
+                start_x = start_x,
+                start_y = start_y,
+                end_x   = end_x,
+                end_y   = end_y,
+                frame_numbers = frange,
             )
+        )
+
+    @line_profiler.profile
+    def segmentState(self, segment, start_x, start_y) -> FileState:
+        'Returns the state of the segment in the current frame'
+        return self.getFileState(
+            start_x = start_x,
+            start_y = start_y,
+            end_x   = start_x+segment.width-1,
+            end_y   = start_y+segment.height-1,
+            frange  = [self.mov.currentFrameNumber-1, self.mov.currentFrameNumber-1],
         )
 
     @line_profiler.profile
