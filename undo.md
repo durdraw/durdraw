@@ -208,11 +208,11 @@ On another note, here are some logs from the very rough POC implementation in du
   - [ ] Load From File
   - [ ] Clear Canvas
 - [ ] Adding/Removing columns & lines
-  - [ ] Add Column To Canvas
+  - [x] Add Column To Canvas
   - [ ] Delete Column From Canvas
   - [ ] Add Line To Canvas
   - [ ] Delete Line From Canvas
-  - [ ] Add Column
+  - [x] Add Column
   - [ ] Delete Column
   - [ ] Delete Line
   - [ ] Add Line
