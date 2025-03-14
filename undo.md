@@ -5,9 +5,13 @@
     - [Summarised](#summarised)
   - [Feature List](#feature-list)
   - [Implementation](#implementation)
-    - [WIP](#wip)
-    - [Performance Details](#performance-details)
-  - [Considerations \& Challenges](#considerations--challenges)
+    - [Current system](#current-system)
+    - [Considerations and Challenges](#considerations-and-challenges)
+    - [Basic Framework](#basic-framework)
+      - ["do" an action (push)](#do-an-action-push)
+      - ["undo" an action](#undo-an-action)
+      - ["redo" an action](#redo-an-action)
+    - [Low-Level Undo Register](#low-level-undo-register)
   - [Opportunities](#opportunities)
   - [POC](#poc)
   - [Progress/Operation Support](#progressoperation-support)
@@ -89,11 +93,38 @@
 
 ## Implementation
 
-There are many scattered usages of the undo state machine. There are many actions that affect the state of pixels,
-frames and the movie, and each of these callers are the ones that also directly adjust the undo state.
+### Current system
 
-This makes changes difficult as there are many use cases to contend with that seem different on the surface, but in
-reality are mostly modifying chars/colours
+The current undo system relies on [`pickle.dump`](https://docs.python.org/3/library/pickle.html#pickle.dump) to serialize the entire `durdraw` UI object. The key advantage of this approach is the simplicity of use - any UI method can `push` the picked state onto the queue, and there is no implementation required for how to undo an action, only the initial operation itself!
+
+This approach has some performance drawbacks, however, which make durdraw a little sluggish to use at times.
+
+- the size of the pickled state mainly depends on the dimensions, and **_the number of frames_**
+- pickling the entire UI happens on many operations
+- this includes insertChar (i.e. typing), which is the most common operation
+- this can result in a sluggish experience for the user as even simple typing is slow
+- this problem grows over time as each new redo is added to the stack
+
+>[!CAUTION]
+> This can result in a durdraw movie file of `500KB` taking **1-2 seconds delay** for each character inserted, and using `1.5GB` of memory in **less than 40 characters inserted**.
+
+### Considerations and Challenges
+
+Given that almost all durdraw performance is tied to the undo system, it's clear that a new system is needed that will
+allow durdraw to more effectively scale to very large projects.
+
+> [!IMPORTANT]
+> This efficiency is entirely dictated by the size of each undo record.   
+> In order to achieve this, I am proposing a system that will store only the changes made by each operation, rather than the entire state of the UI.
+
+See [Progress/Operation Support](#progressoperation-support) for the complete list of operations that need to be implemented. Some examples of the types of changes include:
+
+- pixel char and/or colour changes
+  - for one frame or many
+- the cursor position
+- the canvas size
+
+A major change required by this new system is that for every user action that is stored in the undo register, the "reverse" of that operation must now be implemented.
 
 Each existing action should be routed (where appropriate) through the Frame/Movie classes. These classes are best placed
 to recognise when state has changed and correspondingly update the undo state.
@@ -102,28 +133,44 @@ to recognise when state has changed and correspondingly update the undo state.
 and the main undo list could just consist of references to the individual pixel & index of the change inside that pixel. I'm unsure how this would interact with things like the existing colour map #TODO investigate.~~   
 *^ I am now thinking that, at this stage, this change to Frames/pixels is not neccessary to be able to implement the new undo system, and it risks changing too much at once (e.g. the underlying way that chars and colours are set in durdraw via the content and colour map)*
 
-### WIP
+### Basic Framework
 
+#### "do" an action (push)
 
-1. validate frange
-2. get all pixel states from self.mov
- i. pass coords amd frange to 
-    s = self.mov.getStates(x1, y1, x2, y2, frange)
- 1.  add mouse state to states
- 2. fill/flip the states with
-      s.fill(char, fg, bg)
-      s.flip(horizontal, vertical)
-3. pass states to self.applyState(push=True)
- 1. this applies the states by calling
-    self.mov.applyStates(states)
- 2. then pushes the states to the undo stack
+1. user performs action in UI
+2. the UI function will
+   1. create an object containing the current (_old_/_before_) state of all effected pixels/frames/movie
+      1. e.g. for a segment flip, storing the pixel chars/colours for the segment area
+   2. perform the operation, updating the canvas/frames/movie
+   3. create an object containing the current (_new_/_after_) state of all effected pixels/frames/movie
+   4. create an undo object containing the _old_ and _new_ states
+   5. and push this undo object to the undo register
 
+#### "undo" an action
 
-![image](https://github.com/user-attachments/assets/eea5445d-292f-42c5-9327-85da1e0560c1)
+1. user presses undo
+2. undo object is popped from the undo register
+3. using the _old_/_before state /in that undo object
+   1. Apply any pixel changes
+      1. For each frame that was changed
+   2. Apply any other changes
+      1. e.g. cursor position, canvas size
 
-[diagram](https://link.excalidraw.com/readonly/svgZcqp0b4R5EClbbkdh)
+#### "redo" an action
 
-### Performance Details
+1. user presses redo
+2. redo object is popped from the redo register
+3. using the _new_/_after state /in that redo object
+   1. Apply any pixel changes
+      1. For each frame that was changed
+   2. Apply any other changes
+      1. e.g. cursor position, canvas size
+
+| [diagram](https://link.excalidraw.com/readonly/svgZcqp0b4R5EClbbkdh) |
+|-----|
+| ![image](https://github.com/user-attachments/assets/eea5445d-292f-42c5-9327-85da1e0560c1) |
+
+### Low-Level Undo Register
 
 Initially, I've come up with an implementation that utilises the `deque` data structure from the `collections` module. This is a double-ended queue that allows for fast appends and pops from either end. This is ideal for the undo/redo system, as we only need to deal with items that are on the *very end* of the buffers.
 
@@ -149,10 +196,7 @@ In [6]: %timeit undo(a, b, 10)
 # 416 ns ± 1.15 ns per loop (mean ± std. dev. of 7 runs, 1,000,000 loops each)
 ```
 
-## Considerations & Challenges
-
-- For operations like "flipping", this will require storing many pixel changes
-  - will need to ensure that nothing is missed, and that the operation is not slow
+---
 
 ## Opportunities
 
@@ -188,48 +232,48 @@ On another note, here are some logs from the very rough POC implementation in du
 *These are all the operations that need to be supported by the undo system.*
 
 - [ ] Changing pixels
-  - [ ] Insert Color
-  - [x] Insert Char
   - [ ] Backspace
   - [ ] Delete Key Pop
-  - [ ] Reverse Delete
+  - [ ] Insert Color
   - [ ] Replace Color Under Cursor
+  - [ ] Reverse Delete
+  - [x] Insert Char
 - [ ] Frame/Animation
+  - [ ] Append Empty Frame
+  - [ ] Clone To New Frame
+  - [ ] Delete Current Frame Prompt
+  - [ ] Move Current Frame
   - [ ] Transform Bounce
   - [ ] Transform Repeat
   - [ ] Transform Reverse
-  - [ ] Move Current Frame
-  - [ ] Clone To New Frame
-  - [ ] Append Empty Frame
-  - [ ] Delete Current Frame Prompt
 - [ ] Movie/High-level
-  - [ ] Get Delay Value
   - [ ] Apply Neofetch Keys
-  - [ ] Load From File
   - [ ] Clear Canvas
+  - [ ] Get Delay Value
+  - [ ] Load From File
 - [ ] Adding/Removing columns & lines
-  - [x] Add Column To Canvas
-  - [ ] Delete Column From Canvas
+  - [ ] Add Line
   - [ ] Add Line To Canvas
+  - [ ] Delete Column
+  - [ ] Delete Column From Canvas
+  - [ ] Delete Line
   - [ ] Delete Line From Canvas
   - [x] Add Column
-  - [ ] Delete Column
-  - [ ] Delete Line
-  - [ ] Add Line
+  - [x] Add Column To Canvas
 - [ ] Box selections
-  - [x] Start Selecting
-  - [x] Paste From Clipboard
   - [ ] Copy Segment To All Frames
-  - [x] Flip Segment Vertical
-  - [x] Flip Segment Horizontal
-  - [x] Delete Segment
-  - [x] Fill Segment
-  - [x] Color Segment
   - [ ] Cut Segment
   - [x] Brush Segment
+  - [x] Color Segment
+  - [x] Delete Segment
+  - [x] Fill Segment
+  - [x] Flip Segment Horizontal
+  - [x] Flip Segment Vertical
+  - [x] Paste From Clipboard
+  - [x] Start Selecting
 - [x] Undo/Redo
-  - [x] Clicked Undo
   - [x] Clicked Redo
+  - [x] Clicked Undo
 
 ## Questions
 
