@@ -36,7 +36,7 @@ import durdraw.durdraw_file as durfile
 from durdraw.durdraw_ui_widgets import StatusBar
 import durdraw.durdraw_gui_manager as durgui
 import durdraw.durdraw_movie as durmovie
-from durdraw.durdraw_movie import UndoStates, FileState, MouseCoord, FrameState, FrameContent, PixelCoord
+from durdraw.durdraw_movie import UndoStates, FileState, MouseCoord, FrameState, FrameContent, MovieState, PixelCoord
 
 import durdraw.neofetcher as neofetcher
 import durdraw.durdraw_color_curses as dur_ansilib
@@ -678,17 +678,18 @@ class UserInterface():  # Separate view (curses) from this controller
             pass    # .. if terminal supports it.
 
     @line_profiler.profile
-    def push(self, old_mouse_state, new_mouse_state, old_state, new_state):
+    def push(self, old_file_state, new_mouse_state, new_state):
         new_file_state = FileState(
             mouse  = new_mouse_state,
             frames = new_state,
+            movie  = MovieState(
+                sizeX = self.opts.sizeX,
+                sizeY = self.opts.sizeY,
+            ),
         )
         self.mov.undo_register.push(
             UndoStates(
-                previous=FileState(
-                    mouse  = old_mouse_state,
-                    frames = old_state,
-                ),
+                previous=old_file_state,
                 current=new_file_state,
             )
         )
@@ -710,6 +711,9 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.mov.gotoFrame(undo_states.previous.mouse.frame+1)
             self.xy = [undo_states.previous.mouse.pixel.y, undo_states.previous.mouse.pixel.x]
 
+        self.opts.sizeX = undo_states.previous.movie.sizeX
+        self.opts.sizeY = undo_states.previous.movie.sizeY
+
     @line_profiler.profile
     def redo(self):
         if not self.mov.undo_register.can_redo:
@@ -717,14 +721,24 @@ class UserInterface():  # Separate view (curses) from this controller
             return
         start = time.time()
         undo_states = self.mov.undo_register.redo()
+
         self.log.debug('redo', {'time': time.time()-start})
+        self.opts.sizeX = undo_states.current.movie.sizeX
+        self.opts.sizeY = undo_states.current.movie.sizeY
+        self.mov.sizeX = undo_states.current.movie.sizeX
+        self.mov.sizeY = undo_states.current.movie.sizeY
+        self.appState.realmaxX = undo_states.current.movie.sizeX
+        self.appState.realmaxY = undo_states.current.movie.sizeY
+
+        self.log.debug('redo movie state', {'current': undo_states.current.movie, 'previous': undo_states.previous.movie})
+
         self.mov.applyStates(undo_states.current)
 
         if undo_states.current.mouse is not None:
             # self.log.debug('moving cursor in redo', {'mouse': undo_states.current.mouse})
             if undo_states.current.mouse.frame != self.mov.currentFrameNumber-1:
                 self.mov.gotoFrame(undo_states.current.mouse.frame+1)
-            self.xy = [undo_states.current.mouse.pixel.y, undo_states.current.mouse.pixel.x]
+            self.xy = [undo_states.current.mouse.pixel.y, undo_states.current.mouse.pixel.x]        
 
     @line_profiler.profile
     def addstr(self, y, x, string, attr=None): # addstr(y, x, str[, attr]) and addstr(str[, attr])
@@ -899,7 +913,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     frame_n = fn,
                     rows    = [FrameContent(content=[chr(c)], fg_colors=[fg], bg_colors=[bg])],
                     start   = PixelCoord(x=x-1, y=y),
-                    end     = PixelCoord(x=x, y=y)
+                    end     = PixelCoord(x=x, y=y),
                 )
             )
 
@@ -910,23 +924,26 @@ class UserInterface():  # Separate view (curses) from this controller
             )
 
         self.push(
-            old_mouse_state=MouseCoord(PixelCoord(x=self.xy[1], y=self.xy[0]), frame=self.mov.currentFrameNumber-1),
+            old_file_state = FileState(
+                mouse = MouseCoord(PixelCoord(x=self.xy[1], y=self.xy[0]), frame=self.mov.currentFrameNumber-1),
+                frames = [
+                    FrameState(
+                        delay   = self.mov.currentFrame.delay,
+                        frame_n = self.mov.currentFrameNumber-1, 
+                        rows    = [
+                            FrameContent(
+                                content   = [self.mov.currentFrame.content[y][x-1]],
+                                fg_colors = [self.mov.currentFrame.newColorMap[y][x-1][0]],
+                                bg_colors = [self.mov.currentFrame.newColorMap[y][x-1][1]],
+                            )
+                        ],
+                        start = PixelCoord(x=x-1, y=y),
+                        end   = PixelCoord(x=x, y=y),
+                    )
+                ],
+                movie = MovieState(sizeX=self.mov.sizeX, sizeY=self.mov.sizeY),
+            ),
             new_mouse_state=mouse_state,
-            old_state=[
-                FrameState(
-                    delay=self.mov.currentFrame.delay,
-                    frame_n=self.mov.currentFrameNumber-1, 
-                    rows=[
-                        FrameContent(
-                            content=[self.mov.currentFrame.content[y][x-1]],
-                            fg_colors=[self.mov.currentFrame.newColorMap[y][x-1][0]],
-                            bg_colors=[self.mov.currentFrame.newColorMap[y][x-1][1]],
-                        )
-                    ],
-                    start=PixelCoord(x=x-1, y=y),
-                    end=PixelCoord(x=x, y=y),
-                )
-            ],
             new_state=frame_states,
         )
         if mouse_state is not None:
@@ -2782,7 +2799,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 elif c == 46:       # alt-. - insert column in frame
                     self.addCol()
                 elif c == 62:       # alt-> - insert column in canvas
-                    self.addColToCanvas()
+                    self.addCol(expandCanvas=True, frange=self.appState.playbackRange)
                 elif c == 60:       # alt-< - delete column from canvas
                     self.delColFromCanvas()
                 elif c == 34:       # alt-" - insert line in canvas
@@ -6404,10 +6421,21 @@ Can use ESC or META instead of ALT
         screenLineNum = 0
         firstCol = self.appState.firstCol
         lastCol = min(mov.sizeX, self.appState.realmaxX + firstCol)
-        # Draw each character
+
         for linenum in range(topLine, lastLineToDraw):
+            # TODO: why did I need to do this, it should already have been done by redo calling applyState?
+            if linenum >= len(mov.currentFrame.content):
+                mov.currentFrame.content.append([' ' for x in range(mov.sizeX)])
+                mov.currentFrame.newColorMap.append([
+                    [self.appState.defaultFgColor, self.appState.defaultBgColor]
+                    for x in range(mov.sizeX)
+                ])
             line = mov.currentFrame.content[linenum]
             for colnum in range(firstCol, lastCol):
+                # TODO: why did I need to do this, it should already have been done by redo calling applyState?
+                if colnum == len(line):
+                    mov.currentFrame.content[linenum].append(' ')
+                    mov.currentFrame.newColorMap[linenum].append([self.appState.defaultFgColor, self.appState.defaultBgColor])
                 charColor = mov.currentFrame.newColorMap[linenum][colnum]
                 charContent = str(line[colnum])
                 if self.appState.cursorMode == "Paint" and not self.playing and not self.appState.playingHelpScreen:
@@ -6575,7 +6603,7 @@ Can use ESC or META instead of ALT
         if self.xy[0] == self.mov.sizeY: # We're on the last line, and just deleted it.
             self.move_cursor_up()
 
-    def addCol(self, frange=None):
+    def addCol(self, frange=None, expandCanvas: bool=False):
         """
         Insert column at position of cursor.
         - The current vertical column in line with the cursor (and everything to the right of it)
@@ -6588,19 +6616,26 @@ Can use ESC or META instead of ALT
         if frange is None:
             frange = [self.mov.currentFrameNumber-1, self.mov.currentFrameNumber-1]
         else:
-            frange = [frange[0]-1, frange[1]]
+            frange = [frange[0]-1, frange[1]-1]
         colIndex = self.xy[1]-1
 
         currentState = self.getFileState(
             start_x=colIndex, start_y=0, end_x=self.mov.sizeX-1, end_y=self.mov.sizeY-1, frange=frange,
         )
 
+        self.log.debug('addCol', {'frange': frange, 'colIndex': colIndex, 'expandCanvas': expandCanvas, 'frames': len(self.mov.frames)})
+
         for frameNum in frange:
             for x in range(len(self.mov.frames[frameNum].content)):
                 self.mov.frames[frameNum].content[x].insert(self.xy[1] - 1, ' ')
-                self.mov.frames[frameNum].content[x].pop()
                 self.mov.frames[frameNum].newColorMap[x].insert(self.xy[1] - 1, fgbg)
-                self.mov.frames[frameNum].newColorMap[x].pop()
+                if not expandCanvas:
+                    self.mov.frames[frameNum].content[x].pop()
+                    self.mov.frames[frameNum].newColorMap[x].pop()
+
+        if expandCanvas:
+            self.mov.sizeX += 1
+            self.opts.sizeX += 1
 
         newState = self.getFileState(
             start_x=colIndex, start_y=0, end_x=self.mov.sizeX-1, end_y=self.mov.sizeY-1, frange=frange,
@@ -7157,7 +7192,8 @@ Can use ESC or META instead of ALT
                 end_x   = end_x,
                 end_y   = end_y,
                 frame_numbers = frange,
-            )
+            ),
+            movie = MovieState(sizeX=self.mov.sizeX, sizeY=self.mov.sizeY),
         )
 
     @line_profiler.profile
@@ -7190,6 +7226,7 @@ Can use ESC or META instead of ALT
                 segment       = frame_segment,
                 frame_numbers = frange,
             ),
+            movie = MovieState(sizeX=self.mov.sizeX, sizeY=self.mov.sizeY),
         )
         self.mov.applyStates(new_file_state)
         if mouse_state is not None:

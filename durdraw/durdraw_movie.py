@@ -122,11 +122,11 @@ class FrameContent(NamedTuple):
     bg_colors: List[int]
 
 class FrameState(NamedTuple):
-    delay:   int
-    frame_n: int
-    rows:    Tuple[Tuple[FrameContent]]
-    start:   PixelCoord
-    end:     PixelCoord
+    delay:      int
+    frame_n:    int
+    rows:       Tuple[Tuple[FrameContent]]
+    start:      PixelCoord
+    end:        PixelCoord
 
 class FileState(NamedTuple):
     mouse:  MouseCoord = None
@@ -247,18 +247,31 @@ class Movie():
         self.log.info('movie initialized', {'sizeX': self.sizeX, 'sizeY': self.sizeY})
 
     @line_profiler.profile
-    def applyFrameState(self, state: FrameState):
+    def applyFrameState(self, state: FrameState, width: int, height: int):
         # TODO: Optimize this - store the chars/fg/bg in a more convenient format
         for i, row in enumerate(state.rows):
+            # update the frame chars
             self.frames[state.frame_n].content[i+state.start.y][state.start.x:state.end.x] = row.content
+            # update the frame colors
             self.frames[state.frame_n].newColorMap[i+state.start.y][state.start.x:state.end.x] = list(zip(row.fg_colors, row.bg_colors))
+            # remove any extra columns caused by adding a canvas column
+            while len(self.frames[state.frame_n].content[i+state.start.y]) > width:
+                self.frames[state.frame_n].content[i+state.start.y].pop()
+                self.frames[state.frame_n].newColorMap[i+state.start.y].pop()
+
+        # remove any extra rows caused by adding a canvas row
+        while len(self.frames[state.frame_n].content) > height:
+            self.frames[state.frame_n].content.pop()
         if state.delay:
             self.frames[state.frame_n].delay = state.delay
 
     @line_profiler.profile
     def applyStates(self, state: FileState):
         for frame_state in state.frames:
-            self.applyFrameState(frame_state)
+            self.applyFrameState(frame_state, width=state.movie.sizeX, height=state.movie.sizeY)
+
+        self.sizeX = state.movie.sizeX
+        self.sizeY = state.movie.sizeY
 
     @line_profiler.profile
     def setChar(self, frame_n, x, y, c, color):
@@ -285,14 +298,13 @@ class Movie():
         'Returns old pixel states and new pixel states, both as tuples of PixelState'
         self.log.debug('getting frame states', {'start_x': start_x, 'start_y': start_y, 'frame_numbers': frame_numbers})
         for frame_n in range(frame_numbers[0], frame_numbers[1]+1):
+            rows = (self._frame_row_state(self.frames[frame_n], y, start_x, end_x) for y in range(start_y, end_y+1))
             yield FrameState(
-                delay  = self.frames[frame_n].delay,
-                rows = tuple(self._frame_row_state(
-                    self.frames[frame_n], y, start_x, end_x
-                ) for y in range(start_y, end_y+1)),
+                delay   = self.frames[frame_n].delay,
+                rows    = tuple(rows),
                 frame_n = frame_n,
-                start = PixelCoord(x=start_x, y=start_y),
-                end   = PixelCoord(x=end_x, y=end_y),
+                start   = PixelCoord(x=start_x, y=start_y),
+                end     = PixelCoord(x=end_x, y=end_y),
             )
 
     @line_profiler.profile
