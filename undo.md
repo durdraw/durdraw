@@ -1,9 +1,6 @@
 # Undo Register
 
 - [Undo Register](#undo-register)
-  - [Undo usages](#undo-usages)
-    - [Summarised](#summarised)
-  - [Feature List](#feature-list)
   - [Implementation](#implementation)
     - [Current system](#current-system)
     - [Considerations and Challenges](#considerations-and-challenges)
@@ -15,81 +12,7 @@
   - [Opportunities](#opportunities)
   - [POC](#poc)
   - [Progress/Operation Support](#progressoperation-support)
-  - [Questions](#questions)
-  - [Proposal](#proposal)
-
-
-## Undo usages
-
-| undo method | file | Line | Function |
-| --- | --- | --- | --- |
-`push()` | durdraw/durdraw_ui_curses.py | 1097 | `def transform_bounce(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 1107 | `def transform_repeat(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 1117 | `def transform_reverse(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 1126 | `def moveCurrentFrame(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 1386 | `def apply_neofetch_keys(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 2614 | `def mainLoop(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 3372 | `def replaceColorUnderCursor(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 3427 | `def cloneToNewFrame(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 3437 | `def appendEmptyFrame(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 3611 | `def getDelayValue(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 3630 | `def deleteCurrentFramePrompt(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 5314 | `def loadFromFile(self, shortfile, loadFormat):  # shortfile = non full path filename` |
-`push()` | durdraw/durdraw_ui_curses.py | 6446 | `def addColToCanvas(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6459 | `def delColFromCanvas(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6475 | `def addLineToCanvas(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6487 | `def delLineFromCanvas(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6501 | `def addCol(self, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6524 | `def delCol(self, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6543 | `def delLine(self, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6564 | `def addLine(self, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6582 | `def startSelecting(self, firstkey=None, mouse=False):   # firstkey is the key the user was` |
-`push()` | durdraw/durdraw_ui_curses.py | 6853 | `def askHowToPaste(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6876 | `def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6927 | `def copySegmentToAllFrames(self, startPoint, height, width, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6972 | `def flipSegmentVertical(self, startPoint, height, width, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6984 | `def flipSegmentHorizontal(self, startPoint, height, width, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 6995 | `def deleteSegment(self, startPoint, height, width, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 7011 | `def fillSegment(self, startPoint, height, width, frange=None, fillChar=\"X\"):` |
-`push()` | durdraw/durdraw_ui_curses.py | 7027 | `def colorSegment(self, startPoint, height, width, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 764 | `def backspace(self):` |
-`push()` | durdraw/durdraw_ui_curses.py | 774 | `def deleteKeyPop(self, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 790 | `def reverseDelete(self, frange=None):` |
-`push()` | durdraw/durdraw_ui_curses.py | 807 | `def insertColor(self, fg=1, bg=0, frange=None, x=None, y=None, pushUndo=True):` |
-`push()` | durdraw/durdraw_ui_curses.py | 823 | `def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True):` |
-`push()` | durdraw/durdraw_ui_curses.py | 878 | `def clearCanvas(self, prompting = False):` |
-`push()` | durdraw/durdraw_undo.py | 10 | `def __init__(self, ui, appState = None):` |
-`push()` | durdraw/durdraw_undo.py | 42 | `def undo(self):` |
-`undo()` | durdraw/durdraw_ui_curses.py | 1126 | `def moveCurrentFrame(self):` |
-`undo()` | durdraw/durdraw_ui_curses.py | 2584 | `def clickedUndo(self):` |
-`undo()` | durdraw/durdraw_ui_curses.py | 6582 | `def startSelecting(self, firstkey=None, mouse=False):   # firstkey is the key the user was` |
-`redo()` | durdraw/durdraw_ui_curses.py | 2592 | `def clickedRedo(self):` |
-
-### Summarised
-
-## Feature List
-
-1. pixel-level undo/redo
-   - Should be able to store and update pixel states, e.g. chars and colours
-2. (?) action/state-level undo/redo
-    - Allow undo/redo for actions that are not pixel/char/colour changes
-    - e.g. cursor position, selected area, durations/other metadata
-    - some of these may be stored in tandem with other changes, e.g. a pixel change and a cursor move
-3. Multi-pixel (or multi-anything) operations
-    - Ensure that multi-pixel operations (e.g. flipping, colour fill) are correctly undone/redone all at once.
-    - This will probably take the form of storing `n` pixel changes in each undo/redo action
-
-*Misc requirements:*
-
-- All pixel/other state should be updated correctly from undo/redo actions
-  - cursor position
-  - pixel char/colour
-  - selected area
-  - durations/other metadata
-- Goes without saying
-  - This should all be _fast_, which I'm pretty confident will be the case (#TODO some basic proof and big Os).
-  - This should be _efficient_, leaving room for very large projects and scaling/extending in future.
-  - This should all be _small_, as any speed increase at the cost of memory will not really be a victory.
+  - [Undo usages](#undo-usages)
 
 ## Implementation
 
@@ -275,23 +198,49 @@ On another note, here are some logs from the very rough POC implementation in du
   - [x] Clicked Redo
   - [x] Clicked Undo
 
-## Questions
 
-- Clarify: Why is the colour map stored separately to the content? I don't want to miss anything due to lack of understanding.
-- What is the largest file (frames * width * height) that should be supported?
-- Have I missed any major operations or functionality?
+## Undo usages
 
-## Proposal
-
-I've now done enough digging and poking that I'm ready to sketch out a rough proposal for review/confirmation before I start getting really stuck in. This will require quite a few LOC to be changed, so I definitely want to make sure I'm on the right track before I start and avoid any horrific oversights.
-
-1. Introduce the new undo "registry" (exact name pending?)
-2. Move a lot (all/most?) of the "pixel manipulation" functions from `durdraw_ui_curses` to the `Frame` and `Movie` classes in `durdraw_movie`.
-     1. When doing this, take the opportunity to add tests for as many operations as I have the energy for.
-     2. This has the benefit of reducing the LOC in ui_curses which will benefit our squishy human brains.
-3. Implement [all operations listed above](#progressoperation-support) in the new undo system.
-
-> *Exact implementation still pending! e.g.*
-> - *Do I store tuples containing the actual function, or a string value that can be used with a mapping dict to get that function? What are the implications and performance considerations of each?*
-> - *Do I use ChainMap or similar instead of a deque for the undo/redo buffers?*
-> *These are pretty low-level considerations that I haven't set in stone yet, but the overall plan and interface is becoming clearer.*
+| undo method | file | Line | Function |
+| --- | --- | --- | --- |
+`push()` | durdraw/durdraw_ui_curses.py | 1097 | `def transform_bounce(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 1107 | `def transform_repeat(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 1117 | `def transform_reverse(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 1126 | `def moveCurrentFrame(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 1386 | `def apply_neofetch_keys(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 2614 | `def mainLoop(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 3372 | `def replaceColorUnderCursor(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 3427 | `def cloneToNewFrame(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 3437 | `def appendEmptyFrame(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 3611 | `def getDelayValue(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 3630 | `def deleteCurrentFramePrompt(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 5314 | `def loadFromFile(self, shortfile, loadFormat):  # shortfile = non full path filename` |
+`push()` | durdraw/durdraw_ui_curses.py | 6446 | `def addColToCanvas(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6459 | `def delColFromCanvas(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6475 | `def addLineToCanvas(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6487 | `def delLineFromCanvas(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6501 | `def addCol(self, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6524 | `def delCol(self, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6543 | `def delLine(self, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6564 | `def addLine(self, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6582 | `def startSelecting(self, firstkey=None, mouse=False):   # firstkey is the key the user was` |
+`push()` | durdraw/durdraw_ui_curses.py | 6853 | `def askHowToPaste(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6876 | `def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6927 | `def copySegmentToAllFrames(self, startPoint, height, width, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6972 | `def flipSegmentVertical(self, startPoint, height, width, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6984 | `def flipSegmentHorizontal(self, startPoint, height, width, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 6995 | `def deleteSegment(self, startPoint, height, width, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 7011 | `def fillSegment(self, startPoint, height, width, frange=None, fillChar=\"X\"):` |
+`push()` | durdraw/durdraw_ui_curses.py | 7027 | `def colorSegment(self, startPoint, height, width, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 764 | `def backspace(self):` |
+`push()` | durdraw/durdraw_ui_curses.py | 774 | `def deleteKeyPop(self, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 790 | `def reverseDelete(self, frange=None):` |
+`push()` | durdraw/durdraw_ui_curses.py | 807 | `def insertColor(self, fg=1, bg=0, frange=None, x=None, y=None, pushUndo=True):` |
+`push()` | durdraw/durdraw_ui_curses.py | 823 | `def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True):` |
+`push()` | durdraw/durdraw_ui_curses.py | 878 | `def clearCanvas(self, prompting = False):` |
+`push()` | durdraw/durdraw_undo.py | 10 | `def __init__(self, ui, appState = None):` |
+`push()` | durdraw/durdraw_undo.py | 42 | `def undo(self):` |
+`undo()` | durdraw/durdraw_ui_curses.py | 1126 | `def moveCurrentFrame(self):` |
+`undo()` | durdraw/durdraw_ui_curses.py | 2584 | `def clickedUndo(self):` |
+`undo()` | durdraw/durdraw_ui_curses.py | 6582 | `def startSelecting(self, firstkey=None, mouse=False):   # firstkey is the key the user was` |
+`redo()` | durdraw/durdraw_ui_curses.py | 2592 | `def clickedRedo(self):` |
