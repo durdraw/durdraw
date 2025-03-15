@@ -1,6 +1,7 @@
 # Undo Register
 
 - [Undo Register](#undo-register)
+  - [Preface](#preface)
   - [Implementation](#implementation)
     - [Current system](#current-system)
     - [Considerations and Challenges](#considerations-and-challenges)
@@ -9,10 +10,31 @@
       - ["undo" an action](#undo-an-action)
       - ["redo" an action](#redo-an-action)
     - [Low-Level Undo Register](#low-level-undo-register)
-  - [Opportunities](#opportunities)
   - [POC](#poc)
+    - [1. Low-Level Undo Register](#1-low-level-undo-register)
+    - [2. Partial implementation in durdraw](#2-partial-implementation-in-durdraw)
+  - [Demo/UX Testing](#demoux-testing)
+    - [How to grok?](#how-to-grok)
   - [Progress/Operation Support](#progressoperation-support)
+  - [Opportunities / Out of Scope](#opportunities--out-of-scope)
   - [Undo usages](#undo-usages)
+
+## Preface
+
+> [!IMPORTANT]
+> This proposal is:
+> 
+> - ✔️ a prototype/proof of concept of the main ideas detailed below
+> - ✘ not a set-in-stone/inflexible idea
+> - ✘ not a completely-polished representation of the final implementation
+>   - there may be inconsistencies in implementation that I missed or left until after this discussion, as otherwise I could be working on this forever before sharing it 😛
+
+I've taken a while to slowly amble through discovering this project on a deeper level, I tried a few different directions before settling on this one as a good starting point for discussion. I see this proposal as having 2 main components
+
+1. the technical details of the undo register, how items are exchanged between the undo/redo buffers
+2. the code framework that creates and assembles the new state objects needed for each operation
+
+_(Item number 1 took me only a few days to work on, and item number 2 has taken 2-3 months)_
 
 ## Implementation
 
@@ -62,10 +84,10 @@ and the main undo list could just consist of references to the individual pixel 
 
 1. user performs action in UI
 2. the UI function will
-   1. create an object containing the current (_old_/_before_) state of all effected pixels/frames/movie
+   1. create an object containing the current (`old/before`) state of all effected pixels/frames/movie
       1. e.g. for a segment flip, storing the pixel chars/colours for the segment area
    2. perform the operation, updating the canvas/frames/movie
-   3. create an object containing the current (_new_/_after_) state of all effected pixels/frames/movie
+   3. create an object containing the current (`new/after`) state of all effected pixels/frames/movie
    4. create an undo object containing the _old_ and _new_ states
    5. and push this undo object to the undo register
 
@@ -73,7 +95,7 @@ and the main undo list could just consist of references to the individual pixel 
 
 1. user presses undo
 2. undo object is popped from the undo register
-3. using the _old_/_before state /in that undo object
+3. using the `old/before` state in that undo object
    1. Apply any pixel changes
       1. For each frame that was changed
    2. Apply any other changes
@@ -83,7 +105,7 @@ and the main undo list could just consist of references to the individual pixel 
 
 1. user presses redo
 2. redo object is popped from the redo register
-3. using the _new_/_after state /in that redo object
+3. using the `new/after` state in that redo object
    1. Apply any pixel changes
       1. For each frame that was changed
    2. Apply any other changes
@@ -121,38 +143,79 @@ In [6]: %timeit undo(a, b, 10)
 
 ---
 
-## Opportunities
-
-These are ideas that are not part of this proposal, but could be explored in future.
-
-- It would be possible to serialize the undo/redo buffers to a local file in the event of a crash, and restore the state on next launch ala vim.
-
 ## POC
 
-I wrote a [POC script](./poc.py) to test the undo/redo functionality. It's an oversimplified version of durdraw, with the proposed undo system bolted on.   
+There are 2 main demos/POCs that I've worked on as part of this
+
+1. [1. Low-Level Undo Register](#1-low-level-undo-register)
+2. [2. Partial implementation in durdraw](#2-partial-implementation-in-durdraw)
+
+### 1. Low-Level Undo Register
+
+Initially I wrote a very rudimentary [POC script](./poc.py) to test the undo/redo functionality. It's an oversimplified version of durdraw, with the proposed undo system bolted on.   
 You can essentially type out a bunch of stuff and use the arrow keys, and then press (and hold!) 'u/r' to undo/redo.
 
 - There is line profiling attached to almost every function, you can run with `LINE_PROFILE=1 ./poc.py` to see where time is being spent.
 - You can also enable debug logs by uncommenting them and setting the log level to `'DEBUG'`
 
-On another note, here are some logs from the very rough POC implementation in durdraw
+Additionally, check out the unit tests in `test/durdraw/test_undo.py` which show the different state changes that happen in the undo register.
 
-```json
-{"timestamp":"2024-12-12T19:39:38.509133+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:38.827779+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 115, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:39.521499+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 115, 7, 0), (0, 0, 100, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:40.639585+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"undo","data":{"undoBuf":"deque([(0, 0, 115, 7, 0)])","redoBuf":"deque([(0, 0, 115, 7, 0)])"}}
-{"timestamp":"2024-12-12T19:39:44.620562+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 107, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:44.641024+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 107, 7, 0), (0, 0, 106, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:44.646262+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 107, 7, 0), (0, 0, 106, 7, 0), (0, 0, 115, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:44.659840+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 107, 7, 0), (0, 0, 106, 7, 0), (0, 0, 115, 7, 0), (0, 0, 97, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:44.709905+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 107, 7, 0), (0, 0, 106, 7, 0), (0, 0, 115, 7, 0), (0, 0, 97, 7, 0), (0, 0, 100, 7, 0)])","redoBuf":"deque([])"}}
-{"timestamp":"2024-12-12T19:39:44.763499+11:00","level":"DEBUG","name":"durdraw.undo_register","msg":"push","data":{"undoBuf":"deque([(0, 0, 115, 7, 0), (0, 0, 107, 7, 0), (0, 0, 106, 7, 0), (0, 0, 115, 7, 0), (0, 0, 97, 7, 0), (0, 0, 100, 7, 0), (0, 0, 104, 7, 0)])","redoBuf":"deque([])"}}
-```
+### 2. Partial implementation in durdraw
+
+On this branch ([`undo-register-proposal-implement-ops`](https://github.com/tmck-code/durdraw/tree/undo-register-proposal-implement-ops)), I've implemented **13/37** operations from the total list (see [Progress/Operation Support](#progressoperation-support)).
+
+These are all variations on:
+
+- changing/updating individual pixels
+- segments (updating many pixels across >=1 frames)
+  - single frame: flipping
+  - multi-frame: flipping, deleting, filling, colouring
+- adding columns to the canvas (updating pixels in >1 frames + movie state)
+
+---
+
+## Demo/UX Testing
+
+How to test? This is a great example I've been using for comparison:
+
+> [!TIP]
+> _run `tail -f durdraw.log` in a separate terminal to see debug logs as they happen_
+
+1. checkout to this branch in the durdraw repo
+2. Download [goto80-goto20.ans](https://16colo.rs/pack/impure77/raw/goto80-goto20.ans) from 16colo.rs
+3. run `DEBUG=true ./start-durdraw goto80-goto20.ans`
+4. create 10 animation frames by cloning the current one 9 times (pressing `ESC, n` 9 times)
+5. save this as a durdraw file (e.g. `goto.dur`)
+6. exit durdraw
+7. run `DEBUG=true ./start-durdraw goto.dur`
+8. start typing and using the operations listed in [Progress/Operation Support](#progressoperation-support)
+   1. press `u` to undo, `r` to redo
+9. now, to compare, switch to the `master` branch and repeat steps 7-8
+
+### How to grok?
+
+- Reading this doc is a good start, and then trying out the UI as detailed above [Demo/UX Testing](#demoux-testing). After that, reading the following areas of code:
+
+1. the low-level undo register
+   1. [`durdraw/durdraw_undo.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_undo.py#L117-L170)
+   2. and the tests in [`test/durdraw/test_undo.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/test/durdraw/test_undo.py)
+2. the `FileState` object defined in [`durdraw/durdraw_movie.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L107-L138)
+3. the methods in [`durdraw/durdraw_movie.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L249-L321) that apply pixel & frame changes using `FileState` objects
+4. the methods in `durdraw/durdraw_ui_curses.py` that create the `FileState` objects as they perform their operations before pushing the objects to the undo register, e.g.
+   1. [`insertChar`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L249-L321)
+   2. [`startSelecting`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_ui_curses.py#L6794-L7010)
+      1. for flipping, only 1 undo record is pushed when the user finally presses enter, rather than 1 record per flip
+   3. [`addCol`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_ui_curses.py#L6606-L6650)
+
+
+---
 
 ## Progress/Operation Support
 
 *These are all the operations that need to be supported by the undo system.*
+
+> [!IMPORTANT]
+> Current Completion: **13/37 (35%)**
 
 - [ ] Changing pixels
   - [ ] Backspace
@@ -161,19 +224,6 @@ On another note, here are some logs from the very rough POC implementation in du
   - [ ] Replace Color Under Cursor
   - [ ] Reverse Delete
   - [x] Insert Char
-- [ ] Frame/Animation
-  - [ ] Append Empty Frame
-  - [ ] Clone To New Frame
-  - [ ] Delete Current Frame Prompt
-  - [ ] Move Current Frame
-  - [ ] Transform Bounce
-  - [ ] Transform Repeat
-  - [ ] Transform Reverse
-- [ ] Movie/High-level
-  - [ ] Apply Neofetch Keys
-  - [ ] Clear Canvas
-  - [ ] Get Delay Value
-  - [ ] Load From File
 - [ ] Adding/Removing columns & lines
   - [ ] Add Line
   - [ ] Add Line To Canvas
@@ -197,7 +247,27 @@ On another note, here are some logs from the very rough POC implementation in du
 - [x] Undo/Redo
   - [x] Clicked Redo
   - [x] Clicked Undo
+- [ ] Frame/Animation
+  - [ ] Append Empty Frame
+  - [ ] Clone To New Frame
+  - [ ] Delete Current Frame Prompt
+  - [ ] Move Current Frame
+  - [ ] Transform Bounce
+  - [ ] Transform Repeat
+  - [ ] Transform Reverse
+- [ ] Movie/High-level
+  - [ ] Apply Neofetch Keys
+  - [ ] Clear Canvas
+  - [ ] Get Delay Value
+  - [ ] Load From File
 
+---
+
+## Opportunities / Out of Scope
+
+TODO: up to here!
+
+---
 
 ## Undo usages
 
