@@ -4,7 +4,8 @@
   - [Preface](#preface)
   - [Implementation](#implementation)
     - [Current system](#current-system)
-    - [Considerations and Challenges](#considerations-and-challenges)
+    - [An "undo" record](#an-undo-record)
+    - [Challenges](#challenges)
     - [Basic Framework](#basic-framework)
       - ["do" an action (push)](#do-an-action-push)
       - ["undo" an action](#undo-an-action)
@@ -53,7 +54,7 @@ This approach has some performance drawbacks, however, which make durdraw a litt
 >[!CAUTION]
 > This can result in a durdraw movie file of `500KB` taking **1-2 seconds delay** for each character inserted, and using `1.5GB` of memory in **less than 40 characters inserted**.
 
-### Considerations and Challenges
+### An "undo" record
 
 Given that almost all durdraw performance is tied to the undo system, it's clear that a new system is needed that will
 allow durdraw to more effectively scale to very large projects.
@@ -69,14 +70,22 @@ See [Progress/Operation Support](#progressoperation-support) for the complete li
 - the cursor position
 - the canvas size
 
+### Challenges
+
 A major change required by this new system is that for every user action that is stored in the undo register, the "reverse" of that operation must now be implemented.
 
-Each existing action should be routed (where appropriate) through the Frame/Movie classes. These classes are best placed
-to recognise when state has changed and correspondingly update the undo state.
+The `ui_curses` (aka god) is the beating heart of durdraw, and ties together
+- the canvas
+  - and animation frame system, both editing and playing
+- menu systems/displays
+- user input
+- pixel manipulation/updates
 
-~~In addition to the existing Frame/Movie classes, it could be handy to introduce something like a Pixel class that could keep track of its own state,
-and the main undo list could just consist of references to the individual pixel & index of the change inside that pixel. I'm unsure how this would interact with things like the existing colour map #TODO investigate.~~   
-*^ I am now thinking that, at this stage, this change to Frames/pixels is not neccessary to be able to implement the new undo system, and it risks changing too much at once (e.g. the underlying way that chars and colours are set in durdraw via the content and colour map)*
+There is a separate `movie` module that houses the classes for 
+- `frame` holds a grid of characters, a grid of ANSI colour pairs, and some other related values
+- `movie` holds a colletion of frames, and some other related values
+
+However, the actual logic to do all of the pixel updating is in `ui_curses` TODO: up to here
 
 ### Basic Framework
 
