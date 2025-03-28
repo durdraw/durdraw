@@ -2,6 +2,8 @@
 
 - [Undo Register](#undo-register)
   - [Preface](#preface)
+  - [Demo/UX Testing](#demoux-testing)
+    - [How to grok?](#how-to-grok)
   - [Implementation](#implementation)
     - [Current system](#current-system)
     - [Thinking about an "undo" record](#thinking-about-an-undo-record)
@@ -12,16 +14,12 @@
       - ["redo" an action](#redo-an-action)
       - [Some examples](#some-examples)
         - [1. Insert Char](#1-insert-char)
-        - [2. Flip Segment](#2-flip-segment)
   - [POC](#poc)
     - [1. Low-Level Undo Register](#1-low-level-undo-register)
       - [POC](#poc-1)
       - [Unit Tests](#unit-tests)
     - [2. Partial implementation in durdraw](#2-partial-implementation-in-durdraw)
-  - [Demo/UX Testing](#demoux-testing)
-    - [How to grok?](#how-to-grok)
   - [Progress/Operation Support](#progressoperation-support)
-  - [Opportunities / Out of Scope](#opportunities--out-of-scope)
   - [Undo usages](#undo-usages)
 
 ## Preface
@@ -42,6 +40,41 @@ I've taken a while to slowly amble through discovering this project on a deeper 
 2. the **code framework** that creates and assembles the new state objects needed for each operation
 
 _(Item number 1 took me only a few days to work on, and item number 2 has taken 2-3 months)_
+
+---
+
+## Demo/UX Testing
+
+How to test? This is a great example I've been using for comparison:
+
+> [!TIP]
+> _run `tail -f durdraw.log` in a separate terminal to see debug logs as they happen_
+
+1. checkout to this branch in the durdraw repo
+2. Download [goto80-goto20.ans](https://16colo.rs/pack/impure77/raw/goto80-goto20.ans) from 16colo.rs
+3. run `DEBUG=true ./start-durdraw goto80-goto20.ans`
+4. create 10 animation frames by cloning the current one 9 times (pressing `ESC, n` 9 times)
+5. save this as a durdraw file (e.g. `goto.dur`)
+6. exit durdraw
+7. run `DEBUG=true ./start-durdraw goto.dur`
+8. start typing and using the operations listed in [Progress/Operation Support](#progressoperation-support)
+   1. press `u` to undo, `r` to redo
+9. now, to compare, switch to the `master` branch and repeat steps 7-8
+
+### How to grok?
+
+- Reading this doc is a good start, and then trying out the UI as detailed above [Demo/UX Testing](#demoux-testing). After that, reading the following areas of code:
+
+1. the low-level undo register
+   1. [`durdraw/durdraw_undo.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_undo.py#L117-L170)
+   2. and the tests in [`test/durdraw/test_undo.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/test/durdraw/test_undo.py)
+2. the `FileState` object defined in [`durdraw/durdraw_movie.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L107-L138)
+3. the methods in [`durdraw/durdraw_movie.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L249-L321) that apply pixel & frame changes using `FileState` objects
+4. the methods in `durdraw/durdraw_ui_curses.py` that create the `FileState` objects as they perform their operations before pushing the objects to the undo register, e.g.
+   1. [`insertChar`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L249-L321)
+   2. [`startSelecting`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_ui_curses.py#L6794-L7010)
+      1. for flipping, only 1 undo record is pushed when the user finally presses enter, rather than 1 record per flip
+   3. [`addCol`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_ui_curses.py#L6606-L6650)
 
 ---
 
@@ -93,9 +126,7 @@ There is a separate `movie` module that houses the classes for
 - `frame` holds a grid of characters, a grid of ANSI colour pairs, and some other related values
 - `movie` holds a colletion of frames, and some other related values
 
-However, the actual logic to do all of the pixel updating is in `ui_curses`
-
-TODO: up to here
+However, the actual logic to do all of the pixel updating is in `ui_curses`, this means that the implementation of the undo record creation will need to be done in `ui_curses` as well as the `movie` module.
 
 ### Basic Framework
 
@@ -137,7 +168,6 @@ TODO: up to here
 #### Some examples
 
 - [1. Insert Char](#1-insert-char)
-- [2. Flip Segment](#2-flip-segment)
 
 ##### 1. Insert Char
 
@@ -156,19 +186,68 @@ def insertChar(c, bg, fg, fraange, x, y, moveCursor = False, pushUndo=True):
 
 New implementation:
 
-TODO: up to here!
+> _This method includes all the new steps and objects that are created for the undo register._
+> _This can be abstracted away into a separate function, but I wanted to show the steps in detail._
+>
+> _For other operations like `flipSegment`, this is abstracted away to keep the new function close to the original,_
+> _but the same steps are followed._
 
 ```python
+    def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True):
+        """ insert character at current location, move cursor to the right (unless at the edge of canvas) """
+        if x == None:
+            x = self.xy[1]
+            moveCursor = True
+        if y == None:
+            y = self.xy[0]
+
+        if frange is None:
+            frange = [self.mov.currentFrameNumber, self.mov.currentFrameNumber]
+
+        frame_states = []
+        for fn in range(frange[0]-1, frange[1]):
+            frame_states.append(
+                FrameState(
+                    delay   = self.mov.frames[fn].delay,
+                    frame_n = fn,
+                    rows    = [FrameContent(content=[chr(c)], fg_colors=[fg], bg_colors=[bg])],
+                    start   = PixelCoord(x=x-1, y=y),
+                    end     = PixelCoord(x=x, y=y),
+                )
+            )
+
+        mouse_state = None
+        if x < self.mov.sizeX and moveCursor:
+            mouse_state = MouseCoord(
+                pixel=PixelCoord(x=self.xy[1], y=self.xy[0]), frame=self.mov.currentFrameNumber-1
+            )
+
+        self.push(
+            old_file_state = FileState(
+                mouse = MouseCoord(PixelCoord(x=self.xy[1], y=self.xy[0]), frame=self.mov.currentFrameNumber-1),
+                frames = [
+                    FrameState(
+                        delay   = self.mov.currentFrame.delay,
+                        frame_n = self.mov.currentFrameNumber-1, 
+                        rows    = [
+                            FrameContent(
+                                content   = [self.mov.currentFrame.content[y][x-1]],
+                                fg_colors = [self.mov.currentFrame.newColorMap[y][x-1][0]],
+                                bg_colors = [self.mov.currentFrame.newColorMap[y][x-1][1]],
+                            )
+                        ],
+                        start = PixelCoord(x=x-1, y=y),
+                        end   = PixelCoord(x=x, y=y),
+                    )
+                ],
+                movie = MovieState(sizeX=self.mov.sizeX, sizeY=self.mov.sizeY),
+            ),
+            new_mouse_state=mouse_state,
+            new_state=frame_states,
+        )
+        if mouse_state is not None:
+            self.move_cursor_right()
 ```
-
-##### 2. Flip Segment
-
-Lets look at a basic example of a segment flip operation
-
-```python
-
-```
-
 
 ---
 
@@ -234,42 +313,6 @@ These involve:
 
 ---
 
-## Demo/UX Testing
-
-How to test? This is a great example I've been using for comparison:
-
-> [!TIP]
-> _run `tail -f durdraw.log` in a separate terminal to see debug logs as they happen_
-
-1. checkout to this branch in the durdraw repo
-2. Download [goto80-goto20.ans](https://16colo.rs/pack/impure77/raw/goto80-goto20.ans) from 16colo.rs
-3. run `DEBUG=true ./start-durdraw goto80-goto20.ans`
-4. create 10 animation frames by cloning the current one 9 times (pressing `ESC, n` 9 times)
-5. save this as a durdraw file (e.g. `goto.dur`)
-6. exit durdraw
-7. run `DEBUG=true ./start-durdraw goto.dur`
-8. start typing and using the operations listed in [Progress/Operation Support](#progressoperation-support)
-   1. press `u` to undo, `r` to redo
-9. now, to compare, switch to the `master` branch and repeat steps 7-8
-
-### How to grok?
-
-- Reading this doc is a good start, and then trying out the UI as detailed above [Demo/UX Testing](#demoux-testing). After that, reading the following areas of code:
-
-1. the low-level undo register
-   1. [`durdraw/durdraw_undo.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_undo.py#L117-L170)
-   2. and the tests in [`test/durdraw/test_undo.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/test/durdraw/test_undo.py)
-2. the `FileState` object defined in [`durdraw/durdraw_movie.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L107-L138)
-3. the methods in [`durdraw/durdraw_movie.py`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L249-L321) that apply pixel & frame changes using `FileState` objects
-4. the methods in `durdraw/durdraw_ui_curses.py` that create the `FileState` objects as they perform their operations before pushing the objects to the undo register, e.g.
-   1. [`insertChar`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_movie.py#L249-L321)
-   2. [`startSelecting`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_ui_curses.py#L6794-L7010)
-      1. for flipping, only 1 undo record is pushed when the user finally presses enter, rather than 1 record per flip
-   3. [`addCol`](https://github.com/tmck-code/durdraw/blob/f0ee417f846ceab1e02ca954eed574f7b41b2546/durdraw/durdraw_ui_curses.py#L6606-L6650)
-
-
----
-
 ## Progress/Operation Support
 
 *These are all the operations that need to be supported by the undo system.*
@@ -320,12 +363,6 @@ How to test? This is a great example I've been using for comparison:
   - [ ] Clear Canvas
   - [ ] Get Delay Value
   - [ ] Load From File
-
----
-
-## Opportunities / Out of Scope
-
-TODO: up to here!
 
 ---
 
