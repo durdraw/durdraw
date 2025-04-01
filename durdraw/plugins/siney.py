@@ -4,6 +4,7 @@
 
 import math
 from copy import deepcopy
+
 from durdraw.durdraw_movie import Frame  # Adjust import path as needed
 
 # Durdraw plugin format version
@@ -20,8 +21,8 @@ durdraw_plugin = {
 
 opts = {
     # Animation settings
-    "steps": 20,   # Frames for one full wave cycle
-    "amplitude": 5,   # Max shift in chars
+    "steps": 10,   # Frames for one full wave cycle
+    "amplitude": 3,   # Max shift in chars
 }
 
 
@@ -53,7 +54,7 @@ def transform_movie(mov, appState=None, opts=opts):
                 frame.content[y][x] = orig_line[src_x]
                 frame.newColorMap[y][x] = orig_colors[src_x]
         
-        frame.delay = 0.05  # Fast playback for smooth wave (adjustable)
+        #frame.delay = 0.05  # Fast playback for smooth wave (adjustable)
         mov.addFrame(frame)
     
     return mov
