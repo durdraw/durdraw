@@ -3607,6 +3607,41 @@ class UserInterface():  # Separate view (curses) from this controller
         self.setBgColor(ui_bg)
         self.stdscr.refresh()
 
+    def replaceCharUnderCursor(self):
+        self.commandMode = False
+		# get the old character from under the cursor
+        old_char = self.mov.currentFrame.content[self.xy[0]][self.xy[1]-1]
+        # Print a message for the user to pick a new character
+        #self.clearStatusLine()
+        self.addstr(self.statusBarLineNum, 0, " " * 50 , curses.color_pair(self.appState.theme['notificationColor']))
+        printMessage = "Replce with what character? Type or use F1-F10: "
+        self.addstr(self.statusBarLineNum, 0, printMessage, curses.color_pair(self.appState.theme['notificationColor']))
+        self.stdscr.refresh()
+        new_char = self.askForCharacter()
+
+        if self.mov.hasMultipleFrames():
+            self.promptPrint("Apply to all frames in playback range (Y/N)? ")
+            askingAboutRange = True
+
+        else:   # only 1 frame in movie, so just apply to akk without asking
+            self.undo.push()
+            self.mov.search_and_replace_char(old_char, new_char)
+            askingAboutRange = False
+        while askingAboutRange:
+            prompt_ch = self.stdscr.getch()
+            if chr(prompt_ch) in ['y', 'Y']:    # yes, all in range
+                self.undo.push()
+                self.mov.search_and_replace_char(old_char, new_char, frange=self.appState.playbackRange)
+                askingAboutRange = False
+            if chr(prompt_ch) in ['n', 'N']:    # No, only current frame
+                self.undo.push()
+                self.mov.search_and_replace_char(old_char, new_char)
+                askingAboutRange = False
+            elif prompt_ch == 27:  # esc, cancel
+                askingAboutRange = False
+
+        self.notify(f"old char: {old_char}, new char: {new_char}")
+        self.stdscr.refresh()
 
     def cloneToNewFrame(self):
         """ Take current frame, clone it to a new one, insert it immediately after current frame """
@@ -3931,6 +3966,66 @@ class UserInterface():  # Separate view (curses) from this controller
         response = self.statusBar.editMenu.showHide()
         self.statusBar.mainMenu.handler.panel.hide()
 
+    def askForCharacter(self):
+        self.window.nodelay(0) # wait for input when calling getch
+        maxLines, maxCol = self.window.getmaxyx()
+        #pdb.set_trace()
+        prompting = True
+        curses.flushinp()
+        newchar = ' '
+        while prompting:
+            #c = self.window.getch()
+            c = self.window.get_wch()
+            time.sleep(0.01)
+            if c in [curses.KEY_F1]:
+                newChar = chr(self.chMap['f1'])
+                prompting = False
+            elif c in [curses.KEY_F2]:
+                newChar = chr(self.chMap['f2'])
+                PROMPting = False
+            elif c in [curses.KEY_F3]:
+                newChar = chr(self.chMap['f3'])
+                prompting = False
+            elif c in [curses.KEY_F4]:
+                newChar = chr(self.chMap['f4'])
+                prompting = False
+            elif c in [curses.KEY_F5]:
+                newChar = chr(self.chMap['f5'])
+                prompting = False
+            elif c in [curses.KEY_F6]:
+                newChar = chr(self.chMap['f6'])
+                prompting = False
+            elif c in [curses.KEY_F7]:
+                newChar = chr(self.chMap['f7'])
+                prompting = False
+            elif c in [curses.KEY_F8]:
+                newChar = chr(self.chMap['f8'])
+                prompting = False
+            elif c in [curses.KEY_F9]:
+                newChar = chr(self.chMap['f9'])
+                prompting = False
+            elif c in [curses.KEY_F10]:
+                newChar = chr(self.chMap['f10'])
+                prompting = False
+            elif c in [27, 13, curses.KEY_ENTER]:   # 27 = esc, 13 = enter, cancel
+                prompting = False
+            elif type(c) == str:    # Is a printable/unicode character
+                if c.isprintable():
+                    newChar = c
+                prompting = False
+            else:   # is an integer, but probably still a printable character
+                try:
+                    if chr(c).isprintable():
+                        newChar = chr(c)
+                        prompting = False
+                except:
+                    pass
+                pass
+        self.window.addstr(maxLines - 3, 0, "                                               ")
+        self.refresh()
+        if self.playing:
+            self.stdscr.nodelay(1)
+        return newChar
 
     def openDrawCharPicker(self):
         self.stdscr.nodelay(0)

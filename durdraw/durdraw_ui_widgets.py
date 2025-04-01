@@ -498,6 +498,7 @@ class StatusBar():
         editMenu.add_item("Delete Line", caller.delLine, "d", shortcut="esc-;")
         editMenu.add_item("Character Sets", caller.showCharSetPicker, "c", shortcut="esc-S")
         editMenu.add_item("Replace Color", caller.replaceColorUnderCursor, "e", shortcut="esc-L")
+        editMenu.add_item("Replace Character", caller.replaceCharUnderCursor, "h", shortcut="")
         editMenu.is_submenu = True
         editMenu.set_x(self.x - 1)
         editMenu.set_y(editMenuColumn)

@@ -281,6 +281,44 @@ class Movie():
                         found = True
                 line_num += 1
 
+    def search_and_replace_char(self, old_char: str, new_char: str, frange = None):
+        for frame in self.frames:
+            line_num = 0
+            while line_num < frame.sizeY:
+                col_num  = 0
+                #for col in line:
+                while col_num < frame.sizeX:
+                    if frame.content[line_num][col_num] == old_char:
+                        frame.content[line_num][col_num] = new_char
+                    col_num += 1
+                line_num += 1
+
+        if frange != None:  # apply to all frames in range
+            for frameNum in range(frange[0] - 1, frange[1]):
+            #for frame in self.frames:
+                frame = self.frames[frameNum]
+                line_num = 0
+                col_num = 0
+                while line_num < frame.sizeY:
+                    while col_num < frame.sizeX:
+                        if frame.content[line_num][col_num] == old_char:
+                            frame.content[line_num][col_num] = new_char
+                        col_num += 1
+                    line_num += 1
+                    col_num = 0
+        else:   # only apply to current frame
+            frame = self.currentFrame
+            line_num = 0
+            col_num = 0
+            while line_num < frame.sizeY:
+                while col_num < frame.sizeX:
+                    if frame.content[line_num][col_num] == old_char:
+                        frame.content[line_num][col_num] = new_char
+                    col_num += 1
+                line_num += 1
+                col_num = 0
+
+
     def search_and_replace(self, caller, search_str: str, replace_str: str):
         #search_list = list(search)
         found = False
