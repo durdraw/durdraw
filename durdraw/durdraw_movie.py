@@ -375,50 +375,93 @@ class Movie():
         return found    # should be false if execution reaches this point
 
 
-    def change_palette_16_to_256(self):
+    def change_palette_16_to_256(self, frame=None):
         # Convert from blue to bright white by reducing their value by 1
-        for frame in self.frames:
+        if frame:   # run it on just a frame.
             line_num = 0
             col_num = 0
             for line in frame.newColorMap:
                 for pair in line:
                     if pair[0] == 1:    # black
-                        pair[0] = 16
+                        frame.newColorMap[line_num][col_num][0] = 16
                     elif pair[0] == 16:    # bright white
-                        pair[0] = 15
+                        frame.newColorMap[line_num][col_num][0] = 15
                     elif pair[0] == 15:    # bright yellow
-                        pair[0] = 14
+                        frame.newColorMap[line_num][col_num][0] = 14
                     elif pair[0] == 14:    # bright purple
-                        pair[0] = 13
+                        frame.newColorMap[line_num][col_num][0] = 13
                     elif pair[0] == 13:    # bright red
-                        pair[0] = 12
+                        frame.newColorMap[line_num][col_num][0] = 12
                     elif pair[0] == 12:    # bright cyan
-                        pair[0] = 11
+                        frame.newColorMap[line_num][col_num][0] = 11
                     elif pair[0] == 11:    # bright green
-                        pair[0] = 10
+                        frame.newColorMap[line_num][col_num][0] = 10
                     elif pair[0] == 10:    # bright blue
-                        pair[0] = 9
+                        frame.newColorMap[line_num][col_num][0] = 9
                     elif pair[0] == 9:    # bright black
-                        pair[0] = 8
+                        frame.newColorMap[line_num][col_num][0] = 8
                     elif pair[0] == 8:    # grey
-                        pair[0] = 7
+                        frame.newColorMap[line_num][col_num][0] = 7
                     elif pair[0] == 7:    # brown
-                        pair[0] = 6
+                        frame.newColorMap[line_num][col_num][0] = 6
                     elif pair[0] == 6:    # purple
-                        pair[0] = 5
+                        frame.newColorMap[line_num][col_num][0] = 5
                     elif pair[0] == 5:    # red
-                        pair[0] = 4
+                        frame.newColorMap[line_num][col_num][0] = 4
                     elif pair[0] == 4:    # cyan
-                        pair[0] = 3
+                        frame.newColorMap[line_num][col_num][0] = 3
                     elif pair[0] == 3:    # green
-                        pair[0] = 2
+                        frame.newColorMap[line_num][col_num][0] = 2
                     elif pair[0] == 2:    # blue
-                        pair[0] = 1
+                        frame.newColorMap[line_num][col_num][0] = 1
                     # eliminate all BG colors for now. 0 = black in 256 color mode.
                     # bg 8 = black in 16 color mode. We do this because things get
                     # weird in 256 color mode with non-0 BG colors.
                     pair[1] = 0         
                     col_num += 1
+        else:   # run it on whole movie
+            for frame in self.frames:
+                line_num = 0
+                col_num = 0
+                for line in frame.newColorMap:
+                    for pair in line:
+                        if pair[0] == 1:    # black
+                            pair[0] = 16
+                        elif pair[0] == 16:    # bright white
+                            pair[0] = 15
+                        elif pair[0] == 15:    # bright yellow
+                            pair[0] = 14
+                        elif pair[0] == 14:    # bright purple
+                            pair[0] = 13
+                        elif pair[0] == 13:    # bright red
+                            pair[0] = 12
+                        elif pair[0] == 12:    # bright cyan
+                            pair[0] = 11
+                        elif pair[0] == 11:    # bright green
+                            pair[0] = 10
+                        elif pair[0] == 10:    # bright blue
+                            pair[0] = 9
+                        elif pair[0] == 9:    # bright black
+                            pair[0] = 8
+                        elif pair[0] == 8:    # grey
+                            pair[0] = 7
+                        elif pair[0] == 7:    # brown
+                            pair[0] = 6
+                        elif pair[0] == 6:    # purple
+                            pair[0] = 5
+                        elif pair[0] == 5:    # red
+                            pair[0] = 4
+                        elif pair[0] == 4:    # cyan
+                            pair[0] = 3
+                        elif pair[0] == 3:    # green
+                            pair[0] = 2
+                        elif pair[0] == 2:    # blue
+                            pair[0] = 1
+                        # eliminate all BG colors for now. 0 = black in 256 color mode.
+                        # bg 8 = black in 16 color mode. We do this because things get
+                        # weird in 256 color mode with non-0 BG colors.
+                        pair[1] = 0         
+                        col_num += 1
 
     def change_palette_256_to_16(self):
         # Convert from blue to bright white by reducing their value by 1
