@@ -3962,6 +3962,7 @@ class UserInterface():  # Separate view (curses) from this controller
             pass
         else:
             self.statusBar.animMenu.handler.panel.hide()
+        self.statusBar.animMenu.handler.panel.hide()
 
     def openCursorMenu(self):
         """ Show the status bar's menu for settings """
