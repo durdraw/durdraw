@@ -5,6 +5,7 @@
 import math
 from copy import deepcopy
 from durdraw.durdraw_movie import Frame  # Adjust import path as needed
+import pdb
 
 # Durdraw plugin format version
 durdraw_plugin_version = 1
@@ -23,6 +24,7 @@ opts = {
     "min color": 1,
     "max color": 255,
     "fill character": 'X',
+    "overwrite characters": True,
 }
 
 def transform_movie(mov, appState=None, opts=opts):
@@ -55,8 +57,13 @@ def transform_movie(mov, appState=None, opts=opts):
                 
                 # Map to color range (1 to max_color)
                 fg_color = int(min_color + (value + 1) * (max_color - 1) / 2)
-                frame.content[y][x] = opts['fill character'][0]  # Static char—color does the work
-                frame.newColorMap[y][x] = [fg_color, 0]  # Black bg
+                if opts['overwrite characters']:
+                    frame.content[y][x] = opts['fill character'][0]  # Static char—color does the work
+                    frame.newColorMap[y][x] = [fg_color, 0]  # Black bg
+                else:
+                    if frame.content[y][x] == ' ':
+                        frame.content[y][x] = opts['fill character'][0]  # Static char—color does the work
+                        frame.newColorMap[y][x] = [fg_color, 0]  # Black bg
         frame_num += 1
     return mov
 
