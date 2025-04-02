@@ -229,18 +229,30 @@ class UserInterface():  # Separate view (curses) from this controller
         for item in opts:
             # valid option types are probably 'int' 'float' and 'str':
             inputType = type(opts[item]).__name__
-            validInputTypes = ['int', 'float', 'str']
+            validInputTypes = ['int', 'float', 'str', 'bool']
             if inputType in validInputTypes:
                 validInput = False
                 while validInput == False:
                     self.clearStatusLine()
                     self.promptPrint(f"Plugin option {inputType}: {item} [{opts[item]}] ")
                     curses.echo()
-                    result = self.stdscr.getstr()
-                    if result.strip() == b'':
+                    if inputType == 'bool':
+                        result = chr(self.stdscr.getch())
+                    else:
+                        result = self.stdscr.getstr()
+                    if result.strip() == b'' or result.strip() == '':
                         # leave default - use presesd enter.
                         validInput = True
                         pass
+                    elif inputType == 'bool':
+                        if result.lower() == 'y':
+                            result = True
+                            opts[item] = result
+                            validInput = True
+                        elif result.lower() == 'n':
+                            result = False
+                            opts[item] = result
+                            validInput = True
                     # If plugin template expects a float, see if it's a float.
                     elif inputType == 'float':
                         try:
