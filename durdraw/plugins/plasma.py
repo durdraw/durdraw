@@ -4,6 +4,7 @@
 
 import math
 from copy import deepcopy
+from durdraw.durdraw_movie import Frame  # Adjust import path as needed
 
 # Durdraw plugin format version
 durdraw_plugin_version = 1
@@ -19,25 +20,28 @@ durdraw_plugin = {
 
 opts = {
     # Animation settings
-    "steps": 50,    # number of frames to generate
-    #"min color": 1,
+    "min color": 1,
     "max color": 255,
+    "fill character": 'X',
 }
 
 def transform_movie(mov, appState=None, opts=opts):
     """Creates a plasma effect with sine-based color waves across the canvas."""
-    mov.frames = []  # Clear for new frames
-    mov.frameCount = 0
     
     # Animation settings
-    steps = opts['steps']
+    low_frame = appState.playbackRange[0] - 1
+    high_frame = appState.playbackRange[1]
+    steps = high_frame - low_frame
+    frame_num = low_frame   # start low
+
     color_mode = appState.colorMode if appState else "16"  # Default to 16-color
     max_color = opts['max color'] if color_mode == "256" else 15  # Color range
-    #min_color = opts['min color']
-    min_color = 1
+    min_color = opts['min color']
+    #min_color = 1
     
     for step in range(steps):
-        frame = Frame(mov.sizeX, mov.sizeY)  # Fresh frame
+        #frame = Frame(mov.sizeX, mov.sizeY)  # Fresh frame
+        frame = mov.frames[frame_num]
         time = step / steps * 2 * math.pi  # Animation phase
         
         for y in range(mov.sizeY):
@@ -51,12 +55,9 @@ def transform_movie(mov, appState=None, opts=opts):
                 
                 # Map to color range (1 to max_color)
                 fg_color = int(min_color + (value + 1) * (max_color - 1) / 2)
-                frame.content[y][x] = 'X'  # Static char—color does the work
+                frame.content[y][x] = opts['fill character'][0]  # Static char—color does the work
                 frame.newColorMap[y][x] = [fg_color, 0]  # Black bg
-        
-        mov.addFrame(frame)
-    
+        frame_num += 1
     return mov
 
-from durdraw.durdraw_movie import Frame  # Adjust import path as needed
 

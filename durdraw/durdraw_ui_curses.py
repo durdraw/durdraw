@@ -267,7 +267,8 @@ class UserInterface():  # Separate view (curses) from this controller
                             validInput = True
                         else:
                             # If plugin is expecting a string, just pass it in.
-                            opts[item] = str(result)
+                            #opts[item] = str(result)
+                            opts[item] = result.decode()
                             validInput = True
                     else:
                         self.clearStatusLine()
