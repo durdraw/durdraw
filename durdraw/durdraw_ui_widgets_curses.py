@@ -136,7 +136,8 @@ class MenuHandler:
             self.panel.move(self.menuOriginLine, self.menu.y)
             self.panel.show()
         except: # The window was probably too short, so panel.move() returns ERR.
-            pdb.set_trace()
+            #pdb.set_trace()
+            curses_notify(self.window, f"Window too small to show the menu")
             curses_cursorOn()
             self.menu.hide()
             response = "Close"  # default thing to do when done, returned to menu wrapper
