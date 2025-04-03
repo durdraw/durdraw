@@ -23,8 +23,8 @@ opts = {
     # Animation settings
     "min color": 1,
     "max color": 255,
-    "fill character": 'X',
-    "overwrite characters": True,
+    "fill character": ':',
+    "overwrite characters": False,
 }
 
 def transform_movie(mov, appState=None, opts=opts):
