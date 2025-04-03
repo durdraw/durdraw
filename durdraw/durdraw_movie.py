@@ -154,6 +154,12 @@ class Movie():
         self.frameCount += 1
         return True
 
+    def insertFrame(self, frame):
+        """ takes a Frame object, inserts it after current frame """
+        self.frames.insert(self.currentFrameNumber, frame)
+        self.frameCount += 1
+        return True
+
     def addEmptyFrame(self):
         newFrame = Frame(self.sizeX, self.sizeY)
         self.frames.append(newFrame)
