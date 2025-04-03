@@ -27,8 +27,8 @@ opts = {
 def transform_movie(mov, appState=None, opts=opts):
     """Melts filled chars downward unevenly, piling into a puddle over 30 frames."""
     orig_frame = deepcopy(mov.frames[0])  # Frame to melt
-    mov.frames = []  # Clear for new frames
-    mov.frameCount = 0
+    #mov.frames = []  # Clear for new frames
+    #mov.frameCount = 0
     
     # Animation settings
     steps = opts['steps']
@@ -89,7 +89,8 @@ def transform_movie(mov, appState=None, opts=opts):
             frame.content[y][x] = char
             frame.newColorMap[y][x] = color
         
-        mov.addFrame(frame)
+        mov.insertFrame(frame)
+        mov.nextFrame()
     
     # Final frame: all in puddle
     final_frame = Frame(mov.sizeX, mov.sizeY)
@@ -101,7 +102,8 @@ def transform_movie(mov, appState=None, opts=opts):
             else:
                 final_frame.content[y][x] = ' '
                 final_frame.newColorMap[y][x] = [1, 0]
-    mov.addFrame(final_frame)
+    mov.insertFrame(final_frame)
+    mov.nextFrame()
     
     return mov
 
