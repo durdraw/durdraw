@@ -3955,7 +3955,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def openTransformMenu(self):
         #self.statusBar.mainMenu.handler.panel.show()
-        self.statusBar.animMenu.handler.panel.show()
+        #self.statusBar.animMenu.handler.panel.show()
         #response = self.statusBar.transformMenu.showHide()
         response = self.statusBar.transformMenu.show()
         if response == "Pop":
@@ -3966,12 +3966,22 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def openCursorMenu(self):
         """ Show the status bar's menu for settings """
-        self.statusBar.settingsMenu.handler.panel.show()
+        #self.statusBar.settingsMenu.handler.panel.show()
         response = self.statusBar.cursorMenu.showHide()
+        #self.statusBar.settingsMenu.handler.panel.hide()
+
+    def openThemesMenu(self):
+        """ Show the status bar's menu for settings """
+        self.statusBar.themesMenu.handler.panel.show()
+        response = self.statusBar.themesMenu.showHide()
         self.statusBar.settingsMenu.handler.panel.hide()
 
     def openSettingsMenu(self):
         """ Show the status bar's menu for settings """
+        # Rebuild the theme list
+        self.statusBar.initThemesMenu()
+        self.appState.loadThemeList(menu=self.statusBar.themesMenu)
+
         self.statusBar.mainMenu.handler.panel.show()
         response = self.statusBar.settingsMenu.showHide()
         self.statusBar.mainMenu.handler.panel.hide()

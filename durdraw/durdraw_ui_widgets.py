@@ -432,6 +432,7 @@ class StatusBar():
         settingsMenu.add_item("C64 Colors", caller.enableTrueC64Colors, "c")
         #settingsMenu.add_item("Deafult Colors", caller.resetColorsToDefault, "d")
         settingsMenu.add_item("Cursor Style", caller.openCursorMenu, "r", has_submenu=True)
+        settingsMenu.add_item("Themes", caller.openThemesMenu, "t", has_submenu=True)
         settingsMenu.add_item("Toggle Mouse", caller.toggleMouse, "m")
         settingsMenu.add_item("Toggle Color Scroll", caller.toggleColorScrolling, "s")
         settingsMenu.add_item("Toggle Wide Wrapping", caller.toggleWideWrapping, "w")
@@ -461,11 +462,13 @@ class StatusBar():
         self.cursorMenu = cursorMenu
 
 
+        self.initThemesMenu()
+
         # Transforms menu
         #transformMenuColumn = 24 # Try to place to the right of the main menu
         transformMenuColumn = 35 # Try to place to the right of the Animation menu
         transformMenu = Menu(self.window, x = self.x - 2, y = transformMenuColumn, caller=self, appState=self.appState, statusBar=self)
-        transformMenu.set_title("Deafult Plugins:")
+        transformMenu.set_title("Default Plugins:")
         #transformMenu.add_item("Bounce", caller.transform_bounce, "b")
         #transformMenu.add_item("Repeat", caller.transform_repeat, "r")
         #transformMenu.add_item("Reverse", caller.transform_reverse, "v")
@@ -692,6 +695,18 @@ class StatusBar():
         if self.caller.appState.showCharSetButton:
             self.buttons.append(charSetButton)
         # Add them to the items
+
+    def initThemesMenu(self):
+        themesMenuColumn = 45
+        themesMenu = Menu(self.window, x = self.x - 2, y = themesMenuColumn, caller=self, appState=self.appState, statusBar=self)
+        themesMenu.set_title("Themes:")
+        #themesMenu.add_item("Default", caller.do_nothing, "b")
+        themesMenu.is_submenu = True
+        #themesMenu.add_item("Show/Hide Sidebar", caller.toggleSideBar, "s")
+        themesMenu.set_x(self.x - 1)
+        themesMenu.set_y(themesMenuColumn)
+        self.themesMenu = themesMenu
+
 
     def hide(self):
         self.hidden = True

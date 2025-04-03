@@ -1,7 +1,9 @@
 import configparser
 import curses
+import glob
 import gzip
 import os
+import pathlib
 import pdb
 import pickle
 import subprocess
@@ -255,18 +257,43 @@ class AppState():
     def getLogger(self, name: str):
         return log.getLogger(name, level=self.log_level, filepath=self.log_filepath, local_tz=self.log_local_tz)
 
-    def loadThemeList(self):
+    def loadThemeList(self, menu=None):
         """ Look for theme files in internal durdraw directory """
-        # durhelp256_fullpath = pathlib.Path(__file__).parent.joinpath("help/durhelp-256-long.dur") 
         # Get a list of files from the themes paths
         internal_theme_path = pathlib.Path(__file__).parent.joinpath("themes/")
         self.internal_theme_file_list = glob.glob(f"{internal_theme_path}/*.dtheme.ini")
+        if self.colorMode == '256':
+            themeMode = 'Theme-256'
+        else:
+            themeMode = 'Theme-16'
         #user_theme_path = pathlib.Path(__file__).parent.joinpath("themes/")
         #self.user_theme_file_list = glob.glob(f"{user_theme_path}/*.dtheme.ini")
         # Turn lists into an index of Theme name, Theme type, and Path to 
-        theme_files = []   # populate with a list of dicts containing name=, path=, type=
+        self.internal_themes = []
+        #self.internal_theme_file_list = []
         for filename in self.internal_theme_file_list:
-            theme_files += filename
+            themeFileConfig = configparser.ConfigParser()
+            themeConfigsLoaded = themeFileConfig.read(filename)
+            if themeConfigsLoaded == []:
+                pass # could not find or load the theme file
+            else:
+                if themeMode in themeFileConfig.sections():
+                    theme = themeFileConfig[themeMode]
+                    if 'name' in theme:
+                        themeName = str(theme['name'])
+                        self.internal_themes.append({
+                            'name': themeName,
+                            'path': filename,
+                            'type': themeMode,   # 16 or 256 color
+                            })
+        if menu:    # populate with themes
+            for theme in self.internal_themes:
+                menu.add_item(
+                        theme['name'],
+                        lambda tf=theme['path']:
+                            self.loadThemeFile(tf, themeMode),
+                        "")
+            menu.handler.rebuild()
 
     def loadConfigFile(self):
         # Load configuration filea
