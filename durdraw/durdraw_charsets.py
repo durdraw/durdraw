@@ -1,4 +1,4 @@
-# Load character sets from files, initialize them 
+# Load character sets from files, initialize them
 
 import configparser
 import pdb
@@ -26,7 +26,7 @@ def hex_range_iterator(start_hex, end_hex):
         current_int += 1
 
 def parse_xml_blocks_file(xml_file_path):
-    """ laod XML file, returns block_data object, containing all the block
+    """ load XML file, returns block_data object, containing all the block
         names and their first and last code point (hex value)
      """
     block_data = {}
@@ -40,7 +40,7 @@ def parse_xml_blocks_file(xml_file_path):
         first_cp = block_element.get('first-cp')
         last_cp = block_element.get('last-cp')
         block_name = block_element.get('name')
-        
+
         if block_name is not None and first_cp is not None and last_cp is not None:
             block_data[block_name] = {
                 'first-cp': first_cp,
@@ -48,7 +48,7 @@ def parse_xml_blocks_file(xml_file_path):
             }
     return block_data
 
-# We can return a fullCharMap that looks like this: [ {'f1':\x1FB00, 
+# We can return a fullCharMap that looks like this: [ {'f1':\x1FB00,
 # 895         self.fullCharMap = [ \
 # 896             # All of our unicode templates live here. Blank template:
 # 897             #{'f1':, 'f2':, 'f3':, 'f4':, 'f5':, 'f6':, 'f7':, 'f8':, 'f9':, 'f10':},
@@ -159,7 +159,7 @@ def load_charmap_file(file_path: str, appState, setting=False):
             charMap.append(fKeyList.copy())
 
             blockNum += 1
-        else:   
+        else:
             # ran out of blocks. Stop searching.
             scanning = False
 

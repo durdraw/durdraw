@@ -8,7 +8,7 @@ Durdraw files store color text art (both animated and static) in a file format w
 
 The "contents" array contains strings, each one of which represents a line of ASCII or Utf-8 text in a frame of art. This can be thought of as a flat ASCII (or Unicode) art file which has been separated into lines, with each line stored as a string in the array.
 
-Similarly, colorMap contains an array of lines, wich each line containing a list of foreground and background color pairs. For example, the pair [1,0] represents blue text with a black background.
+Similarly, colorMap contains an array of lines, which each line containing a list of foreground and background color pairs. For example, the pair [1,0] represents blue text with a black background.
 
 Each element of the colorMap should coordinate with a corresponding line and column in the contents. For example, colorMap[2][3] should describe the foreground and background color for the character at contents[2][3], which is the character at Line 2, Column 3 of the given frame.
 

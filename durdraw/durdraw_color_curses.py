@@ -113,7 +113,7 @@ mirc_16_to_color_16 = {
     8: 15,  # br yellow
     #0: 16, # br white
 }
-    
+
 
 color_16_to_mirc_16 = {
     0: 0, # white
@@ -317,7 +317,7 @@ class AnsiArtStuff():
         pass
 
     def convert_colormap(self, mov, conv_table):
-        """ takes a dictionary that contains a coler mapper. 
+        """ takes a dictionary that contains a coler mapper.
             Modifies the movie
          """    # It might be better to deepclone and return a new movie...
         for frame in mov.frames:
@@ -333,7 +333,7 @@ class AnsiArtStuff():
                     #if pair[1] in conv_table.keys():
                     #    pair[1] = conv_table[pair[1]]
 
-        
+
     def initColorPairs_general(self, fg_count=256, bg_count=16, use_order=False):   # High color pairs, 256 color
         """ Initialize 256 color mode color pairs """
         self.colorPairMap = {}
@@ -444,7 +444,7 @@ class AnsiArtStuff():
             #self.colorPairMap.update({(curses.COLOR_YELLOW,bg):7})
             #curses.init_pair(7, curses.COLOR_WHITE, bg) # white - 7 (and 0)
             #self.colorPairMap.update({(curses.COLOR_WHITE,bg):8})
-            
+
 
             # basic ncurses colors - comments for these are durdraw internal color numbers:
             curses.init_pair(0, curses.COLOR_BLACK, defaultBg) # black - 0
@@ -462,7 +462,7 @@ class AnsiArtStuff():
                 }
 
 
-            # redo it fro scrarch:
+            # redo it from scratch:
             pair = 0
             #bg += 1
             bg = 0
@@ -600,7 +600,7 @@ class AnsiArtStuff():
         curses.init_pair(64, curses.COLOR_WHITE, curses.COLOR_WHITE)   # 8,7
         #curses.init_pair(64, defaultBg, curses.COLOR_RED)   # 8,7
         # ^ this doesn't work ?!@ ncurses pair # must be between 1 and 63
-        # or ncurses (const?) COLOR_PAIR - 1 
+        # or ncurses (const?) COLOR_PAIR - 1
         # fix is: have functions to swap color map from blackfg to normal.
         # call that function when drawing if the fg color == black, then switch back
         # after each character. Or.. keep track which map we're in in a variable.
@@ -609,9 +609,9 @@ class AnsiArtStuff():
              (0,0):1, (1,0):1, (2,0):2, (3,0):3, (4,0):4, (5,0):5, (6,0):6, (7,0):7, (8,0):8,
              # and again, because black == both 0 and 8. :| let's just ditch 0?
              (0,8):1, (1,8):1, (2,8):2, (3,8):3, (4,8):4, (5,8):5, (6,8):6, (7,8):7, (8,8):8,
-             # white with backround colors 
+             # white with background colors
              (1,1):9, (1,2):10, (1,3):11, (1,4):12, (1,5):13, (1,6):14, (1,7):15,
-             # cyan with backround colors 
+             # cyan with background colors
              (2,1):16, (2,2):17, (2,3):18, (2,4):19, (2,5):20, (2,6):21, (2,7):22,
              # magenta with background colors
              (3,1):23, (3,2):24, (3,3):25, (3,4):26, (3,5):27, (3,6):28, (3,7):29,
@@ -624,17 +624,17 @@ class AnsiArtStuff():
              # red with background colors
              (7,1):51, (7,2):52, (7,3):53, (7,4):54, (7,5):55, (7,6):56, (7,7):57,
              # black with background colors
-             (8,1):58, (8,2):59, (8,3):60, (8,4):61, (8,5):62, (8,6):63, 
+             (8,1):58, (8,2):59, (8,3):60, (8,4):61, (8,5):62, (8,6):63,
              #(8,7):57,  # 57 instead of 64, because we switch color maps for black
              # on red
-             (8,7):64, 
+             (8,7):64,
              # Again, this time with feeling
-             (0,1):58, (0,2):59, (0,3):60, (0,4):61, (0,5):62, (0,6):63, 
-             (0,7):57,  
+             (0,1):58, (0,2):59, (0,3):60, (0,4):61, (0,5):62, (0,6):63,
+             (0,7):57,
              # BRIGHT COLORS 9-16
-             # white with backround colors 
+             # white with background colors
              (9,0):1, (9,8):1, (9,1):9, (9,2):10, (9,3):11, (9,4):12, (9,5):13, (9,6):14, (9,7):15,
-             # cyan with backround colors 
+             # cyan with background colors
              (10,0):2, (10,8):2, (10,1):16, (10,2):17, (10,3):18, (10,4):19, (10,5):20, (10,6):21, (10,7):22,
              # magenta with background colors
              (11,0):3, (11,8):3, (11,1):23, (11,2):24, (11,3):25, (11,4):26, (11,5):27, (11,6):28, (11,7):29,
@@ -647,9 +647,9 @@ class AnsiArtStuff():
              # red with background colors
              (15,0):7, (15,8):7, (15,1):51, (15,2):52, (15,3):53, (15,4):54, (15,5):55, (15,6):56, (15,7):57,
              # black with background colors
-             (16,0):8, (16,8):8, (16,1):58, (16,2):59, (16,3):60, (16,4):61, (16,5):62, (16,6):63, 
+             (16,0):8, (16,8):8, (16,1):58, (16,2):59, (16,3):60, (16,4):61, (16,5):62, (16,6):63,
              #(16,7):57,  # 57 instead of 64, because we switch color maps for black
-             (16,7):64,  
+             (16,7):64,
              } # (fg,bg):cursespair
 
     def initColorPairs_cga_old(self):
@@ -730,7 +730,7 @@ class AnsiArtStuff():
        curses.init_pair(57, curses.COLOR_BLACK, curses.COLOR_RED)   # 8,7
        #curses.init_pair(64, curses.COLOR_BLACK, curses.COLOR_RED)   # 8,7
        # ^ this doesn't work ?!@ ncurses pair # must be between 1 and 63
-       # or ncurses (const?) COLOR_PAIR - 1 
+       # or ncurses (const?) COLOR_PAIR - 1
        # fix is: have functions to swap color map from blackfg to normal.
        # call that function when drawing if the fg color == black, then switch back
        # after each character. Or.. keep track which map we're in in a variable.
@@ -739,9 +739,9 @@ class AnsiArtStuff():
             (0,0):1, (1,0):1, (2,0):2, (3,0):3, (4,0):4, (5,0):5, (6,0):6, (7,0):7, (8,0):8,
             # and again, because black == both 0 and 8. :| let's just ditch 0?
             (0,8):1, (1,8):1, (2,8):2, (3,8):3, (4,8):4, (5,8):5, (6,8):6, (7,8):7, (8,8):8,
-            # white with backround colors 
+            # white with background colors
             (1,1):9, (1,2):10, (1,3):11, (1,4):12, (1,5):13, (1,6):14, (1,7):15,
-            # cyan with backround colors 
+            # cyan with background colors
             (2,1):16, (2,2):17, (2,3):18, (2,4):19, (2,5):20, (2,6):21, (2,7):22,
             # magenta with background colors
             (3,1):23, (3,2):24, (3,3):25, (3,4):26, (3,5):27, (3,6):28, (3,7):29,
@@ -754,13 +754,13 @@ class AnsiArtStuff():
             # red with background colors
             (7,1):51, (7,2):52, (7,3):53, (7,4):54, (7,5):55, (7,6):56, (7,7):57,
             # black with background colors
-            (8,1):58, (8,2):59, (8,3):60, (8,4):61, (8,5):62, (8,6):63, 
+            (8,1):58, (8,2):59, (8,3):60, (8,4):61, (8,5):62, (8,6):63,
             (8,7):57,  # 57 instead of 64, because we switch color maps for black
             # on red
             # BRIGHT COLORS 9-16
-            # white with backround colors 
+            # white with background colors
             (9,0):1, (9,8):1, (9,1):9, (9,2):10, (9,3):11, (9,4):12, (9,5):13, (9,6):14, (9,7):15,
-            # cyan with backround colors 
+            # cyan with background colors
             (10,0):2, (10,8):2, (10,1):16, (10,2):17, (10,3):18, (10,4):19, (10,5):20, (10,6):21, (10,7):22,
             # magenta with background colors
             (11,0):3, (11,8):3, (11,1):23, (11,2):24, (11,3):25, (11,4):26, (11,5):27, (11,6):28, (11,7):29,
@@ -773,7 +773,7 @@ class AnsiArtStuff():
             # red with background colors
             (15,0):7, (15,8):7, (15,1):51, (15,2):52, (15,3):53, (15,4):54, (15,5):55, (15,6):56, (15,7):57,
             # black with background colors
-            (16,0):8, (16,8):8, (16,1):58, (16,2):59, (16,3):60, (16,4):61, (16,5):62, (16,6):63, 
+            (16,0):8, (16,8):8, (16,1):58, (16,2):59, (16,3):60, (16,4):61, (16,5):62, (16,6):63,
             (16,7):57,  # 57 instead of 64, because we switch color maps for black
             } # (fg,bg):cursespair
 
@@ -867,9 +867,9 @@ class AnsiArtStuff():
             (0,0):1, (1,0):1, (2,0):2, (3,0):3, (4,0):4, (5,0):5, (6,0):6, (7,0):7, (8,0):8,
             # and again, because black == both 0 and 8. :| let's just ditch 0?
             (0,8):1, (1,8):1, (2,8):2, (3,8):3, (4,8):4, (5,8):5, (6,8):6, (7,8):7, (8,8):8,
-            # white with backround colors
+            # white with background colors
             (1,1):9, (1,2):10, (1,3):11, (1,4):12, (1,5):13, (1,6):14, (1,7):15,
-            # cyan with backround colors
+            # cyan with background colors
             (2,1):16, (2,2):17, (2,3):18, (2,4):19, (2,5):20, (2,6):21, (2,7):22,
             # magenta with background colors
             (3,1):23, (3,2):24, (3,3):25, (3,4):26, (3,5):27, (3,6):28, (3,7):29,
@@ -886,7 +886,7 @@ class AnsiArtStuff():
             (8,7):57,  # 57 instead of 64, because we switch color maps for black
             # on red
             # BRIGHT COLORS 9-16
-            # white with backround colors
+            # white with background colors
             (9,0):1, (9,8):1, (9,1):9, (9,2):10, (9,3):11, (9,4):12, (9,5):13, (9,6):14, (9,7):15,
             # cyan with backround colors
             (10,0):2, (10,8):2, (10,1):16, (10,2):17, (10,3):18, (10,4):19, (10,5):20, (10,6):21, (10,7):22,
@@ -904,5 +904,3 @@ class AnsiArtStuff():
             (16,0):8, (16,8):8, (16,1):58, (16,2):59, (16,3):60, (16,4):61, (16,5):62, (16,6):63,
             (16,7):57,  # 57 instead of 64, because we switch color maps for black
             } # (fg,bg):cursespair
-
-

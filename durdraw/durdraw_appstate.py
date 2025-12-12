@@ -7,7 +7,7 @@ import pickle
 import subprocess
 import sys
 import threading
-from sys import version_info 
+from sys import version_info
 from durdraw.durdraw_options import Options
 import durdraw.durdraw_file as durfile
 import durdraw.durdraw_sauce as dursauce
@@ -31,11 +31,11 @@ class AppState():
         self.stop_event = threading.Event()
         self.bg_download_thread = None
         self.bg_download_executor = None
-        # String containnig updates from threads to tell users about
-        self.thread_update_string = None 
+        # String containing updates from threads to tell users about
+        self.thread_update_string = None
         self.pool_executor = None
 
-        # User friendly defeaults
+        # User friendly defaults
         self.quickStart = False
         self.mental = False # Mental mode - enable experimental options/features
         self.showStartupScreen = False
@@ -48,10 +48,10 @@ class AppState():
         self.maxColors = 256
         self.iceColors = False
 
-        # 16c stuff 
+        # 16c stuff
         self.sixteenc_available = True # Enabled if 16colo.rs browsing is available
         self.sixteenc_browsing = False   # Enabled if we are currently browsing 16c
-        self.sixteenc_dizcache = {} # {"packname": dizdata} 
+        self.sixteenc_dizcache = {} # {"packname": dizdata}
         self.sixteenc_cached_years = [] # [1996, etc]
         self.sixteenc_api = None
         self.sixteenc_year = None
@@ -154,8 +154,8 @@ class AppState():
         self.sideBar_minimum_width_256 = 37 # Must have this much width to draw sidebar. Actually it's the colorBar width.
         self.sideBar_minimum_width_16 = 12 # Must have this much width to draw sidebar. Actually it's the colorBar width.
         self.bottomBar_minimum_height = 10  # same as above, but for height
-        self.bottomBar_minimum_height_256 = 10 
-        self.bottomBar_minimum_height_16 = 4 
+        self.bottomBar_minimum_height_256 = 10
+        self.bottomBar_minimum_height_16 = 4
         self.colorBar_height = 8
         self.sideBarShowing = False
         self.themesEnabled = True
@@ -255,13 +255,13 @@ class AppState():
 
     def loadThemeList(self):
         """ Look for theme files in internal durdraw directory """
-        # durhelp256_fullpath = pathlib.Path(__file__).parent.joinpath("help/durhelp-256-long.dur") 
+        # durhelp256_fullpath = pathlib.Path(__file__).parent.joinpath("help/durhelp-256-long.dur")
         # Get a list of files from the themes paths
         internal_theme_path = pathlib.Path(__file__).parent.joinpath("themes/")
         self.internal_theme_file_list = glob.glob(f"{internal_theme_path}/*.dtheme.ini")
         #user_theme_path = pathlib.Path(__file__).parent.joinpath("themes/")
         #self.user_theme_file_list = glob.glob(f"{user_theme_path}/*.dtheme.ini")
-        # Turn lists into an index of Theme name, Theme type, and Path to 
+        # Turn lists into an index of Theme name, Theme type, and Path to
         theme_files = []   # populate with a list of dicts containing name=, path=, type=
         for filename in self.internal_theme_file_list:
             theme_files += filename
@@ -275,7 +275,7 @@ class AppState():
         readConfigPaths = configFile.read(configFileLocations)
         if self.configFile == []:
             self.configFileLoaded = False
-            return False 
+            return False
         else:
             self.configFileName = readConfigPaths
             self.configFile = configFile
@@ -432,6 +432,3 @@ class AppState():
         #    self.hasHelpFile = False
         #    self.helpMov = None
         #    return False
-
-
-

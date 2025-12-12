@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 
+#!/usr/bin/env python3
 
 # Theory of operation notes:
 # A code starts with '\x1B[' or ^[ and ends with a LETTER.
@@ -62,7 +62,7 @@ color_name_to_durcolor_table = {
     'Magenta': 6,
     'Cyan': 4,
     'White': 8,
-    
+
     'Black': 00,
     'Red': 00,
     'Green': 00,
@@ -150,7 +150,7 @@ def get_width_and_height_of_ansi_blob(text, width=80):
                 if len(escape_sequence) == 0:
                     escape_sequence = '0'   # default - clear from cursor to end
                 if escape_sequence == '2':  # cls, move to top left
-                    # using a sledgehammer to claer the screen
+                    # using a sledgehammer to clear the screen
                     #new_frame = durmovie.Frame(width, height + 1)
                     col_num, line_num = 0, 0
                 i = end_index + 1   # move on to next byte
@@ -173,7 +173,7 @@ def get_width_and_height_of_ansi_blob(text, width=80):
             pass    # pfft
         elif text[i:i + 5] == 'SAUCE' and len(text) - i == 128:   # SAUCE record found
             i += 128
-            # Wee, I'm flying
+            # Whee, I'm flying
         else:   # printable character (hopefully)
             if col_num == width:
                 col_num = 0
@@ -188,7 +188,7 @@ def get_width_and_height_of_ansi_blob(text, width=80):
     return width, height
 
 def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, console=False, debug=False, convert_control_codes=True, maxWidth=80):
-    """ Take an ANSI file blob, load it into a DUR frame object, return 
+    """ Take an ANSI file blob, load it into a DUR frame object, return
         frame """
     sauce = None
 
@@ -302,11 +302,11 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
                             code += 60  # 30 -> 90, etc, for DOS-style bright colors that use bold
                             #bold = False
                         if appState.colorMode == "256":
-                            fg_color = dur_ansilib.ansi_code_to_dur_16_color[str(code)] 
+                            fg_color = dur_ansilib.ansi_code_to_dur_16_color[str(code)]
                         else:
                             #if bold:
                             #    code += 60  # 30 -> 90, etc, for DOS-style bright colors that use bold
-                            fg_color = dur_ansilib.ansi_code_to_dur_16_color[str(code)] 
+                            fg_color = dur_ansilib.ansi_code_to_dur_16_color[str(code)]
                             #if bold:
                             #    fg_color += 8
                         # fix for durdraw color pair stupidity
@@ -341,14 +341,14 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
                         else:
                             fg_color = 1
                     # 256 Colors
-                #if console:    
+                #if console:
                 #    print(str(escape_codes), end="")
 
                 # Add color to color map
                 try:
                     new_frame.newColorMap[line_num][col_num] = [fg_color, bg_color]
                 except Exception as E:
-                    if console:    
+                    if console:
                         print(str(E))
                         print(f"line num: {line_num}")
                 i = end_index + 1
@@ -411,7 +411,7 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
                 if len(escape_sequence) == 0:
                     escape_sequence = '0'   # default - clear from cursor to end
                 if escape_sequence == '2':  # cls, move to top left
-                    # using a sledgehammer to claer the screen
+                    # using a sledgehammer to clear the screen
                     new_frame = durmovie.Frame(width, height + 1)
                     col_num, line_num = 0, 0
                 i = end_index + 1   # move on to next byte
@@ -476,11 +476,11 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
                 parse_error = True
                 if debug:
                     caller.notify(f"Error writing color. Width: {width}, Height: {height}, line: {line_num}, col: {col_num}, pos: {i}")
-           # if console:    
+           # if console:
            #     print(character, end='')
             col_num += 1
         i += 1
-    if console:    
+    if console:
         print("")
         print(f"Lines: {line_num}, Columns: {max_col}")
     if parse_error and appState.debug:
@@ -517,5 +517,3 @@ if __name__ == "__main__":
         print(str(newFrame))
         #print(parsed_text)
         #print(f"Fg: {fg}, bg: {bg}")
-
-

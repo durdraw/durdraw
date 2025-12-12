@@ -4,7 +4,7 @@ Durdraw
                   __                __
                 _|  |__ __ _____ __|  |_____ _____ __ __ __
                / _  |  |  |   __|  _  |   __|  _  |  |  |  |\
-              /_____|_____|__|__|_____|__|___\____|________| | 
+              /_____|_____|__|__|_____|__|___\____|________| |
               \_____________________________________________\|  v 0.29.0
 
 ![durdraw-0 28-demo](https://github.com/user-attachments/assets/3bdb0c46-7f21-4514-9b48-ac00ca62e68e)
@@ -44,7 +44,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 
 1. `ansilove`
 
-    For PNG and animated GIF export, please install `ansilove` (https://ansilove.org/) and make sure it is is in your path.   
+    For PNG and animated GIF export, please install `ansilove` (https://ansilove.org/) and make sure it is in your path.
     _PNG and GIF export only works in 16-color mode for now, and only with CP437 compatible characters._
 
 2. `neofetch`
@@ -411,7 +411,7 @@ menuBorderColor: 24
 
 #### Custom Character Sets
 
-You can create custom character set files and place them in the ~/.durdraw/charsets folder. Character set files must have the file nme extension .ini. Durdraw will automatically scan for these files and include them in the list of character sets (esc-S).
+You can create custom character set files and place them in the ~/.durdraw/charsets folder. Character set files must have the file name extension .ini. Durdraw will automatically scan for these files and include them in the list of character sets (esc-S).
 
 An example character set file is provided in example-charset.ini:
 
@@ -561,7 +561,7 @@ A: Look in your terminal setting for "Use bright colors for bold," or a similarl
 #### Q: Some or all of the F1-F10 keys do not work for me! What can I do?
 A: You can use ESC-1 through ESC-0 as a replacement for F1-F10. Some terminals will map this to Alt-1 through Alt-0. You can also use the following settings in some terminals to enable the F1-F10 keys:
 
-- **GNOME Terminal**: **Click**: Menu -> Edit -> Preferences -> General, and **uncheck** the box: 
+- **GNOME Terminal**: **Click**: Menu -> Edit -> Preferences -> General, and **uncheck** the box:
 
   - [ ] Enable the menu accelerator key (F10 by default)
 
@@ -624,7 +624,7 @@ If you are feeling really old school, you can try the #durdraw IRC channel on ir
 Durdraw is what it is thanks to the following people:
 
 - Sam Foster - Creator, primary developer
-- Tom McKeesick - Performnace enhancements, documentation formatting
+- Tom McKeesick - Performance enhancements, documentation formatting
 - Alex Myczko - Man page, Debian ambassador
 - sigurdo - Cursor shapes, command-line ANSI export
 - yumpyy - Dockerfile
@@ -641,4 +641,3 @@ Durdraw is Copyright (c) 2009-2025 Sam Foster <samfoster@gmail.com>. All rights 
 The BSD Daemon is Copyright 1988 by Marshall Kirk McKusick.
 
 This software is distributed under the BSD 3-Clause License. See LICENSE file for details.
-
