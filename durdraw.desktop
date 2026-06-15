@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Durdraw
+Exec=durdraw
+Icon=durdraw
+Terminal=true
+Categories=Graphics;
+Comment=Versatile ASCII and ANSI Art text editor for drawing in terminal
