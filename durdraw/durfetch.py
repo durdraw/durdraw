@@ -86,13 +86,15 @@ def main():
     parser.add_argument("-V", "--version", help="Show Version information and quit", action="store_true")
     #parser.add_argument("-l", nargs="?", default="list")
     args = parser.parse_args()
-    use_fetcher = "neofetch"
-    if neofetcher.fetcher_available(name=use_fetcher):
-        print("Pulling data from neofetch.")
-        neofetch_data = neofetcher.run()
+    if (fetcher := neofetcher.find_available_fetcher()):
+        print(f"Pulling data from {fetcher}.")
+        fetch_data = neofetcher.run(fetcher)
         print("done.")
     else:
-        print(f"Error: Durfetch requires {use_fetcher}. Please make sure \"{use_fetcher}\" is installed and in the PATH.")
+        print("Error: Durfetch requires one of the following fetchers:")
+        for fetcher in neofetcher.od_fetchers.keys():
+            print(f"   -> {fetcher}")
+        print("Please make sure one of the above is installed and in the PATH.")
         exit(1)
     #print(args.filename, args.list, args.l, neofetch_data)
     #if args.filename == None:   # no file name passed, so pick an appropriate one.
@@ -111,9 +113,9 @@ def main():
             exit(1)
     elif args.filename == []:   # no file name passed, so pick an appropriate one.
         if args.rand:   # don't prefix path, cuz all_dur_files() already did it
-            filename = [auto_load_file(neofetch_data, rand=args.rand, fake_os=faked)]
+            filename = [auto_load_file(fetch_data, rand=args.rand, fake_os=faked)]
         else:
-            filename = [get_internal_durf_path() + "/" + auto_load_file(neofetch_data, fake_os=faked)]
+            filename = [get_internal_durf_path() + "/" + auto_load_file(fetch_data, fake_os=faked)]
     else:
         filename = args.filename
     #print(filename)
