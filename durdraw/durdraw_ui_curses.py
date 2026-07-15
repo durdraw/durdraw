@@ -3928,6 +3928,7 @@ class UserInterface():  # Separate view (curses) from this controller
         curses.noecho()
 
     def verySafeQuit(self): # non-interactive part.. close out curses screen and exit.
+        self.disableMouseReporting()
         curses.nocbreak()
         self.stdscr.keypad(0)
         curses.echo()
