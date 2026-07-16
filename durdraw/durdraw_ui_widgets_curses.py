@@ -82,8 +82,9 @@ class MenuHandler:
                 width = titleWidth
         self.width = width
         self.x = self.menu.x - height
+        if self.x < 0:
+            self.x = 0
         self.curses_win = curses.newwin(height, width, self.x, self.y)
-        #self.curses_win.border()
         line = 1
         if self.title:
             line += 1
