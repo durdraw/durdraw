@@ -50,7 +50,7 @@ def run(fetcher=""):
     # ignore parent process so fastfetch correctly determines the shell
     env = os.environ.copy()
     env['FFTS_IGNORE_PARENT'] = '1'
-    fetch_output = subprocess.check_output(od_fetchers[fetcher], env=env).decode()
+    fetch_output = subprocess.check_output(od_fetchers[fetcher], env=env).decode(errors='replace')
     fetch_lines = fetch_output.split('\n')[2:]
     # Parse the fetch output into fetch_results{}
     for line in fetch_lines:
