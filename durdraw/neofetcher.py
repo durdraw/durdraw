@@ -12,7 +12,7 @@ neo_keys = ['OS', 'Host', 'Kernel', 'Uptime', 'Packages', 'Shell', 'Resolution',
 # dictionary order determines cmd priority if multiple are present
 od_fetchers = OrderedDict({
     "fastfetch": ["fastfetch", "--pipe", "-l", "none"],
-    "neofetch": ["neofetch", "--stdout"],
+    "neofetch": ["neofetch", "--stdout", "--config", "none"],
 })
 
 def strip_escape_codes(text):
