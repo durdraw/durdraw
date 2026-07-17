@@ -3966,15 +3966,18 @@ class UserInterface():  # Separate view (curses) from this controller
         self.statusBar.animMenu.handler.panel.hide()
 
     def openCursorMenu(self):
-        """ Show the status bar's menu for settings """
         #self.statusBar.settingsMenu.handler.panel.show()
         response = self.statusBar.cursorMenu.showHide()
         #self.statusBar.settingsMenu.handler.panel.hide()
 
     def openThemesMenu(self):
-        """ Show the status bar's menu for settings """
         self.statusBar.themesMenu.handler.panel.show()
         response = self.statusBar.themesMenu.showHide()
+        self.statusBar.settingsMenu.handler.panel.hide()
+
+    def openUserThemesMenu(self):
+        self.statusBar.userThemesMenu.handler.panel.show()
+        response = self.statusBar.userThemesMenu.showHide()
         self.statusBar.settingsMenu.handler.panel.hide()
 
     def openSettingsMenu(self):
@@ -3982,6 +3985,8 @@ class UserInterface():  # Separate view (curses) from this controller
         # Rebuild the theme list
         self.statusBar.initThemesMenu()
         self.appState.loadThemeList(menu=self.statusBar.themesMenu)
+        self.appState.loadThemeList(menu=self.statusBar.userThemesMenu,
+                                    path="~/.durdraw/")
 
         self.statusBar.mainMenu.handler.panel.show()
         response = self.statusBar.settingsMenu.showHide()

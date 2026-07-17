@@ -257,11 +257,14 @@ class AppState():
     def getLogger(self, name: str):
         return log.getLogger(name, level=self.log_level, filepath=self.log_filepath, local_tz=self.log_local_tz)
 
-    def loadThemeList(self, menu=None):
+    def loadThemeList(self, menu=None, path=None):
         """ Look for theme files in internal durdraw directory """
         # Get a list of files from the themes paths
-        internal_theme_path = pathlib.Path(__file__).parent.joinpath("themes/")
-        self.internal_theme_file_list = glob.glob(f"{internal_theme_path}/*.dtheme.ini")
+        if not path:    # scan for internal themes if no path is specified
+            theme_path = pathlib.Path(__file__).parent.joinpath("themes/")
+        else:
+            theme_path = os.path.expanduser("~/.durdraw/themes/")
+        self.internal_theme_file_list = glob.glob(f"{theme_path}/*.dtheme.ini")
         if self.colorMode == '256':
             themeMode = 'Theme-256'
         else:

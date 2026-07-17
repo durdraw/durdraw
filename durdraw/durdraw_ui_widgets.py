@@ -433,6 +433,7 @@ class StatusBar():
         #settingsMenu.add_item("Deafult Colors", caller.resetColorsToDefault, "d")
         settingsMenu.add_item("Cursor Style", caller.openCursorMenu, "r", has_submenu=True)
         settingsMenu.add_item("Themes", caller.openThemesMenu, "t", has_submenu=True)
+        settingsMenu.add_item("User Themes", caller.openUserThemesMenu, "u", has_submenu=True)
         settingsMenu.add_item("Toggle Mouse", caller.toggleMouse, "m")
         settingsMenu.add_item("Toggle Color Scroll", caller.toggleColorScrolling, "s")
         settingsMenu.add_item("Toggle Wide Wrapping", caller.toggleWideWrapping, "w")
@@ -697,6 +698,7 @@ class StatusBar():
         # Add them to the items
 
     def initThemesMenu(self):
+        # system themes
         themesMenuColumn = 45
         themesMenu = Menu(self.window, x = self.x - 2, y = themesMenuColumn, caller=self, appState=self.appState, statusBar=self)
         themesMenu.set_title("Themes:")
@@ -706,6 +708,14 @@ class StatusBar():
         themesMenu.set_x(self.x - 1)
         themesMenu.set_y(themesMenuColumn)
         self.themesMenu = themesMenu
+        # user themes
+        userThemesMenuColumn = 45
+        userThemesMenu = Menu(self.window, x = self.x - 2, y = userThemesMenuColumn, caller=self, appState=self.appState, statusBar=self)
+        userThemesMenu.set_title("User Themes:")
+        userThemesMenu.is_submenu = True
+        userThemesMenu.set_x(self.x - 1)
+        userThemesMenu.set_y(userThemesMenuColumn)
+        self.userThemesMenu = userThemesMenu
 
 
     def hide(self):
