@@ -60,6 +60,7 @@ You can install `durdraw` via several methods:
 - [Via OS Repositories](#via-os-repositories)
 - [Via Source Repository](#via-source-repository)
 - [Via pip](#via-pip)
+- [Via Nix Flakes](#via-nix-flakes)
 
 After installing, you should be able to run `durdraw`. Press `esc-h` for help, or try `durdraw --help` for [command-line options](#command-line-usage).
 
@@ -106,7 +107,7 @@ If you're using Nix with flakes enabled, you can install Durdraw in several ways
 1. Run directly using `nix run`:
 
 ```shell
-nix run github:cmang/durdraw
+nix run github:durdraw/durdraw
 ```
 
 2. Add to your NixOS configuration:
@@ -114,7 +115,7 @@ nix run github:cmang/durdraw
 ```nix
 {
   inputs = {
-    durdraw.url = "github:cmang/durdraw";
+    durdraw.url = "github:durdraw/durdraw";
   };
 
   outputs = { self, durdraw, ... }: {
@@ -134,7 +135,7 @@ nix run github:cmang/durdraw
 3. For development, you can enter a development shell with:
 
 ```shell
-nix develop github:cmang/durdraw
+nix develop github:durdraw/durdraw
 ```
 
 The Nix package includes all required dependencies including `neofetch` and `ansilove` for full functionality.
