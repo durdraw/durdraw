@@ -47,7 +47,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
     For PNG and animated GIF export, please install `ansilove` (https://ansilove.org/) and make sure it is is in your path.   
     _PNG and GIF export only works in 16-color mode for now, and only with CP437 compatible characters._
 
-2. `neofetch`
+2. `fastfetch` or `neofetch`
 
     For [durfetch](#durfetch) support, please install `neofetch` and place it in your path.
 
@@ -81,14 +81,6 @@ _If you just want to run it without installing, see [Running Without Installing]
     ```shell
     python3 -m pip install --upgrade .
     ```
-
-3. Optionally, install some themes and a sample configuration file for your local user into `~/.durdraw/`:
-
-    ```shell
-    ./installconf.sh
-    ```
-    This will place durdraw.ini into `~/.durdraw/` and the themes into `~/.durdraw/themes/`.
-
 
 ### Via pip
 
@@ -292,7 +284,7 @@ FG:██              (1/21)  [Dur..] <F1░F2▒F3▓F4█F5▀F6▄F7▌F8▐
 - [Theme Options](#theme-options)
 - [Custom Character Sets](#custom-character-sets)
 
-You can create a custom startup file where you can set a theme and other options.
+You can create a custom startup file in ~/.durdraw/durdraw.ini where you can set a theme and other options.
 
 > If you did not already do so during installation, you can install a sample configuration (_See step 3 under[Installation via Source Repository](#via-source-repository)_)
 
