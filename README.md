@@ -334,7 +334,7 @@ You can place theme files in ~/.durdraw/themes/ and they will appear in the Sett
 
 While running Durdraw you can switch themes under Settings -> Themes and Settings -> User Themes.
 
-To set a default theme, you can place the following in your ~/.durdraw/settings.ini file:
+To set a default theme, you can place the following in your ~/.durdraw/durdraw.ini file:
 
 ```ini
 [Theme]
