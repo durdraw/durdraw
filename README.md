@@ -29,7 +29,9 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
   - [Command Line](#command-line)
   - [Interactive Usage/Editing](#interactive-usageediting)
   - [Configuration](#configuration)
+  - [Themes](#themes)
 - [Durfetch](#durfetch)
+- [Durview](#durview)
 - [FAQ](#faq)
 - [Other](#other)
 
@@ -49,7 +51,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 
 2. `fastfetch` or `neofetch`
 
-    For [durfetch](#durfetch) support, please install `neofetch` and place it in your path.
+    For [durfetch](#durfetch) support, please install `fastfetch` or `neofetch` and place it in your path.
 
 ## Installation
 
@@ -312,8 +314,8 @@ Here is an example `durdraw.ini` file, showing the available options:
 ;scroll-colors: True
 
 [Theme]
-theme-16: ~/.durdraw/themes/mutedchill-16.dtheme.ini
-theme-256: ~/.durdraw/themes/mutedform-256.dtheme.ini
+;theme-16: ~/.durdraw/themes/mutedchill-16.dtheme.ini
+;theme-256: ~/.durdraw/themes/mutedform-256.dtheme.ini
 
 [Logging]
 ; filepath is the path to the log file. Default is ./durdraw.log
@@ -326,9 +328,23 @@ theme-256: ~/.durdraw/themes/mutedform-256.dtheme.ini
 ;local-tz: False
 ```
 
+#### Themes
+
+You can place theme files in ~/.durdraw/themes/ and they will appear in the Settings -> User Themes menu.
+
+While running Durdraw you can switch themes under Settings -> Themes and Settings -> User Themes.
+
+To set a default theme, you can place the following in your ~/.durdraw/settings.ini file:
+
+```ini
+[Theme]
+theme-16: ~/.durdraw/themes/mutedchill-16.dtheme.ini
+theme-256: ~/.durdraw/themes/mutedform-256.dtheme.ini
+```
+
 The option `'theme-16'` sets the path to the theme file used in 16-color mode, and `'theme-256'` sets the theme file used for 256-color mode.
 
-You can also load a custom theme file using the `--theme` command-line argument and passing it the path to a theme file, or disable themes entirely with the `--notheme` command line option.
+You can also load a custom theme file using the `--theme` command-line argument and passing it the path to a theme file.
 
 #### Example Themes
 
@@ -442,11 +458,7 @@ f10:
 
 ## Durfetch
 
-`durfetch` is a program which acts like a fetcher. It uses Neofetch to obtain system statistics and requires that Neofetch be found in the path. You can put keys in your `.dur` files which `durfetch` will replace with values from Neofetch. You can also use built-in example animations.
-
-Note that this feature is in beta, and is far from perfect, but it can be fun to play with. If anyone wants to improve `durfetch`, please feel free.
-
-Keys will only be replaced if there is enough room in the art for the replacement value.
+`durfetch` is a program which acts like a fetcher. It uses Fastfetch or Neofetch to obtain system statistics and requires that Fastfetch or Neofetch be found in the path. You can put keys in your `.dur` files which `durfetch` will replace with values from Neofetch. You can also use built-in example animations.
 
 The following values can be used in your art and automatically interpreted by `durfetch`:
 
@@ -500,19 +512,9 @@ Here are some `durfetch` examples:
 |-|-|
 | ![tux-fetch-colors](https://github.com/user-attachments/assets/4010d18a-1b79-4594-a9cd-17234584f3c8) | ![unixy3](https://github.com/user-attachments/assets/812514d4-0216-4f41-8384-84563fa664b7) |
 
-## Experimental Features
+## Durview
 
-To enable an external feature, use an ENV var listed below in front of a `durdraw` command, e.g.
-
-```shell
-ENABLE_UNDO_TEMPFILES=1 durdraw animation.dur
-```
-
-The following list of features are experimental and may not work as expected:
-
-```shell
-ENABLE_UNDO_TEMPFILES=1 # store undo history using python the `tmpfile` lib instead of memory
-```
+`durview` is an ANSI artpack viewer somewhat reminiscent of AcidView.  By default it connects to https://16colo.rs and lets you browse archived ANSI art scene art packs by year.  It can also view local ANSI, ASCII, DIZ, NFO and DUR files.
 
 ## Development
 
