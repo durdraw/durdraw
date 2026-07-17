@@ -105,6 +105,46 @@ python3 -m pip install 'git+https://github.com/cmang/durdraw@0.28.0'
 python3 -m pip install 'git+https://github.com/cmang/durdraw@dev'
 ```
 
+### Via Nix Flakes
+
+If you're using Nix with flakes enabled, you can install Durdraw in several ways:
+
+1. Run directly using `nix run`:
+
+```shell
+nix run github:cmang/durdraw
+```
+
+2. Add to your NixOS configuration:
+
+```nix
+{
+  inputs = {
+    durdraw.url = "github:cmang/durdraw";
+  };
+
+  outputs = { self, durdraw, ... }: {
+    # For your system configuration:
+    environment.systemPackages = [
+      durdraw.packages.${system}.default
+    ];
+
+    # Or for your home-manager configuration:
+    home.packages = [
+      durdraw.packages.${system}.default
+    ];
+  };
+}
+```
+
+3. For development, you can enter a development shell with:
+
+```shell
+nix develop github:cmang/durdraw
+```
+
+The Nix package includes all required dependencies including `neofetch` and `ansilove` for full functionality.
+
 ### Running Without Installing
 
 You can run Durdraw with:
