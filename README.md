@@ -74,7 +74,7 @@ _If you just want to run it without installing, see [Running Without Installing]
 1. Download and extract, or use git to download:
 
     ```shell
-    git clone https://github.com/cmang/durdraw.git
+    git clone https://github.com/durdraw/durdraw.git
     cd durdraw
     ```
 
@@ -90,13 +90,13 @@ Alternatively, you can install the pip package pip directly (_Please note that t
 
 ```shell
 # install `master` branch version:
-python3 -m pip install 'git+https://github.com/cmang/durdraw'
+python3 -m pip install 'git+https://github.com/durdraw/durdraw'
 
 # install specific version:
-python3 -m pip install 'git+https://github.com/cmang/durdraw@0.28.0'
+python3 -m pip install 'git+https://github.com/durdraw/durdraw@0.28.0'
 
 # install `dev` branch version:
-python3 -m pip install 'git+https://github.com/cmang/durdraw@dev'
+python3 -m pip install 'git+https://github.com/durdraw/durdraw@dev'
 ```
 
 ### Via Nix Flakes
@@ -575,7 +575,7 @@ pytest -vv test/
 ## FAQ
 
 #### Q: Durdraw crashed! What do I do?
-A: Oh no! I am sorry and hope nothing important was lost. But you can help fix it. Please take a screenshot of the crash and post it as a bug report at https://github.com/cmang/durdraw/issues/. Please try to describe what you were trying to do when it happened, and if possible, include the name of your terminal, OS and Python version. I will do my best to try to fix it ASAP. Your terminal will probably start acting weird if Durdraw crashed. You can usually fix it by typing "reset" and pressing enter.
+A: Oh no! I am sorry and hope nothing important was lost. But you can help fix it. Please take a screenshot of the crash and post it as a bug report at https://github.com/durdraw/durdraw/issues/. Please try to describe what you were trying to do when it happened, and if possible, include the name of your terminal, OS and Python version. I will do my best to try to fix it ASAP. Your terminal will probably start acting weird if Durdraw crashed. You can usually fix it by typing "reset" and pressing enter.
 
 #### Q: Don't TheDraw and some other programs already do ANSI animation?
 A: Yes, but traditional ANSI animation does not provide any control over timing, instead relying on terminal baud rate to govern the playback speed. This does not work well on modern systems without baud rate emulation. Durdraw gives the artist fine control over frame rate, and delays per frame. Traditional ANSI animation also updates the animation one character at a time, while Durdraw updates the animation a full frame at a time. This makes it less vulnerable to visual corruption from things like errant terminal characters, resized windows, line noise, etc. Finally, unlike TheDraw, which requires MS-DOS, Durdraw runs in modern Unicode terminals.
@@ -644,16 +644,12 @@ If you need assistance or have questions about Durdraw, feel free to reach out t
 
 ### Community
 
-There are community discussions on Github, where people post art made with Durdraw. Check it out: https://github.com/cmang/durdraw/discussions
-
-We also have a Discord server for Durdraw users. Join us: https://discord.gg/9TrCsUrtZD
-
-If you are feeling really old school, you can try the #durdraw IRC channel on irc.libera.chat.
+There are community discussions on Github, where people post art made with Durdraw. Check it out: https://github.com/durdraw/durdraw/discussions
 
 ### Credits
 
 - Home page: http://durdraw.org
-- Development: https://github.com/cmang/durdraw
+- Development: https://github.com/durdraw/durdraw
 
 Durdraw is what it is thanks to the following people:
 
