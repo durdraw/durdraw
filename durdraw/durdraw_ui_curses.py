@@ -3363,7 +3363,7 @@ class UserInterface():  # Separate view (curses) from this controller
                             self.xy[0] = mouseY + self.appState.topLine
                             color_fg = self.appState.defaultFgColor 
                             color_bg = self.appState.defaultBgColor 
-                            self.insertChar(ord(' '), fg=color_fg, bg=color_bg, x=mouseX + self.appState.firstCol, y=mouseY + self.appState.topLine, pushUndo=False)
+                            self.insertChar(ord(' '), fg=color_fg, bg=color_bg, x=self.xy[1], y=self.xy[0], pushUndo=False)
                     elif self.appState.cursorMode == "Eyedrop":   # Change the color under the cursor
                         self.eyeDrop(mouseX + self.appState.firstCol, mouseY + self.appState.topLine)
                         self.statusBar.setCursorModeMove()
