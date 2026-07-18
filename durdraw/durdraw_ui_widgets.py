@@ -469,7 +469,7 @@ class StatusBar():
         #transformMenuColumn = 24 # Try to place to the right of the main menu
         transformMenuColumn = 35 # Try to place to the right of the Animation menu
         transformMenu = Menu(self.window, x = self.x - 2, y = transformMenuColumn, caller=self, appState=self.appState, statusBar=self)
-        transformMenu.set_title("Default Plugins:")
+        transformMenu.set_title("Effects:")
         #transformMenu.add_item("Bounce", caller.transform_bounce, "b")
         #transformMenu.add_item("Repeat", caller.transform_repeat, "r")
         #transformMenu.add_item("Reverse", caller.transform_reverse, "v")
@@ -559,7 +559,7 @@ class StatusBar():
         animMenu.add_item("Move Frame", caller.moveCurrentFrame, "m", shortcut="esc-M")
         animMenu.add_item("Shift Frames Right", caller.shiftMovieRight, "}", shortcut="esc-}")
         animMenu.add_item("Shift Frames Left", caller.shiftMovieLeft, "{", shortcut="esc-{")
-        animMenu.add_item("Default Plugins", caller.openTransformMenu, "t", has_submenu=True)
+        animMenu.add_item("Effects", caller.openTransformMenu, "f", has_submenu=True)
         animButton = Button("Anim", 0, animButton_offset, caller.openAnimMenu, self.window, appState=self.appState)
         animButton.set_tooltip_command('a')
         self.animButton = animButton
