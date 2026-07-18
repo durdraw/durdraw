@@ -296,6 +296,8 @@ class AppState():
                         lambda tf=theme['path']:
                             self.loadThemeFile(tf, themeMode),
                         "")
+            if not self.internal_themes: # no theme files found/loaded
+                menu.add_item( "No themes found.", lambda: None, "")
             menu.handler.rebuild()
 
     def loadConfigFile(self):
