@@ -658,7 +658,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.appState.colorMode = "16"
             self.ansi.initColorPairs_cga()
             self.init_16_colors_misc()
-            self.mov.change_palette_256_to_16()
+            #self.mov.change_palette_256_to_16()
             if self.clipBoard:
                 self.mov.change_palette_256_to_16(frame=self.clipBoard)
             self.appState.loadThemeFromConfig("Theme-16")
@@ -5766,25 +5766,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.mov = newMovie
 
             f.close()
-            #self.notify(f"From color map at 1, 1: {self.mov.currentFrame.newColorMap[1][1]}")
-            #for x in range(lineNum, self.mov.sizeY):   # clear out rest of contents.
-            #    self.mov.currentFrame.content[x] = list(" " * self.mov.sizeX)
 
-            # If we're in the wrong color mode, switch modes and reload file.
-            if self.appState.colorMode == "256":
-                if not self.mov.contains_high_colors(): # if not using 256 colors
-                    #self.notify("Does not contain extended colors.")
-                    if self.mov.contains_background_colors():   # but using background colors...
-                        #self.notify("Contains background colors.")
-                        # Must be a 16 color ANSI. Switch since 256 can't do background colors.
-                        if self.appState.debug:
-                            self.notify(f"16 color file. Switching to 16 color mode and reloading file.")
-                        self.switchTo16ColorMode()
-                        self.loadFromFile(shortfile, 'ascii')
-                # If drawing does contain high colors, and backgrounds... remove the backgrounds until 256 bg colors works.
-                if self.mov.contains_high_colors():
-                    if self.mov.contains_background_colors():
-                        self.mov.strip_backgrounds()
             self.hardRefresh()
 
         elif loadFormat == 'dur':
