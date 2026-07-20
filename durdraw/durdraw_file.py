@@ -268,8 +268,17 @@ def open_json_dur_file(f, appState):
     except Exception as e:
         return False
 
-    width = loadedMovieData['DurMovie']['sizeX']
-    height = loadedMovieData['DurMovie']['sizeY']
+
+    if "DurMovie" in loadedMovieData and "sizeX" in loadedMovieData["DurMovie"]:
+        width = loadedMovieData['DurMovie']['sizeX']
+    elif "DurMovie" in loadedMovieData and "columns" in loadedMovieData["DurMovie"]:
+        width = loadedMovieData['DurMovie']['columns']
+    else: return False
+    if "DurMovie" in loadedMovieData and "sizeX" in loadedMovieData["DurMovie"]:
+        height = loadedMovieData['DurMovie']['sizeY']
+    elif "DurMovie" in loadedMovieData and "lines" in loadedMovieData["DurMovie"]:
+        height = loadedMovieData['DurMovie']['lines']
+    else: return False
     colorMode = loadedMovieData['DurMovie']['colorFormat']
     newOpts = Options(width=width, height=height)
     newOpts.framerate = loadedMovieData['DurMovie']['framerate']

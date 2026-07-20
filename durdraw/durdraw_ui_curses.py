@@ -5797,7 +5797,16 @@ class UserInterface():  # Separate view (curses) from this controller
             #if (f.read(16) == b'\x7b\x0a\x20\x20\x22\x44\x75\x72\x64\x72\x61\x77\x20\x4d\x6f\x76'): # {.  "Durdraw Mov
             if self.appState.debug2: self.notify(f"Checking for JSON file.")
             f.seek(0)
-            if f.read(12) == b'\x7b\x0a\x20\x20\x22\x44\x75\x72\x4d\x6f\x76\x69': # {.  "DurMov
+            #if f.read(12) == b'\x7b\x0a\x20\x20\x22\x44\x75\x72\x4d\x6f\x76\x69': # {.  "DurMov
+            isValidJSONDur = False
+            try:
+                import json
+                json_data = json.load(f)
+                if "DurMovie" in json_data:
+                    isValidJSONDur = True
+            except (ValueError, json.JSONDecodeError):
+                pass
+            if isValidJSONDur:
                 if self.appState.debug2: self.notify(f"JSON found. Loading JSON dur file.")
                 f.seek(0)
                 fileColorMode, fileCharEncoding = durfile.get_dur_file_colorMode_and_charMode(f)
