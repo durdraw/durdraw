@@ -12,9 +12,10 @@ durdraw_plugin_version = 1
 # Plugin information
 durdraw_plugin = {
     "name": "Melt",
-    "author": "Grok (with Sam Foster’s blessing)",
+    "author": "",
     "version": 1,
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Melts filled characters downward into a puddle like dripping oatmeal."
 }
 opts = {

@@ -13,9 +13,10 @@ durdraw_plugin_version = 1
 # Plugin information
 durdraw_plugin = {
     "name": "Plasma",
-    "author": "Grok (with Sam Foster’s blessing)",
+    "author": "",
     "version": 1,
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Generates a swirling plasma animation with shifting colors."
 }
 

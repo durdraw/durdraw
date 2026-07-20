@@ -13,9 +13,10 @@ durdraw_plugin_version = 1
 # Plugin information
 durdraw_plugin = {
     "name": "Beam Me Up",
-    "author": "Grok and Sam Foster",
+    "author": "",
     "version": 1,
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Fades in the current frame like a Star Trek transporter with sparkly colors."
 }
 

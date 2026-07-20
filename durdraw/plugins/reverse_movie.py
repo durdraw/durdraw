@@ -11,6 +11,7 @@ durdraw_plugin = {
     "author": "Sam Foster, samfoster@gmail.com",
     "version":  1,   # Plugin verison, if applicable
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Reverses the order of the frames in a movie"
 }
 

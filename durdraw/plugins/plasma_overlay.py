@@ -10,9 +10,10 @@ durdraw_plugin_version = 1
 # Plugin information
 durdraw_plugin = {
     "name": "Plasma Overlay",
-    "author": "Grok (with Sam Foster’s blessing)",
+    "author": "",
     "version": 1,
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Overlays a swirling plasma color effect on existing frames."
 }
 

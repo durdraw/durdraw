@@ -13,6 +13,7 @@ durdraw_plugin = {
     "author": "Sam Foster, samfoster@gmail.com",
     "version":  1,   # Plugin verison, if applicable
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Duplicate all frames and reverse them, then append them to the end. |> -> |><|"
 }
 

@@ -176,21 +176,25 @@ class UserInterface():  # Separate view (curses) from this controller
         plugin_number = 1
         found_plugins = False
         for plugin_name, plugin in self.plugin_system.loaded_plugins.items():
-            if 'transform_movie' in plugin["meta"]["provides"] and not plugin["meta"]["internal"]:
-                found_plugins = True
-                if plugin_number < 10:
-                    self.statusBar.animPluginsMenu.add_item(
-                        str(plugin_number) + " " + plugin["meta"]["name"],
-                        #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
-                        lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                        str(plugin_number))
-                    plugin_number += 1
-                else:
-                    self.statusBar.animPluginsMenu.add_item(plugin["meta"]["name"], \
-                        #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
+            plugin_type = "effect"
+            if "type" in plugin["meta"]:
+                if 'export' in plugin["meta"]["type"]:
+                    self.statusBar.exportPluginsMenu.add_item(plugin["meta"]["name"], \
                         lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
                         "")
-                    plugin_number += 1
+                if 'effect' in plugin["meta"]["type"] and not plugin["meta"]["internal"]:
+                    found_plugins = True
+                    if plugin_number < 10:
+                        self.statusBar.animPluginsMenu.add_item(
+                            str(plugin_number) + " " + plugin["meta"]["name"],
+                            lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
+                            str(plugin_number))
+                        plugin_number += 1
+                    else:
+                        self.statusBar.animPluginsMenu.add_item(plugin["meta"]["name"], \
+                            lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
+                            "")
+                        plugin_number += 1
             if found_plugins:
                 self.statusBar.animMenu.add_item("Plugins", self.openAnimPluginsMenu, "p", has_submenu=True)
                 self.statusBar.animPluginsMenu.handler.rebuild()
@@ -198,21 +202,26 @@ class UserInterface():  # Separate view (curses) from this controller
         plugin_number = 1
         found_plugins = False
         for plugin_name, plugin in self.plugin_system.loaded_plugins.items():
-            if 'transform_movie' in plugin["meta"]["provides"] and plugin["meta"]["internal"]:
-                found_plugins = True
-                if plugin_number < 10:
-                    self.statusBar.transformMenu.add_item(
-                        str(plugin_number) + " " + plugin["meta"]["name"],
-                        #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
-                        lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                        str(plugin_number))
-                    plugin_number += 1
-                else:
-                    self.statusBar.transformMenu.add_item(plugin["meta"]["name"], \
-                        #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
+            if "type" in plugin["meta"]:
+                if 'export' in plugin["meta"]["type"]:
+                    self.statusBar.exportPluginsMenu.add_item(plugin["meta"]["name"], \
                         lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
                         "")
-                    plugin_number += 1
+                if 'effect' in plugin["meta"]["type"] and plugin["meta"]["internal"]:
+                    found_plugins = True
+                    if plugin_number < 10:
+                        self.statusBar.transformMenu.add_item(
+                            str(plugin_number) + " " + plugin["meta"]["name"],
+                            #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
+                            lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
+                            str(plugin_number))
+                        plugin_number += 1
+                    else:
+                        self.statusBar.transformMenu.add_item(plugin["meta"]["name"], \
+                            #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
+                            lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
+                            "")
+                        plugin_number += 1
         try:
             self.statusBar.transformMenu.handler.rebuild()
         except ValueError:
@@ -3945,8 +3954,18 @@ class UserInterface():  # Separate view (curses) from this controller
     def do_nothing(self):
         pass
 
+
+    def openExportMenu(self):
+        """ Show the Export menu """
+        #try:
+        #    self.statusBar.exportPluginsMenu.handler.panel.show()
+        #except AttributeError:
+        #    pdb.set_trace()
+        response = self.statusBar.exportPluginsMenu.showHide()
+        self.statusBar.exportPluginsMenu.handler.panel.hide()
+
     def openAnimPluginsMenu(self):
-        """ Show the Edit menu """
+        """ Show the Animation Effects menu """
         try:
             self.statusBar.animPluginsMenu.handler.panel.show()
         except AttributeError:

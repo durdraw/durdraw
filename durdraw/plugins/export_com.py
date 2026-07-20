@@ -6,10 +6,11 @@ durdraw_plugin_version = 1
 
 # Plugin information
 durdraw_plugin = {
-    "name": "Export .COM File",
+    "name": "MS-DOS .COM File",
     "author": "",
     "version":  1,   # Plugin verison, if applicable
     "provides": ["transform_movie", "export_movie"],
+    "type": ["export"],
     "desc": "Exports frame to 16-bit MS-DOS .COM file"
 }
 

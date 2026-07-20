@@ -13,9 +13,10 @@ durdraw_plugin_version = 1
 # Plugin information
 durdraw_plugin = {
     "name": "Sine Wave (constant)",
-    "author": "Grok (with Sam Foster’s blessing)",
+    "author": "",
     "version": 1,
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Oscillates characters horizontally with a sine wave over existing frames."
 }
 

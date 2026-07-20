@@ -484,11 +484,20 @@ class StatusBar():
         animPluginsMenuColumn = 35 # Try to place to the right of the Animation menu
         animPluginsMenu = Menu(self.window, x = self.x - 2, y = animPluginsMenuColumn, caller=self, appState=self.appState, statusBar=self)
         animPluginsMenu.set_title("User Plugins:")
-        #animPluginsMenu.add_item("Apply NeoFetch Keys", caller.apply_neofetch_keys, "n")
         animPluginsMenu.set_x(self.x - 1)
         animPluginsMenu.set_y(animPluginsMenuColumn)
         animPluginsMenu.is_submenu = True
         self.animPluginsMenu = animPluginsMenu
+
+
+        # Export Plugins Menu
+        exportPluginsMenuColumn = 22 # Try to place to the right of the Animation menu
+        exportPluginsMenu = Menu(self.window, x = self.x - 2, y = exportPluginsMenuColumn, caller=self, appState=self.appState, statusBar=self)
+        exportPluginsMenu.set_title("File Export:")
+        exportPluginsMenu.set_x(self.x - 1)
+        exportPluginsMenu.set_y(exportPluginsMenuColumn)
+        exportPluginsMenu.is_submenu = True
+        self.exportPluginsMenu = exportPluginsMenu
 
         # Make the Edit menu
         editMenuColumn = 22 # Try to place to the right of the main menu
@@ -516,6 +525,7 @@ class StatusBar():
         mainMenu.add_item("New/Clear", caller.clearCanvasPrompt, "n", shortcut="esc-C")
         mainMenu.add_item("Open", caller.openFromMenu, "o", shortcut="esc-o")
         mainMenu.add_item("Save", caller.save, "s", shortcut="esc-s")
+        mainMenu.add_item("Export", caller.openExportMenu, "x", has_submenu=True)
         #mainMenu.add_item("16 Color Mode", caller.switchTo16ColorMode, "1")
         #mainMenu.add_item("256 Color Mode", caller.switchTo256ColorMode, "2")
         #mainMenu.add_item("Settings", settingsMenu.showHide, "t", has_submenu=True)

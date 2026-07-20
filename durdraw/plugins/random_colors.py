@@ -14,6 +14,7 @@ durdraw_plugin = {
     "author": "Sam Foster, samfoster@gmail.com",
     "version":  1,   # Plugin verison, if applicable
     "provides": ["transform_frame", "transform_movie"],
+    "type": ["effect"],
     "desc": "Fill canvas with random colors."
 }
 

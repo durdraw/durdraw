@@ -6,10 +6,11 @@ durdraw_plugin_version = 1
 
 # Plugin information
 durdraw_plugin = {
-    "name": "Export B800 (Endoom) File",
+    "name": "B800 (Endoom) File",
     "author": "",
     "version":  1,   # Plugin verison, if applicable
     "provides": ["transform_movie"],
+    "type": ["export"],
     "desc": "Exports B800 (Endoom) raw CGA/EGA/VGA video memory file",
 }
 

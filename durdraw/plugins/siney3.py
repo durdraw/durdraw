@@ -12,9 +12,10 @@ durdraw_plugin_version = 1
 # Plugin information
 durdraw_plugin = {
     "name": "Sine Wave (rising and falling)",
-    "author": "Grok (with Sam Foster’s blessing)",
+    "author": "",
     "version": 1,
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Oscillates characters horizontally with multiple sine waves, amplitude swelling and fading."
 }
 

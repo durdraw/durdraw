@@ -15,6 +15,7 @@ durdraw_plugin = {
     "author": "Grok (inspired by Asciimatics & Sam Foster)",
     "version": 1,
     "provides": ["transform_movie"],
+    "type": ["effect"],
     "desc": "Renders bonfire-like effects surrounding non-space chars, with originals on top."
 }
 
