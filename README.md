@@ -652,10 +652,6 @@ If you need assistance or have questions about Durdraw, feel free to reach out t
 
 There are community discussions on Github, where people post art made with Durdraw. Check it out: https://github.com/cmang/durdraw/discussions
 
-We also have a Discord server for Durdraw users. Join us: https://discord.gg/9TrCsUrtZD
-
-If you are feeling really old school, you can try the #durdraw IRC channel on irc.libera.chat.
-
 ### Credits
 
 - Home page: http://durdraw.org
