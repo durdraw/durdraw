@@ -3647,6 +3647,9 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(self.statusBarLineNum, 0, printMessage, curses.color_pair(self.appState.theme['notificationColor']))
         self.stdscr.refresh()
         new_char = self.askForCharacter()
+        if new_char == '\0':
+            self.notify("Replace character canceled.")
+            return False
 
         if self.mov.hasMultipleFrames():
             self.promptPrint("Apply to all frames in playback range (Y/N)? ")
@@ -4041,7 +4044,7 @@ class UserInterface():  # Separate view (curses) from this controller
         #pdb.set_trace()
         prompting = True
         curses.flushinp()
-        newchar = ' '
+        newChar = '\0'
         while prompting:
             #c = self.window.getch()
             c = self.window.get_wch()
