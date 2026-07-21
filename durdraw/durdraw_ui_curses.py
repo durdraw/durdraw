@@ -13,11 +13,13 @@ import pathlib
 import pdb
 import pickle
 import shutil
-import sys
+import signal
 import subprocess
+import sys
 import tempfile
 import textwrap
 import threading
+import traceback
 import time
 import urllib
 
@@ -49,6 +51,7 @@ class UserInterface():  # Separate view (curses) from this controller
     """ Draws user interface, has main UI loop. """
     #def __init__(self, stdscr, app):
     def __init__(self, app):
+        signal.signal(signal.SIGINT, self.sigint_handler)
         self.opts = Options(width=app.width, height=app.height)
         self.appState = app # will be filled in by main() .. run-time app state stuff
         self.appState.ui = self
@@ -3946,6 +3949,19 @@ class UserInterface():  # Separate view (curses) from this controller
         curses.endwin()
         #print("Waiting for threads to die...")
         self.killAllHumans()
+        #print("Done.")
+        exit(0)
+
+    def sigint_handler(self, signum, frame): # when the user inevitably presess ctrl-c
+        self.disableMouseReporting()
+        curses.nocbreak()
+        self.stdscr.keypad(0)
+        curses.echo()
+        curses.endwin()
+        #print("Waiting for threads to die...")
+        self.killAllHumans()
+        print("User pressed ctrl-c. Exiting. Here is the execution stack:\n")
+        traceback.print_stack()
         #print("Done.")
         exit(0)
 
