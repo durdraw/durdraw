@@ -4338,17 +4338,6 @@ class UserInterface():  # Separate view (curses) from this controller
 
                 current_line_number += 1
 
-
-            #if mask_all:
-            #    self.addstr(realmaxY - 4, 0, f"[X]", curses.color_pair(self.appState.theme['clickColor']))
-            #else:
-            #    self.addstr(realmaxY - 4, 0, f"[ ]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 4, 4, f"Show All Files", curses.color_pair(self.appState.theme['menuItemColor']))
-            #self.addstr(realmaxY - 4, 20, f"[PGUP]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 4, 27, f"[PGDOWN]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 4, 36, f"[OK]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 4, 41, f"[CANCEL]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 3, 0, f"Folder: {current_directory}", curses.color_pair(self.appState.theme['menuTitleColor']))
             if search_string != "":
                 self.addstr(realmaxY - 2, 0, f"search: ")
                 self.addstr(realmaxY - 2, 8, f"{search_string}", curses.color_pair(self.appState.theme['menuItemColor']))
@@ -4689,8 +4678,10 @@ class UserInterface():  # Separate view (curses) from this controller
         for file in search_files_list:
             for mask in masks:
                 if fnmatch.fnmatch(file.lower(), mask.lower()):
-                    matched_files.append(file)
-                    break
+                    if os.path.isfile(os.path.join(current_directory, file)):
+                    #if os.access(pathlib.Path(file), os.R_OK):
+                        matched_files.append(file)
+                        break
         for dirname in folders:
             file_list.append(dirname)
         file_list += sorted(matched_files)
@@ -4734,7 +4725,7 @@ class UserInterface():  # Separate view (curses) from this controller
         if not self.appState.sixteenc_browsing:
             file_list = []
             #folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
+            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
             # remove leading paths
             new_folders = []
             for path_string in folders:
@@ -5048,7 +5039,8 @@ class UserInterface():  # Separate view (curses) from this controller
                                             folders =  ["../"]
                                             #folders += glob.glob("*/", root_dir=current_directory)
                                             if not self.appState.sixteenc_browsing: 
-                                                folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
+                                                folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) 
+                                                folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
                                                 # remove leading paths
                                                 new_folders = []
                                                 for path_string in folders:
@@ -5056,7 +5048,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                                 folders = new_folders
 
                                             if mask_all:
-                                                masks = ['*.*']
+                                                masks = ['*']
                                             else:
                                                 masks = default_masks
                                             matched_files = []
@@ -5157,17 +5149,14 @@ class UserInterface():  # Separate view (curses) from this controller
                                     masks = default_masks
                                 else:
                                     mask_all = True
-                                    masks = ['*.*']
+                                    masks = ['*']
                         elif self.appState.sixteenc_available and mouseCol in range(sixteen_column,sixteen_column+3):  # clicked [X] 16c
                             self.appState.sixteenc_browsing = not self.appState.sixteenc_browsing
                             folders =  ["../"]
                             #folders += glob.glob("*/", root_dir=current_directory)
                             if not self.appState.sixteenc_browsing: 
-                                if mask_all:
-                                    folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
-                                        sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                                else:
-                                    folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
+                                folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
+                                    sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
                                 # remove leading paths
                                 new_folders = []
                                 for path_string in folders:
@@ -5225,7 +5214,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     # Check or uncheck Show All Files
                     mask_all = not mask_all
                     if mask_all:
-                        masks = ['*.*']
+                        masks = ['*']
                     else:
                         masks = default_masks
 
@@ -5244,8 +5233,9 @@ class UserInterface():  # Separate view (curses) from this controller
                     for file in search_files_list:
                         for mask in masks:
                             if fnmatch.fnmatch(file.lower(), mask.lower()):
-                                matched_files.append(file)
-                                break
+                                if os.path.isfile(os.path.join(current_directory, file)):
+                                    matched_files.append(file)
+                                    break
                     for dirname in folders:
                         file_list.append(dirname)
                     file_list += sorted(matched_files)
@@ -5320,11 +5310,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         file_list = []
                         full_file_list = []
 
-                        if mask_all:
-                            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
+                        folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
                                 sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                        else:
-                            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
                         
                         # remove leading paths
                         new_folders = []
@@ -5516,11 +5503,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         if self.appState.sixteenc_browsing:
                             pass
                         else:
-                            if mask_all:
-                                folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
+                            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
                                     sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                            else:
-                                folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
                             # remove leading paths
                         if not self.appState.sixteenc_browsing:
                             new_folders = []
