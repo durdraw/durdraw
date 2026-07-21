@@ -2083,6 +2083,7 @@ class UserInterface():  # Separate view (curses) from this controller
                         #if self.appState.colorMode == "256":
                         #    self.statusBar.colorPickerButton.on_click()
                         self.statusBar.colorPickerButton.on_click()
+                        self.cursorOn()
                     elif c in [330]:              # delete
                         self.deleteKeyPop(frange=self.appState.playbackRange)
                     elif c in [383]:              # shift-delete - delete from opposite direction
@@ -3149,6 +3150,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     #self.statusBar.colorPickerButton.on_click()
                     #self.selectColorPicker()
                 self.selectColorPicker()
+                self.cursorOn()
             elif c in [339, curses.KEY_PPAGE]:  # page up
                 self.move_cursor_pgup()
             elif c in [338, curses.KEY_NPAGE]:  # page down
