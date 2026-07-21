@@ -169,6 +169,8 @@ class UserInterface():  # Separate view (curses) from this controller
 
         self.plugin_system = None
         self.init_plugins()
+        self.statusBar.mainMenu.add_item("Help", self.showHelp, "h", shortcut="esc-h")
+        self.statusBar.mainMenu.add_item("Quit", self.safeQuit, "q", shortcut="esc-q")
 
         #self.loadCharsetFile("~/src/durdraw/coolset.ini")
         self.setCharacterSet("Durdraw Default")
@@ -184,19 +186,35 @@ class UserInterface():  # Separate view (curses) from this controller
                 if 'export' in plugin["meta"]["type"]:
                     self.statusBar.exportPluginsMenu.add_item(plugin["meta"]["name"], \
                         lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                        "")
+                        "", plugin=True)
+                if 'menu_item' in plugin["meta"]["type"]:
+                    if 'location' in plugin["meta"]:
+                        shortcut = ''
+                        if 'shortcut' in plugin['meta']:
+                            shortcut = plugin["meta"]["shortcut"]
+                        location = plugin["meta"]["location"]
+                        itemName = plugin["meta"]["name"]
+                        self.statusBar.menus[location].add_item(itemName, \
+                            lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
+                            shortcut, plugin=True)
+                        # If adding to main menu, move new item above Exit, so
+                        # make sure Exit is the last item in the menu.
+                        #self.statusBar.menus[location].move_item_up(itemName)
+
                 if 'effect' in plugin["meta"]["type"] and not plugin["meta"]["internal"]:
                     found_plugins = True
                     if plugin_number < 10:
                         self.statusBar.animPluginsMenu.add_item(
                             str(plugin_number) + " " + plugin["meta"]["name"],
                             lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                            str(plugin_number))
+                            str(plugin_number),
+                            plugin = True)
                         plugin_number += 1
                     else:
                         self.statusBar.animPluginsMenu.add_item(plugin["meta"]["name"], \
                             lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                            "")
+                            "",
+                            plugin = True)
                         plugin_number += 1
             if found_plugins:
                 self.statusBar.animMenu.add_item("Plugins", self.openAnimPluginsMenu, "p", has_submenu=True)
@@ -209,7 +227,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 if 'export' in plugin["meta"]["type"]:
                     self.statusBar.exportPluginsMenu.add_item(plugin["meta"]["name"], \
                         lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                        "")
+                        "", plugin = True)
                 if 'effect' in plugin["meta"]["type"] and plugin["meta"]["internal"]:
                     found_plugins = True
                     if plugin_number < 10:
@@ -217,13 +235,13 @@ class UserInterface():  # Separate view (curses) from this controller
                             str(plugin_number) + " " + plugin["meta"]["name"],
                             #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
                             lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                            str(plugin_number))
+                            str(plugin_number), plugin=True)
                         plugin_number += 1
                     else:
                         self.statusBar.transformMenu.add_item(plugin["meta"]["name"], \
                             #lambda: self.plugin_system.run_plugin_transform_mov(plugin_name, self.mov, ui=self),
                             lambda pn=plugin_name: self.plugin_system.run_plugin_transform_mov(pn, self.mov, ui=self),
-                            "")
+                            "", plugin=True)
                         plugin_number += 1
         try:
             self.statusBar.transformMenu.handler.rebuild()
