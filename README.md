@@ -656,9 +656,10 @@ Durdraw is what it is thanks to the following people:
 
 - Sam Foster - Creator, primary developer
 - Tom McKeesick - Performnace enhancements, documentation formatting
-- Alex Myczko - Man page, Debian ambassador
+- Alex Myczko - Man page, Debian ambassador, other bits and pieces
 - sigurdo - Cursor shapes, command-line ANSI export
 - yumpyy - Dockerfile
+- Elijah Lovold - Fastfetch Support
 - Zhenrong Wang - Documentation updates
 - Frederick Cambus - Documentation update
 - eyooooo - Filename conventions, useful feedback
