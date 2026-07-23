@@ -109,7 +109,7 @@ class AppState():
         self.playOnlyMode = False   # This means viewer mode now, actually..
         self.viewModeShowInfo = False   # show sauce etc in view mode
         self.playNumberOfTimes = 0  # 0 = loop forever, default
-        self.undoHistorySize = 100  # How far back our undo history can
+        self.undoHistorySize = 1000  # How far back our undo history can go
         self.playbackRange = (1,1)
         self.drawChar = '$'
         self.brush = None
