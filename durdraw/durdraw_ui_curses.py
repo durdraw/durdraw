@@ -4793,6 +4793,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 folders = ['../'] + sixteenc_packs
                 #file_list = folders
                 file_list = []
+                file_list += folders
                 full_file_list = file_list
                 search_files_list = file_list
 
