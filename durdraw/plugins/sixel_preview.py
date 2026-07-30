@@ -136,7 +136,10 @@ def render_sixel(frame, scale=3, color_mode="256"):
     img_w = src_w * cell_w
     img_h = src_h * cell_h
 
-    # Build source color grid: src_pixels[y][x] = (r, g, b)
+    # Build source color grid: src_pixels[y][x] = (top_rgb, bottom_rgb)
+    # Each character cell is treated as 2 vertically-stacked sub-pixels so
+    # that upper/lower half-block characters can show two distinct colors
+    # instead of a single blended one.
     src_pixels = []
     for y in range(src_h):
         row = []
@@ -151,32 +154,46 @@ def render_sixel(frame, scale=3, color_mode="256"):
                 fg_idx -= 1
                 # bg_idx -= 1
 
+            fg = color_index_to_rgb(fg_idx)
+            bg = color_index_to_rgb(bg_idx)
+
             if char in (' ', '', None):
-                # Blank cell - use background color
-                rgb = color_index_to_rgb(bg_idx)
+                # Blank cell - both sub-pixels are background color
+                top, bottom = bg, bg
+            elif char == '█':
+                # Full block - both sub-pixels are foreground color
+                top, bottom = fg, fg
+            elif char == '▀':
+                # Upper half block - top sub-pixel is fg, bottom is bg
+                top, bottom = fg, bg
+            elif char == '▄':
+                # Lower half block - top sub-pixel is bg, bottom is fg
+                top, bottom = bg, fg
+            elif char == '▓':
+                blended = blend(fg, bg, 0.75)
+                top, bottom = blended, blended
+            elif char in ['▒', '▌', '▐']:
+                blended = blend(fg, bg, 0.50)
+                top, bottom = blended, blended
+            elif char == '░':
+                blended = blend(fg, bg, 0.25)
+                top, bottom = blended, blended
             else:
-                # Non-blank - treat as solid fg color pixel.
-                # For block-shading characters, attenuate fg toward bg.
-                fg = color_index_to_rgb(fg_idx)
-                bg = color_index_to_rgb(bg_idx)
-                if char == '█':
-                    rgb = fg
-                elif char == '▓':
-                    rgb = blend(fg, bg, 0.75)
-                elif char in ['▒', '▄', '▀', '▌', '▐']:
-                    rgb = blend(fg, bg, 0.50)
-                elif char == '░':
-                    rgb = blend(fg, bg, 0.25)
-                else:
-                    rgb = fg
-            row.append(rgb)
+                # Solid non-block character - treat as solid fg color
+                top, bottom = fg, fg
+
+            row.append((top, bottom))
         src_pixels.append(row)
 
-    # Scale up: pixels[py][px] maps back to src_pixels[py//cell_h][px//cell_w]
+    # Scale up: pixels[py][px] maps back to src_pixels[py//cell_h][px//cell_w],
+    # picking the top or bottom sub-pixel color depending on which half of
+    # the cell height py falls into.
     def get_pixel(px, py):
         sx = min(px // cell_w, src_w - 1)
         sy = min(py // cell_h, src_h - 1)
-        return src_pixels[sy][sx]
+        local_y = py % cell_h
+        top, bottom = src_pixels[sy][sx]
+        return top if local_y < (cell_h // 2) else bottom
 
     w, h = img_w, img_h
 
