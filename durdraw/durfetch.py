@@ -64,7 +64,7 @@ def auto_load_file(neofetch_data, rand=False, fake_os=None):
         files = ['bsd.durf']
         # list of BSD 
     else:
-        files = ['linux-fire.durf', 'linux-tux.durf']
+        files = ['linux-tux-fire.durf', 'linux-fire.durf', 'linux-tab.durf', 'linux-tux.durf']
     return random.choice(files)
 
 @log.log_on_crash
