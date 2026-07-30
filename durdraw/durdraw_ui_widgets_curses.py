@@ -226,7 +226,7 @@ class MenuHandler:
                 self.appState.colorPickerSelected = False
                 #if not self.menu.caller.caller.playing:    # caller.caller is the main UI thing
                 #    self.window.nodelay(0)
-            elif c in [98, curses.KEY_LEFT]:
+            elif c in [curses.KEY_LEFT]:
                 self.hide()
                 prompting = False
                 response = "Left"
@@ -236,7 +236,7 @@ class MenuHandler:
                 #prompting = False
                 # Here: Launch a different menu
                 #self.menu.statusBar.menuButton.on_click
-            elif c in [102, curses.KEY_RIGHT]:
+            elif c in [curses.KEY_RIGHT]:
                 if self.menu.items[options[current_option]]["has_submenu"]:    # If it opens a sub-menu..
                     #curses_notify(window, f"Debug: Fnord")
                     #self.hide()
