@@ -204,6 +204,7 @@ class AppState():
 
     def check_dependencies(self):
         dependency_thread = threading.Thread(target=self.thread_check_dependencies)
+        dependency_thread.daemon = True
         dependency_thread.start()
 
     def thread_check_dependencies(self):
@@ -452,6 +453,7 @@ class AppState():
 
     def loadHelpFileThread(self, helpFileName):
         help_loading_thread = threading.Thread(target=self.loadHelpFile, args=(helpFileName,))
+        help_loading_thread.daemon = True
         help_loading_thread.start()
 
     def loadHelpFile(self, helpFileName, page=1):

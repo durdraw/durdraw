@@ -4593,6 +4593,7 @@ class UserInterface():  # Separate view (curses) from this controller
             # Thread already ran or running
             return False
         new_caching_thread = threading.Thread(target=self.sixteenc_update_diz_cache, args=(year,), daemon = True)
+        new_caching_thread.daemon = True
         new_caching_thread.start()
 
     def sixteenc_cache_diz_for_pack(self, pack):
