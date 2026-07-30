@@ -371,11 +371,11 @@ Here is an example `durdraw.ini` file, showing the available options:
 
 #### Themes
 
-You can place theme files in ~/.durdraw/themes/ and they will appear in the Settings -> User Themes menu.
+You can switch to different themes in the Menu -> Settings -> Themes and User Themes menus. Durdraw will remember your last used theme and try to load it on restart.
 
-While running Durdraw you can switch themes under Settings -> Themes and Settings -> User Themes.
+To use custom themes, you can place theme files in ~/.durdraw/themes/ and they will appear in the Settings -> User Themes menu.
 
-To set a default theme, you can place the following in your ~/.durdraw/durdraw.ini file:
+To set a default theme, you can place the following in your ~/.durdraw/durdraw.ini file. This will override the remembered "last used" theme.
 
 ```ini
 [Theme]
