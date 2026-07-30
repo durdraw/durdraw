@@ -3996,37 +3996,20 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def openExportMenu(self):
         """ Show the Export menu """
-        #try:
-        #    self.statusBar.exportPluginsMenu.handler.panel.show()
-        #except AttributeError:
-        #    pdb.set_trace()
         response = self.statusBar.exportPluginsMenu.showHide()
         self.statusBar.exportPluginsMenu.handler.panel.hide()
 
     def openAnimPluginsMenu(self):
-        """ Show the Animation Effects menu """
-        try:
-            self.statusBar.animPluginsMenu.handler.panel.show()
-        except AttributeError:
-            pdb.set_trace()
+        """ Show the Animation Plugins menu """
         response = self.statusBar.animPluginsMenu.showHide()
         self.statusBar.animPluginsMenu.handler.panel.hide()
 
     def openTransformMenu(self):
-        #self.statusBar.mainMenu.handler.panel.show()
-        #self.statusBar.animMenu.handler.panel.show()
-        #response = self.statusBar.transformMenu.showHide()
-        response = self.statusBar.transformMenu.show()
-        if response == "Pop":
-            pass
-        else:
-            self.statusBar.animMenu.handler.panel.hide()
-        self.statusBar.animMenu.handler.panel.hide()
+        response = self.statusBar.transformMenu.showHide()
+        self.statusBar.transformMenu.handler.panel.hide()
 
     def openCursorMenu(self):
-        #self.statusBar.settingsMenu.handler.panel.show()
         response = self.statusBar.cursorMenu.showHide()
-        #self.statusBar.settingsMenu.handler.panel.hide()
 
     def openThemesMenu(self):
         self.statusBar.themesMenu.handler.panel.show()
