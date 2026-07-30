@@ -317,15 +317,37 @@ class AppState():
             return True
 
     def loadThemeFromConfig(self, themeMode):
-        #pdb.set_trace()
         if not self.themesEnabled:
             return False
+
+        # Load previously set theme from the GUI, if there is one
+        if themeMode == 'Theme-16':
+            fn = os.path.expanduser('~/.durdraw/theme-16')
+        elif themeMode == 'Theme-256':
+            fn = os.path.expanduser('~/.durdraw/theme-256')
+        try:
+            with open(fn, "r") as file:
+                themeFilePath = file.read()
+            try:
+                self.loadThemeFile(themeFilePath, themeMode)
+            except:
+                # should probably just rm the pointer file
+                # if the theme doesn't load.
+                pass
+        except FileNotFoundError:
+            pass
+
+        # If there is a theme in the user's config file, load that
         if 'Theme' in self.configFile:
             themeConfig = self.configFile['Theme']
             if 'theme-16' in themeConfig and themeMode == 'Theme-16':
                 self.loadThemeFile(themeConfig['theme-16'], themeMode)
             if 'theme-256' in themeConfig and themeMode == 'Theme-256':
                 self.loadThemeFile(themeConfig['theme-256'], themeMode)
+        else:
+            pass
+
+
 
     def getConfigOption(self, section: str, item: str):
         # section = something like [Main], item = something like color-mode:
@@ -369,6 +391,18 @@ class AppState():
                 self.theme['menuTitleColor'] = int(theme['menuTitleColor'])
             if 'menuBorderColor' in theme:
                 self.theme['menuBorderColor'] = int(theme['menuBorderColor'])
+
+            # Write theme file path to ~/.durdraw/theme-256 or theme-16
+            # so it can be auto re-loaded on startup.
+            if themeMode == 'Theme-16':
+                fn = '~/.durdraw/theme-16'
+            elif themeMode == 'Theme-256':
+                fn = '~/.durdraw/theme-256'
+            current_theme_file = os.path.expanduser(fn)
+            with open(current_theme_file, "w") as file:
+                file.write(themeFilePath)
+                file.close()
+
             return True
 
     def checkForPIL(self):
