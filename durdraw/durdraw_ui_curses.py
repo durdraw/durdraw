@@ -4203,6 +4203,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 time.sleep(0.01)
             self.clearStatusLine()
 
+        self.promptPrint("Loading...")
+        self.refresh()
         load_filename, uri_type = self.openFilePicker()
         if uri_type == "remote":   # Remote URL, from 16colo.rs
             url = load_filename
@@ -5146,7 +5148,9 @@ class UserInterface():  # Separate view (curses) from this controller
                                                     search_string = ""
                                             # Because 16c files are being added to the directory list, for some reason:
                                             elif self.sixteenc_levels[self.sixteenc_level] == "pack":
-                                                # Picked a file, so download and load it 
+                                                # Picked a file, so download and load it
+                                                self.promptPrint("Loading...")
+                                                self.refresh()
                                                 filename = file_list[self.selected_item_number]
                                                 url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                                 self.cursorOn()
@@ -5155,6 +5159,8 @@ class UserInterface():  # Separate view (curses) from this controller
                                     else:   # clicked a file, try to load it
                                         if self.appState.sixteenc_browsing:
                                             # Picked a file, so download and load it 
+                                            self.promptPrint("Loading...")
+                                            self.refresh()
                                             filename = file_list[self.selected_item_number]
                                             url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                             self.cursorOn()
@@ -5497,6 +5503,8 @@ class UserInterface():  # Separate view (curses) from this controller
                                 search_string = ""
                             else:
                                 # Picked a file, so download and load it :)
+                                self.promptPrint("Loading...")
+                                self.refresh()
                                 filename = file_list[self.selected_item_number]
                                 #pdb.set_trace()
                                 url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
