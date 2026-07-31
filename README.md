@@ -501,6 +501,12 @@ f10:
 
 `durfetch` is a program which acts like a fetcher. It uses Fastfetch or Neofetch to obtain system statistics and requires that Fastfetch or Neofetch be found in the path. You can put keys in your `.dur` files which `durfetch` will replace with values from Neofetch. You can also use built-in example animations.
 
+To see all of the example Durfetch screens without installing, you can run:
+
+```shell
+./durfetch durdraw/durf/*.durf
+```
+
 The following values can be used in your art and automatically interpreted by `durfetch`:
 
 ```yaml
