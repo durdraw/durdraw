@@ -1,4 +1,4 @@
-Durdraw File Format version 7 (draft) - May 2023
+Durdraw File Format version 7.1 (draft) - August 2026
 
 Durdraw is an ANSI art editor that handles animation, Unicode and 256 color. This document describes its primary file format, "dur."
 
@@ -10,7 +10,7 @@ The "contents" array contains strings, each one of which represents a line of AS
 
 Similarly, colorMap contains an array of lines, wich each line containing a list of foreground and background color pairs. For example, the pair [1,0] represents blue text with a black background.
 
-Each element of the colorMap should coordinate with a corresponding line and column in the contents. For example, colorMap[2][3] should describe the foreground and background color for the character at contents[2][3], which is the character at Line 2, Column 3 of the given frame.
+Each element of the colorMap should coordinate with a corresponding line and column in the contents, but the line and column index will be swapped due to a bug mentioned in [this issue](https://github.com/durdraw/durdraw/issues/24). For example, colorMap[2][3] should describe the foreground and background color for the character at contents[3][2], which is the character at Line 3, Column 2 of the given frame.
 
 Here is the full list of JSON keys stored in a DurMovie object, and their purpose:
 
