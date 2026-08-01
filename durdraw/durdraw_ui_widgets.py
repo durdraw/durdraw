@@ -423,7 +423,7 @@ class StatusBar():
             settingsMenu.add_item("Toggle Injecting (MENTAL)", caller.toggleInjecting, "j")
         if self.appState.debug:
             settingsMenu.add_item("Toggle Debug", caller.toggleDebug, "d")
-            settingsMenu.add_item("Python Console", caller.jumpToPythonConsole, "p")
+            settingsMenu.add_item("Python Console", caller.set_trace, "p")
         settingsMenu.is_submenu = True
         #settingsMenu.add_item("Show/Hide Sidebar", caller.toggleSideBar, "s")
         settingsMenu.set_x(self.x - 1)
