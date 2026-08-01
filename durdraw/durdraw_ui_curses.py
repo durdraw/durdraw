@@ -910,6 +910,11 @@ class UserInterface():  # Separate view (curses) from this controller
         self.cursorOn()
         self.stdscr.refresh()
 
+    def get_terminal_size():
+        """ Return 2 integers, lines/Y and columns/X, like curses' stdscr.getmaxyx() """
+        size = os.get_terminal_size()
+        return size.lines, size.columns
+
     def testWindowSize(self):
         """Test to see if window == too small for program to operate, and
         go into small window mode if necessary"""
@@ -3129,7 +3134,7 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.pushingToClip = False
                     if self.appState.debug:
                         if c == ord('X'):   # esc-X - drop into pdb debugger
-                            self.jumpToPythonConsole()
+                            self.set_trace()
                         else:
                             self.notify("keystroke: %d" % c) # alt-unknown
                 self.commandMode = False
@@ -3947,24 +3952,22 @@ class UserInterface():  # Separate view (curses) from this controller
         if exiting:
             self.verySafeQuit()
 
-    def jumpToPythonConsole(self):
+    def set_trace(self):
         self.getReadyToSuspend()
         pdb.set_trace()
         self.resumeFromSuspend()
 
     def getReadyToSuspend(self):
-        # Get the terminal ready for fun times
-        curses.nocbreak()
-        self.stdscr.keypad(0)
-        curses.echo()
+        # save and suspend ncurses/terminal state
+        curses.def_prog_mode()     # save current tty modes
+        curses.endwin()
 
     def resumeFromSuspend(self):
-        # Get the terminal ready for fun times
-        curses.cbreak()
-        self.stdscr.keypad(1)
-        curses.noecho()
+        # resume ncurses/terminal state
+        curses.reset_prog_mode()
 
-    def verySafeQuit(self): # non-interactive part.. close out curses screen and exit.
+    def verySafeQuit(self):
+        # non-interactive part.. close out curses screen and exit.
         self.disableMouseReporting()
         curses.nocbreak()
         self.stdscr.keypad(0)
