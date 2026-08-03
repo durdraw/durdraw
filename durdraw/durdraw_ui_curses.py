@@ -21,6 +21,7 @@ import textwrap
 import threading
 import traceback
 import time
+import unicodedata
 import urllib
 
 from concurrent.futures import ThreadPoolExecutor
@@ -1119,6 +1120,7 @@ class UserInterface():  # Separate view (curses) from this controller
         fg = self.mov.currentFrame.newColorMap[line][col][0]
         bg = self.mov.currentFrame.newColorMap[line][col][1]
         charType = self.appState.charEncoding
+        charName = unicodedata.name(character)
         if charType == "utf-8":
             charValue = "U+" + str(hex(ord(character)))[2:]    # aye chihuahua
         else:
@@ -1129,6 +1131,7 @@ class UserInterface():  # Separate view (curses) from this controller
             inspectorString = inspectorString + f", cp437 value: {ibmpc_value}"
         except:
             pass
+        inspectorString = inspectorString + f", name: {charName}"
         self.notify(inspectorString, pause=True)
 
     def clickedChMap(self, mouseX, mouseY):
