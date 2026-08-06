@@ -25,9 +25,9 @@ def transform_movie(dur, opts, mov):
     dur.notify(f"Color picked: {c}")
     pl_range = dur.playback_range()
     col_mode = dur.color_mode()
-    dur.suspend_curses()
+    dur.suspend_ui()
     print('')
-    print("Suspended curses.")
+    print("Suspended Durdraw UI (curses).")
     print(f"Color picked: {c}")
     print(f"Range: {pl_range}, Color mode: {col_mode}")
     lines = mov.sizeY
@@ -35,7 +35,7 @@ def transform_movie(dur, opts, mov):
     print(f"Canvas lines: {lines}, columns: {cols}")
     print("Press enter to return to Durdraw.")
     input()
-    dur.resume_curses()
+    dur.resume_ui()
     return mov
 
  
