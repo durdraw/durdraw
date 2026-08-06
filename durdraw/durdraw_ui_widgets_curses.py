@@ -702,10 +702,16 @@ class ColorPickerHandler:
         appState = self.colorPicker.caller.appState
         # ^ Used to determine if we clicked in the canvas:
 
+
         while(prompting):
             time.sleep(0.01)
             #self.colorPicker.caller.drawStatusBar()
+            # Show message, eg: "pick new color"
+            if message != None:
+                #curses_addstr(self.window, appState.realmaxY - 2, 0, message, curses.color_pair(self.appState.theme['notificationColor']))
+                curses_addstr(appState.ui.stdscr, appState.realmaxY - 2, 0, message, curses.color_pair(self.appState.theme['notificationColor']))
             self.update()
+
             c = self.window.getch()
             if c in [98, curses.KEY_LEFT, ord('h')]:
                 if color == 0:
@@ -843,8 +849,6 @@ class ColorPickerHandler:
                     #self.hide()
                     prompting = False
 
-            # Show message, eg: "pick new color"
-            #curses_addstr(self.window, self.appState.realmaxX - 2, 0, message, curses.color_pair(self.appState.theme['notificationColor']))
 
         if not self.appState.colorPickerSelected:
             if self.appState.sideBarShowing:

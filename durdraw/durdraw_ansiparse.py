@@ -22,7 +22,7 @@ import pdb
 import durdraw.durdraw_movie as durmovie
 import durdraw.durdraw_color_curses as dur_ansilib
 import durdraw.durdraw_sauce as dursauce
-import durdraw.plugins.convert_charset as durchar
+import durdraw.convert_charset as durchar
 import durdraw.log as log
 
 LOGGER = log.getLogger('ansiparse', level='DEBUG', override=True)

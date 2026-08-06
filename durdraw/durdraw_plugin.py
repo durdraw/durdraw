@@ -13,6 +13,8 @@ import pathlib
 import importlib.util
 import pdb
 
+import durdraw.durdraw_plugin_api as durdraw_plugin_api
+
 class DurPlugin:
     def __init__(self):
         #self.plugin_dirs = ["./plugins", "~/.durdraw/plugins"]
@@ -45,6 +47,10 @@ class DurPlugin:
                             module = importlib.util.module_from_spec(spec)
                             spec.loader.exec_module(module)
                             
+                            #plugin_api_ver = 1
+                            #if isinstance(module.durdraw_plugin_version, int) and isinstance(module.durdraw_plugin, int):
+                            if isinstance(module.durdraw_plugin_version, int):
+                                plugin_api_ver = module.durdraw_plugin_version
                             # Check if the module contains a 'durdraw_plugin' dict
                             if hasattr(module, 'durdraw_plugin') and isinstance(module.durdraw_plugin, dict):
                                 plugins[module_name] = {
@@ -52,16 +58,15 @@ class DurPlugin:
                                     "module": module,  # Store the module for execution
                                     "path": file_path,   # path to .py file for dynamic reloading
                                     "module_name": module_name,
+                                    "plugin_api_ver": plugin_api_ver,
                                     "opts": None,
                                 }
                                 # Copy in optional module paramaters (opts dict)
                                 if hasattr(module, 'opts') and isinstance(module.opts, dict):
                                     plugins[module_name]["opts"] = module.opts
-                                    #pdb.set_trace()
                                 # Tag internal plugins so they appear in correct menu
                                 if internal_plugin:
                                     plugins[module_name]["meta"]["internal"] = True
-                                    #pdb.set_trace()
                                 else:
                                     plugins[module_name]["meta"]["internal"] = False
                                     
@@ -85,8 +90,7 @@ class DurPlugin:
             self.reload_plugin(plugin_name)
             plugin = self.loaded_plugins[plugin_name]
 
-            #pdb.set_trace()
-
+            opts = ui.pluginOptionsPrompt(plugin['module'].opts)
             # If there are optional paramaters, get them from the user.
             if ui:
                 try:
@@ -100,7 +104,12 @@ class DurPlugin:
             if "transform_movie" in plugin["meta"]["provides"]:
                 if ui:
                     ui.undo.push()
-                mov = plugin["module"].transform_movie(mov, appState=ui.appState)
+                # Different plugin API versions
+                if plugin['module'].durdraw_plugin_version == 1:
+                    mov = plugin["module"].transform_movie(mov, appState=ui.appState)
+                elif plugin['module'].durdraw_plugin_version == 2:
+                    dur_api = durdraw_plugin_api.DurPluginAPI(ui.appState)
+                    mov = plugin["module"].transform_movie(dur_api, opts, mov)
                 if ui:
                     ui.setPlaybackRange(1, mov.frameCount)
                 return mov
