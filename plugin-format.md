@@ -60,38 +60,69 @@ opts = {
 The following methods are provided by Durdraw, and can be used in plugins:
 
 dur.color_mode() - The current color mode, "16" or "256"
+
 dur.suspend_curses() - suspend curses, so another TUI can be loaded
+
 dur.resume_curses() - resume curses, so the plugin can return to Durdraw
+
 dur.notify(message, pause=True) - Send a notification message to the user. pause optionally keeps the message up on the screen until the user presses a key.
+
 dur.color_picker(message=None) - Opens the color picker for the user, returns an integer containing the selected color value. Optionally message contains a message to show the user while the color picker is open.
+
 dur.playback_range() - Returns a tuple containing the playback range set in the UI.
+
 dur.Frame() - returns a new empty Frame object.
+
 dur.Movie() - returns a new empty Frame object.
 
+
 mov.frames[] is a list of Frame objets, which make up the currently loaded movie.
+
 mov.addFrame(frame) - Takes a Frame object and appends it to the end of the movie
+
 mov.insertFrame(frame) - Takes a frame object and inserts it after the "current" frame (the frame in the user's canvas)
+
 mov.addEmptyFrame() - Appends an empty frame to the movie
+
 mov.insertCloneFrame() - Clones current frame and adds it after the current frame
+
 mov.deleteCurrentFrame() - Deletes the current frame
+
 mov.moveFramePosition(startPosition, newPosition) - Moves the frame at startPosition to newPosition
+
 mov.gotoFrame(frameNumber) - frameNumber becomes the current frame
+
 mov.nextFrame() - Go to the next frame (next frame becomes current frame), or wrap around to the first frame if current frame is the last frame in the movie
+
 mov.prevFrame() - Go to the previous frame (previous frame becomes current frame), or wrap around to the last frame if current frame is the first frame
+
 mov.growCanvasWidth(growthSize) - add growthSize number of columns to the canvas (affects all frames)
+
 mov.shrinkCanvasWidth(shrinkSize) - Shrinks the canvas by removing rightmost shrinkSize number of columns
+
 mov.hasMultipleFrames() returns True if the movie has multiple frames, or False if there is only one frame
+
 appState.colorMode: "16" if in 16-color mode, "256" if in 256-color mode.
+
 mov.sizeX - Width (columns) of movie/canvas
+
 mov.sizeY - Height (lines) of movie/canvas
 
+
 Frame.sizeX - Width (columns) of frame
+
 Frame.sizeY - Height (lines) of frame
+
 Frame.content - The unicode characters in the frame (without color data)
+
 frame.content[line][col] - read or write to the character at index line and column
+
 Frame.newColorMap - The color data in the frame (without character data)
+
 Frame.newColorMap[line][col] - read or write to the color at index line and column
+
 Frame.setDelayValue() - takes a float, and sets the timing delay for the specified frame.
+
 
 Here is an example that places random letters and colors on all frames of the movie:
 
