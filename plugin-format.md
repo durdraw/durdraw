@@ -27,7 +27,7 @@ durdraw_plugin = {
 }
 ```
 
-To provide optional paramaters, include the "opts" {} dict. Durdraw will prompt the user to specify these options, or will use the defaults you provide. These options are then passed back into the plugin. For example:
+To provide optional parameters, include the "opts" {} dict. Durdraw will prompt the user to specify these options, or will use the defaults you provide. These options are then passed back into the plugin. For example:
 
 ```python
 opts = {
@@ -47,7 +47,7 @@ def transform_movie(dur, opts, mov):
 transform_movie() is passed 3 objects:
     * dur - an object containing general Durdraw API methods
     * opts - The user-provided options to the plugin
-    * mov - The canvas/movie obbject (a collection of frames)
+    * mov - The canvas/movie object (a collection of frames)
 
 The following methods are provided by Durdraw, and can be used in plugins:
 
@@ -68,7 +68,7 @@ dur.Frame() - returns a new empty Frame object.
 dur.Movie() - returns a new empty Movie object.
 
 
-mov.frames[] is a list of Frame objets, which make up the currently loaded movie.
+mov.frames[] is a list of Frame objects, which make up the currently loaded movie.
 
 mov.addFrame(frame) - Takes a Frame object and appends it to the end of the movie
 
@@ -94,8 +94,6 @@ mov.shrinkCanvasWidth(shrinkSize) - Shrinks the canvas by removing rightmost shr
 
 mov.hasMultipleFrames() returns True if the movie has multiple frames, or False if there is only one frame
 
-appState.colorMode: "16" if in 16-color mode, "256" if in 256-color mode.
-
 mov.sizeX - Width (columns) of movie/canvas
 
 mov.sizeY - Height (lines) of movie/canvas
@@ -116,13 +114,11 @@ Frame.newColorMap[line][col] - read or write to the color at index line and colu
 Frame.setDelayValue() - takes a float, and sets the timing delay for the specified frame.
 
 
-Here is an example that places random letters and colors on all frames of the movie:
+Here is an example Effects that places random letters and colors on all frames of the movie:
 
 
 ```python
 # Durdraw Plugin
-# Type: Transform Movie
-# Name: Random Letters
 
 import random
 import string
@@ -134,7 +130,7 @@ durdraw_plugin_version = 2
 durdraw_plugin = {
     "name": "random letters and colors",
     "author": "Sam Foster, samfoster@gmail.com",
-    "version":  1,   # Plugin verison, if applicable
+    "version":  1,   # Plugin version, if applicable
     "provides": ["transform_movie"],
     "type": ["effect"],
     "desc": "Fill canvas with random letters and colors."
@@ -154,14 +150,9 @@ def transform_movie(dur, opts, mov):
 
 def randomizer(dur, opts, frame):
     # fill canvas with random letters.
-    line_num = 0
-    while line_num < frame.sizeY:
-        col_num  = 0
-        #for col in line:
-        while col_num < frame.sizeX:
+    for line_num in range(frame.sizeY):
+        for col_num in range(frame.sizeX):
             frame.content[line_num][col_num] = random.choice(string.ascii_letters)
-            col_num += 1
-        line_num += 1
 
     # Fill canvas with random colors.
     if dur.color_mode() == "256":
@@ -172,16 +163,47 @@ def randomizer(dur, opts, frame):
         min_color = 1
         max_color = 15
         bg_color = 0
-    line_num = 0
-    while line_num < frame.sizeY:
-        col_num  = 0
-        while col_num < frame.sizeX:
+
+    for line_num in range(frame.sizeY):
+        for col_num in range(frame.sizeX):
             # Fg colr
             frame.newColorMap[line_num][col_num][0] = random.randrange(min_color, max_color + 1)
             # Bg colr
             frame.newColorMap[line_num][col_num][1] = 0
-            col_num += 1
-        line_num += 1
     return frame
 ```
 
+Here is an example Menu Item plugin:
+
+```python
+import curses, os, subprocess
+
+# Durdraw plugin format version
+durdraw_plugin_version = 2
+
+# Plugin information
+durdraw_plugin = {
+    "name": "Jump to Shell",    # Item as it apperas in the menu
+    "author": "",
+    "version": 1,
+    "provides": ["transform_movie"],
+    "desc": "Jump out to the shell, similar to Jump to DOS in TheDraw",
+    # Menu stuff
+    "type": "menu_item",
+    "shortcut": "j",       # Keyboard shurtcut when menu is open
+    "location": "Menu"     # Menu for submenu to go in
+}
+
+# Plugin options
+opts = {
+}
+
+def transform_movie(dur, opts, mov):
+    dur.suspend_curses()
+    shell = os.getenv("SHELL")
+    print("Type 'exit' to return to durdraw.")
+    subprocess.run(shell)
+    input('Press enter to return to Durdraw...')
+    dur.resume_curses()
+    return mov
+```
