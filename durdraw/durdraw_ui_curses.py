@@ -3091,7 +3091,9 @@ class UserInterface():  # Separate view (curses) from this controller
                     c = None
                 elif c == 27:   # 2nd esc byte - possibly alt-arrow.
                     # eg: alt-down: 27 27 91 66 or  \x1b\x1b\x5b\x42
+                    self.stdscr.nodelay(True)   # non-block input in case the user actually pressed Esc
                     c = self.stdscr.getch()
+                    self.stdscr.nodelay(False)
                     if c == 91:     # 3rd byte (\x5b) in arrow key sequence
                         c = self.stdscr.getch()
                         if c == 65: # real alt-up, not esc-up
