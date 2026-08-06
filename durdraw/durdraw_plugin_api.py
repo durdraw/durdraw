@@ -20,12 +20,13 @@ class DurPluginAPI:
         # The plugin calls this, keeping your internal structure hidden
         return self._appState.colorMode
         
-    def suspend_curses(self):
-        """ Suspend ncurses and reset the terminal, so the plugin can use the terminal however they like """
+    def suspend_ui(self):
+        """ Suspend durdraw UI (ncurses) and reset the terminal, so the plugin can use the terminal however they like """
         curses.def_prog_mode()
         curses.endwin()
+        self.curses_running = False
 
-    def resume_curses(self):
+    def resume_ui(self):
         """ Resume ncurses so the plugin can use durdraw UI tools, like notify() """
         curses.reset_prog_mode()
         self.curses_running = True
@@ -50,6 +51,7 @@ class DurPluginAPI:
         return picker_color
 
     def playback_range(self):
+        """ Returns the playback range set in UI """
         return self._appState.playbackRange
 
     def Frame(self, columns, lines):

@@ -53,9 +53,9 @@ The following methods are provided by Durdraw, and can be used in plugins:
 
 dur.color_mode() - The current color mode, "16" or "256"
 
-dur.suspend_curses() - suspend curses, so another TUI can be loaded
+dur.suspend_ui() - Suspend Durdraw UI (curses), so another TUI can be loaded
 
-dur.resume_curses() - resume curses, so the plugin can return to Durdraw
+dur.resume_ui() - Resume Durdraw UI (curses), so the plugin can return to Durdraw
 
 dur.notify(message, pause=True) - Send a notification message to the user. pause optionally keeps the message up on the screen until the user presses a key.
 
@@ -199,11 +199,11 @@ opts = {
 }
 
 def transform_movie(dur, opts, mov):
-    dur.suspend_curses()
+    dur.suspend_ui()
     shell = os.getenv("SHELL")
     print("Type 'exit' to return to durdraw.")
     subprocess.run(shell)
     input('Press enter to return to Durdraw...')
-    dur.resume_curses()
+    dur.resume_ui()
     return mov
 ```

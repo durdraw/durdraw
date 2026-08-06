@@ -23,11 +23,11 @@ opts = {
 }
 
 def transform_movie(dur, opts, mov):
-    dur.suspend_curses()
+    dur.suspend_ui()
     shell = os.getenv("SHELL")
     print("Type 'exit' to return to durdraw.")
     subprocess.run(shell)
     input('Press enter to return to Durdraw...')
-    dur.resume_curses()
+    dur.resume_ui()
     return mov
 
