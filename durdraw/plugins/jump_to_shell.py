@@ -29,7 +29,7 @@ def transform_movie(mov, appState=None, opts=opts):
     curses.endwin()
     #shell = opts['shell']
     shell = os.getenv("SHELL")
-    print("Type 'exit' to reutrn to durdraw.")
+    print("Type 'exit' to return to durdraw.")
     subprocess.run(shell)
     input('Press enter to return to Durdraw...')
     #curses.refresh()
