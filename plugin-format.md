@@ -49,14 +49,6 @@ transform_movie() is passed 3 objects:
     * opts - The user-provided options to the plugin
     * mov - The canvas/movie obbject (a collection of frames)
 
-
-```python
-opts = {
-    'min color': 1,
-    'max color': 255,
-}
-```
-
 The following methods are provided by Durdraw, and can be used in plugins:
 
 dur.color_mode() - The current color mode, "16" or "256"
@@ -73,7 +65,7 @@ dur.playback_range() - Returns a tuple containing the playback range set in the 
 
 dur.Frame() - returns a new empty Frame object.
 
-dur.Movie() - returns a new empty Frame object.
+dur.Movie() - returns a new empty Movie object.
 
 
 mov.frames[] is a list of Frame objets, which make up the currently loaded movie.
@@ -156,11 +148,11 @@ opts = {
 def transform_movie(dur, opts, mov):
     frame_num = 0
     for frame in mov.frames:
-        mov.frames[frame_num] = randomizer(dur, frame)
+        mov.frames[frame_num] = randomizer(dur, opts, frame)
         frame_num += 1
     return mov
 
-def randomizer(dur, frame):
+def randomizer(dur, opts, frame):
     # fill canvas with random letters.
     line_num = 0
     while line_num < frame.sizeY:
