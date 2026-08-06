@@ -1,6 +1,4 @@
 # Durdraw Plugin
-# Type: Transform Movie
-# Name: Reverse |> -> <|
 
 import pdb
 
@@ -18,19 +16,15 @@ durdraw_plugin = {
 }
 
 opts = {
-    #"range low": 0,
-    #"range high": 0,
 }
 
-#def transform_movie(mov, appState=None):
+# old format:
+# def transform_movie(mov, appState=None):
 def transform_movie(dur, opts, mov):
-    # Use slicing trick to reverse frames
-    mov.frames = mov.frames[::-1]
     c = dur.color_picker(message="Pick a color for the effect")
     dur.notify(f"Color picked: {c}")
     pl_range = dur.playback_range()
     col_mode = dur.color_mode()
-    dur.notify(f"Range: {pl_range}, Color mode: {col_mode}")
     dur.suspend_curses()
     print('')
     print("Suspended curses.")

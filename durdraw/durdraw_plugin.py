@@ -90,7 +90,7 @@ class DurPlugin:
             self.reload_plugin(plugin_name)
             plugin = self.loaded_plugins[plugin_name]
 
-            opts = ui.pluginOptionsPrompt(plugin['module'].opts)
+            #opts = ui.pluginOptionsPrompt(plugin['module'].opts)
             # If there are optional paramaters, get them from the user.
             if ui:
                 try:

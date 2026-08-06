@@ -3,7 +3,7 @@
 import curses, os, subprocess
 
 # Durdraw plugin format version
-durdraw_plugin_version = 1
+durdraw_plugin_version = 2
 
 # Plugin information
 durdraw_plugin = {
@@ -20,18 +20,14 @@ durdraw_plugin = {
 
 # Plugin options
 opts = {
-    #'shell': 'bash',
-    # 'filename': '',
 }
 
-def transform_movie(mov, appState=None, opts=opts):
-    curses.def_prog_mode()     # save current tty modes
-    curses.endwin()
-    #shell = opts['shell']
+def transform_movie(dur, opts, mov):
+    dur.suspend_curses()
     shell = os.getenv("SHELL")
     print("Type 'exit' to return to durdraw.")
     subprocess.run(shell)
     input('Press enter to return to Durdraw...')
-    #curses.refresh()
+    dur.resume_curses()
     return mov
 
