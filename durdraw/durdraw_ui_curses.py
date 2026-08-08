@@ -690,7 +690,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.ansi.initColorPairs_cga()
             self.init_16_colors_misc()
             #self.mov.change_palette_256_to_16()
-            if self.clipBoard:
+            if self.clipBoard and isinstance(self.clipBoard, durmovie.Frame):
                 self.mov.change_palette_256_to_16(frame=self.clipBoard)
             self.appState.loadThemeFromConfig("Theme-16")
             self.statusBar.colorPickerButton.hide()
