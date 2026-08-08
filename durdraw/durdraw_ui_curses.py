@@ -7308,7 +7308,26 @@ Can use ESC or META instead of ALT
     def askHowToPaste(self):
         self.clearStatusBar()
         if isinstance(self.clipBoard, durmovie.Movie):
-            self.pasteMovFromClipboard()
+            transparent = False
+            self.clearStatusBar()
+            self.promptPrint("Transparent background paste (Y/N)? ")
+            prompting = True
+            transparent = True
+            while prompting:
+                prompt_ch = self.stdscr.getch()
+                try:
+                    if chr(prompt_ch) in ['y', 'Y']:
+                        frange=self.appState.playbackRange
+                        prompting = False
+                    if chr(prompt_ch) in ['n', 'N']:
+                        transparent = False
+                        prompting = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        return False
+                except ValueError:
+                    pass    # dgaf crash prevention on weird inputs
+
+            self.pasteMovFromClipboard(transparent=transparent)
         elif isinstance(self.clipBoard, durmovie.Frame):
             transparent = False
             frange=None
@@ -7367,7 +7386,7 @@ Can use ESC or META instead of ALT
         # paste it into the next frame of self.mov
         origFrame = self.mov.currentFrameNumber
         for frame in clipBuffer.frames:
-            self.pasteFromClipboard(clipBuffer=frame, transparent=True, pushUndo=False)
+            self.pasteFromClipboard(clipBuffer=frame, transparent=transparent, pushUndo=False)
             self.mov.nextFrame()
         #self.mov.gotoFrame(origFrame)   
     
