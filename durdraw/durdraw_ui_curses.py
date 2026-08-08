@@ -7097,11 +7097,14 @@ Can use ESC or META instead of ALT
                 # copy, cut, fill, or copy into all frames :)
                 prompting = True
                 self.clearStatusBar()
-                self.promptPrint("[C]opy, Cu[t], [D]elete, [F]ill, Co[l]or, Flip [X/Y], New [B]rush, copy to [A]ll Frames in range? " )
+                self.promptPrint("[C]opy, Cu[t], [D]elete, [F]ill, Co[l]or, Flip [X/Y], New [B]rush, Copy Ani[m]ation, copy to [A]ll Frames in range? " )
                 while prompting:
                     prompt_ch = self.stdscr.getch()
                     if chr(prompt_ch) in ['c', 'C']:    # Copy
                         self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                        prompting = False
+                    if chr(prompt_ch) in ['m', 'M']:    # Copy Animation
+                        self.copyAnimToClipboard([firstLineNum, firstColNum], height, width)
                         prompting = False
                     if chr(prompt_ch) in ['b', 'B']:    # Make Brush
                         self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
@@ -7304,52 +7307,78 @@ Can use ESC or META instead of ALT
 
     def askHowToPaste(self):
         self.clearStatusBar()
-        transparent = False
-        frange=None
-        if self.mov.hasMultipleFrames():
-            self.promptPrint("Paste across all frames in playback range (Y/N)? ")
-            askingAboutRange = True
-        else:   # only one frame
-            askingAboutRange = False
-        while askingAboutRange:
-            prompt_ch = self.stdscr.getch()
-            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                frange=self.appState.playbackRange
-                ranged = True
+        if isinstance(self.clipBoard, durmovie.Movie):
+            self.pasteMovFromClipboard()
+        elif isinstance(self.clipBoard, durmovie.Frame):
+            transparent = False
+            frange=None
+            if self.mov.hasMultipleFrames():
+                self.promptPrint("Paste across all frames in playback range (Y/N)? ")
+                askingAboutRange = True
+            else:   # only one frame
                 askingAboutRange = False
-            if chr(prompt_ch) in ['n', 'N']:    # no, single frame only
-                self.undo.push()
-                askingAboutRange = False
-            elif prompt_ch == 27:  # esc, cancel
-                askingAboutRange = False
-                return False
-
-        self.clearStatusBar()
-        self.promptPrint("Transparent background paste (Y/N)? ")
-        prompting = True
-        transparent = True
-        while prompting:
-            prompt_ch = self.stdscr.getch()
-            try:
-                if chr(prompt_ch) in ['y', 'Y']:
+            while askingAboutRange:
+                prompt_ch = self.stdscr.getch()
+                if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
                     frange=self.appState.playbackRange
-                    prompting = False
-                if chr(prompt_ch) in ['n', 'N']:
-                    transparent = False
-                    prompting = False
+                    ranged = True
+                    askingAboutRange = False
+                if chr(prompt_ch) in ['n', 'N']:    # no, single frame only
+                    self.undo.push()
+                    askingAboutRange = False
                 elif prompt_ch == 27:  # esc, cancel
+                    askingAboutRange = False
                     return False
-            except ValueError:
-                pass    # dgaf crash prevention on weird inputs
 
-        self.undo.push()
-        self.pasteFromClipboard(frange=frange, transparent=transparent)
+            self.clearStatusBar()
+            self.promptPrint("Transparent background paste (Y/N)? ")
+            prompting = True
+            transparent = True
+            while prompting:
+                prompt_ch = self.stdscr.getch()
+                try:
+                    if chr(prompt_ch) in ['y', 'Y']:
+                        frange=self.appState.playbackRange
+                        prompting = False
+                    if chr(prompt_ch) in ['n', 'N']:
+                        transparent = False
+                        prompting = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        return False
+                except ValueError:
+                    pass    # dgaf crash prevention on weird inputs
 
-    def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
+            self.undo.push()
+            self.pasteFromClipboard(frange=frange, transparent=transparent)
+
+    def pasteMovFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
+        # Reject if clipboard is empty or not a movie
         if not clipBuffer:
             clipBuffer = self.clipBoard
-        if not clipBuffer:  # clipboard is empty, and no buffer provided
+        if not clipBuffer:
             return False
+        if not isinstance(self.clipBoard, durmovie.Movie):
+            return False
+
+        if pushUndo:
+            self.undo.push()
+
+        # For each frame in the clipboard,
+        # paste it into the next frame of self.mov
+        origFrame = self.mov.currentFrameNumber
+        for frame in clipBuffer.frames:
+            self.pasteFromClipboard(clipBuffer=frame, transparent=True, pushUndo=False)
+            self.mov.nextFrame()
+        #self.mov.gotoFrame(origFrame)   
+    
+    def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
+        """ Pastes a frame object into the canvas """
+        # Reject if clipboard is empty or not a frame
+        if not clipBuffer:
+            clipBuffer = self.clipBoard
+        if not clipBuffer:
+            return False
+
         if pushUndo:
             self.undo.push()
         if not startPoint:
@@ -7401,6 +7430,31 @@ Can use ESC or META instead of ALT
         tempFrame = self.copySegmentToBuffer(startPoint, height, width)
         # paste into each frame in range, at startPoint
         self.pasteFromClipboard(clipBuffer=tempFrame, startPoint=startPoint, frange=frange)
+
+    def copyAnimToClipboard(self, startPoint, height, width):
+        """ startPoint is [line, column] """
+        animClipBoard = self.copyAnimToBuffer(startPoint, height, width)
+        self.clipBoard = animClipBoard 
+
+    def copyAnimToBuffer(self, startPoint, height, width):
+        """ Copies the selected area from all frames in the current playback range into a movie object """
+        opts = Options(width=width, height=height)
+        first = self.appState.playbackRange[0]
+        last = self.appState.playbackRange[1]
+        # Copy animation into a new Movie object
+        clip_mov = Movie(opts)
+        currentFrameNumber = self.mov.currentFrameNumber
+        for frameNum in range(first, last + 1):
+            # For reach frame in the range..
+            self.mov.gotoFrame(frameNum)
+            frame = self.copySegmentToBuffer(startPoint, height, width)
+            # add it to the clipboard movie.
+            clip_mov.addFrame(frame)
+        self.mov.gotoFrame(currentFrameNumber)
+        # Delete initial blank frame from buffer
+        clip_mov.gotoFrame(0)
+        clip_mov.deleteCurrentFrame()
+        return clip_mov
 
     def copySegmentToBuffer(self, startPoint, height, width):
         # Return a buffer, aka a frame or movie object
