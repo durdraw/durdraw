@@ -308,5 +308,8 @@ Here is the same example file in version 7 format:
 
 
 History:
+
 Version 8 - Durdraw 0.30.0 - August 2026 - Fixed colorMap x/y vs y/x issue, and lines/columns vs sizeY/sizeX
+
 Version 7 - May 2023 - First public JSON/GZIP version
+
