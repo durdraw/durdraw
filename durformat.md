@@ -148,8 +148,12 @@ Here is an example Durdraw file, containing an animation with 3 lines, 10 column
 Version 7 is exactly the same, except for the following changes:
 
 * The key 'lines' is called 'sizeY'
+
 * The key 'columns' is called 'sizeX'
+
 * The 'colorMap' lines/columns index are in reverse orientation from 'contents,' so contents[line][column] maps to the color at colorMap[column][line].
+
+Here is the same example file in version 7 format:
 
 ```
 {
