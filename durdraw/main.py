@@ -29,7 +29,7 @@ class ArgumentChecker:
 
 @log.log_on_crash
 def main(fetch_args=None):
-    DUR_FILE_VER = 7
+    DUR_FILE_VER = 8
     DEBUG_MODE = False # debug = makes debug_write available, sends verbose notifications
     durlogo = 'Durdraw'
     argChecker = ArgumentChecker()

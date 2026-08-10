@@ -5745,6 +5745,8 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.ansi.convert_colormap(self.mov, dur_ansilib.legacy_16_to_256)
                     convertedColorMap = True
             self.opts.saveFileFormat = 7
+        if self.opts.saveFileFormat < 8:
+            self.opts.saveFileFormat = 8
         if fileColorMode == "16" and self.appState.colorMode == "256" and convertedColorMap == False:
             for frame in self.mov.frames:   # conert from 16 to 256 pallette
                 for line in range(0, frame.height):

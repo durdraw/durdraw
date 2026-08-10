@@ -171,19 +171,34 @@ def serialize_to_json_file(opts, appState, movie, file_path, gzipped=True):
     else:
         opener = open
     with opener(file_path, 'wt') as f:
-        movieDataHeader = {
-            'formatVersion': opts.saveFileFormat,
-            'colorFormat': colorMode, # 16, 256
-            'preferredFont': 'fixed',   # fixed, vga, amiga, etc.
-            'encoding': appState.charEncoding,
-            'name': '',
-            'artist': '',
-            'framerate': opts.framerate,
-            'sizeX': movie.sizeX,
-            'sizeY': movie.sizeY,
-            'extra': None,
-            'frames': None,
-            }
+        if opts.saveFileFormat < 8:
+            movieDataHeader = {
+                'formatVersion': opts.saveFileFormat,
+                'colorFormat': colorMode, # 16, 256
+                'preferredFont': 'fixed',   # fixed, vga, amiga, etc.
+                'encoding': appState.charEncoding,
+                'name': '',
+                'artist': '',
+                'framerate': opts.framerate,
+                'sizeX': movie.sizeX,
+                'sizeY': movie.sizeY,
+                'extra': None,
+                'frames': None,
+                }
+        elif opts.saveFileFormat >= 8:
+            movieDataHeader = {
+                'formatVersion': opts.saveFileFormat,
+                'colorFormat': colorMode, # 16, 256
+                'preferredFont': 'fixed',   # fixed, vga, amiga, etc.
+                'encoding': appState.charEncoding,
+                'name': '',
+                'artist': '',
+                'framerate': opts.framerate,
+                'columns': movie.sizeX,
+                'lines': movie.sizeY,
+                'extra': None,
+                'frames': None,
+                }
         frameNumber = 1
         fullMovie = {'DurMovie': movieDataHeader}
         fullMovieFrames = []
@@ -191,15 +206,29 @@ def serialize_to_json_file(opts, appState, movie, file_path, gzipped=True):
             content = ''
             newFrame = []
             newColorMap = []
-            for posX in range(0, movie.sizeX):
-                newColorMap.append(list())
+
+            if opts.saveFileFormat < 8:
+                # old v7 saver:
+                for posX in range(0, movie.sizeX):
+                    newColorMap.append(list())
+                    for posY in range(0, movie.sizeY):
+                        #newColorMap[posX].append(list(frame.colorMap[posY, posX]))
+                        try:
+                            newColorMap[posX].append(frame.newColorMap[posY][posX])
+                        except Exception as E:
+                            print(E)
+                            pdb.set_trace()
+            elif opts.saveFileFormat >= 8:
+                # new v8 saver fixes colorMap orientation to match contents:
                 for posY in range(0, movie.sizeY):
-                    #newColorMap[posX].append(list(frame.colorMap[posY, posX]))
-                    try:
-                        newColorMap[posX].append(frame.newColorMap[posY][posX])
-                    except Exception as E:
-                        print(E)
-                        pdb.set_trace()
+                    newColorMap.append(list())
+                    for posX in range(0, movie.sizeX):
+                        try:
+                            newColorMap[posY].append(frame.newColorMap[posY][posX])
+                        except Exception as E:
+                            print(E)
+                            pdb.set_trace()
+    
             for line in frame.content:
                 content = ''.join(line)
                 newFrame.append(content)
@@ -305,7 +334,10 @@ def open_json_dur_file(f, appState):
         for x in range(0, width):
             for y in range(0, height):
                 #pdb.set_trace()
-                colorPair = frame['colorMap'][x][y]
+                if newOpts.saveFileFormat < 8:  # broken file format v7 colormap
+                    colorPair = frame['colorMap'][x][y]
+                elif newOpts.saveFileFormat >= 8:
+                    colorPair = frame['colorMap'][y][x]
                 if appState.colorMode == '16' and colorMode == '256':
                     # set a default color when down-converting color modes:
                     if colorPair[0] > 16:

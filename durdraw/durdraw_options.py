@@ -6,7 +6,7 @@ class Options():    # config, prefs, preferences, etc. Per movie. Separate from 
         self.framerate = 12.0
         self.sizeX = width
         self.sizeY = height
-        self.saveFileFormat = 7 # save file format version number
+        self.saveFileFormat = 8 # save file format version number
         # version 4 is pickle, version 5 is JSON, version 6 saves color and 
         # character encoding formats, Version 7 uses a new palette order for 16 color 
     def toJSON(self):
