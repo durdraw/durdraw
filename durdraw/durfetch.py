@@ -20,8 +20,17 @@ def all_internal_durf_files():
     internal_durf_path = pathlib.Path(__file__).parent.joinpath("durf/")
     internal_durf_files = glob.glob(f"{internal_durf_path}/*.durf")
     all_files = internal_durf_files
-    #all_files = ['bsd.durf', 'linux-tux.durf', 'linux-fire.durf', 'unixbox.durf', 'cm-eye.durf']
     return all_files
+
+def all_internal_durf_linux_files():
+    # Return a list of all files from every location everywhere, throughout the universe
+    # .. or at least the fetch animations built-in to durdraw (in the durdraw/durf/ path).
+    internal_durf_path = pathlib.Path(__file__).parent.joinpath("durf/")
+    internal_durf_files = glob.glob(f"{internal_durf_path}/linux*.durf")
+    all_files = internal_durf_files
+    filenames = [pathlib.Path(path).name for path in all_files]
+    return filenames
+
 
 def get_internal_durf_path():
     return str(pathlib.Path(__file__).parent.joinpath("durf/"))
@@ -64,7 +73,8 @@ def auto_load_file(neofetch_data, rand=False, fake_os=None):
         files = ['bsd.durf']
         # list of BSD 
     else:
-        files = ['linux-tux-fire.durf', 'linux-fire.durf', 'linux-tab.durf', 'linux-tux.durf']
+        #files = ['linux-tux-fire.durf', 'linux-fire.durf', 'linux-tab.durf', 'linux-tux.durf']
+        files = all_internal_durf_linux_files()
     return random.choice(files)
 
 @log.log_on_crash
