@@ -1,4 +1,4 @@
-## Durdraw File Format version 8 - May 2023
+## Durdraw File Format version 8 - August 2026
 
 Durdraw is an ANSI art editor that handles animation, Unicode and 256 color. This document describes its primary file format, "dur."
 
