@@ -4,6 +4,7 @@
 import curses
 
 import durdraw.durdraw_movie as durdraw_movie
+import durdraw_options
 
 class DurPluginAPI:
     """The API object passed to plugins as 'dur'"""
@@ -54,10 +55,11 @@ class DurPluginAPI:
         """ Returns the playback range set in UI """
         return self._appState.playbackRange
 
-    def Frame(self, columns, lines):
+    def Frame(self, lines=25, columns=80):
         """ Return a new Frame object """
         return durdraw_movie.Frame(columns, lines)
 
-    def Movie(self):
+    def Movie(self, lines=25, columns=80):
         """ Return a new Frame object """
-        return durdraw_movie.Movie()
+        opts = durdraw_options.Options(width=80, height=25)
+        return durdraw_movie.Movie(opts)
