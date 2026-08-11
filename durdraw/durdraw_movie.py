@@ -5,6 +5,8 @@ import json
 import pdb
 import re
 
+import curses
+
 def init_list_colorMap(width, height):
     """ Builds a color map consisting of a list of lists """
     #return [[list([1,0]) * width] * height]
@@ -53,23 +55,28 @@ def convert_movie_16_to_256_color_palette(mov):
 class Frame():
     """Frame class - single canvas size frame of animation. a traditional drawing.
     """
-    def __init__(self, width, height):
+    def __init__(self, columns, lines):
         """ Initialize frame, content[x][y] grid """
         # it's a bunch of rows of ' 'characters.
         self.content = []
         self.colorMap = {}
-        self.newColorMap = init_list_colorMap(width, height)   # [[1,0], [3, 1], ...]
-        self.sizeX = width
-        self.width = width
-        self.sizeY = height
-        self.height = height
+        #pdb.set_trace()
+        self.sizeX = columns
+        self.sizeY = lines 
+        if isinstance(self.sizeY, int):
+            self.newColorMap = init_list_colorMap(self.sizeX, self.sizeY)   # [[1,0], [3, 1], ...]
+        else:
+            curses.def_prog_mode() 
+            curses.endwin()
+            pdb.set_trace()
+            curses.reset_prog_mode() 
         self.delay = 0  # delay == # of sec to wait at this frame.
 
         # Generate character arrays for frame contents, fill it
         # with ' ' (space) characters
-        for x in range(0, height):
+        for x in range(0, lines):
             self.content.append([])
-            for y in range(0, width):
+            for y in range(0, columns):
                 self.content[x].append(' ')
 
         self.initOldColorMap()
@@ -78,7 +85,7 @@ class Frame():
         self.setDelayValue(0)
 
         self.log = log.getLogger('frame')
-        self.log.info('frame initialized', {'width': width, 'height': height})
+        self.log.info('frame initialized', {'width': columns, 'height': lines})
 
     def flip_horizontal(self):
         #pdb.set_trace()
@@ -105,15 +112,20 @@ class Frame():
     #        self.content[x].reverse()
     #        self.newColorMap[x].reverse()
 
+    def width(self):
+        """ Returns the number of columns in the frame """
+        return self.sizeX
 
-    def setWidth(self, width):
-        self.sizeX = width
-        self.width = width
+    def height(self):
+        """ Returns the number of lines in the frame """
+        return self.sizeY
+
+    def setWidth(self, columns):
+        self.sizeX = columns 
         return true
 
-    def setHeight(self, height):
-        self.sizeY = height
-        self.height = height
+    def setHeight(self, lines):
+        self.sizeY = lines 
         return true
 
 
@@ -147,6 +159,14 @@ class Movie():
 
         self.log = log.getLogger('movie')
         self.log.info('movie initialized', {'sizeX': self.sizeX, 'sizeY': self.sizeY})
+
+    def width(self):
+        """ Returns the number of columns in the movie """
+        return self.sizeX
+
+    def height(self):
+        """ Returns the number of lines in the movie """
+        return self.sizeY
 
     def addFrame(self, frame):
         """ takes a Frame object, adds it into the movie """
@@ -231,12 +251,10 @@ class Movie():
     def growCanvasWidth(self, growth):
         self.sizeX += growth
         self.opts.sizeX += growth
-        #self.width += growth
 
     def shrinkCanvasWidth(self, shrinkage):
         self.sizeY = self.sizeY - shrinkage
         self.opts.sizeY = self.opts.sizeY - shrinkage 
-        #self.width = self.width - shrinkage
 
     def search_and_replace_color_pair(self, old_color, new_color, frange=None):
         if frange != None:  # apply to all frames in range

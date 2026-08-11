@@ -5749,8 +5749,8 @@ class UserInterface():  # Separate view (curses) from this controller
             self.opts.saveFileFormat = 8
         if fileColorMode == "16" and self.appState.colorMode == "256" and convertedColorMap == False:
             for frame in self.mov.frames:   # conert from 16 to 256 pallette
-                for line in range(0, frame.height):
-                    for col in range(0, frame.width):
+                for line in range(0, frame.height()):
+                    for col in range(0, frame.width()):
                         if frame.newColorMap[line][col][0] == 1:   # convert black color
                             frame.newColorMap[line][col][0] = 16
                         frame.newColorMap[line][col][0] = frame.newColorMap[line][col][0] - 1   # convert rest of colors
@@ -5804,7 +5804,7 @@ class UserInterface():  # Separate view (curses) from this controller
             newFrame = dur_ansiparse.parse_ansi_escape_codes(raw_text, filename = filename, appState=self.appState, caller=self, debug=self.appState.debug, maxWidth=self.appState.wrapWidth)
             self.appState.topLine = 0
             self.appState.firstCol = 0
-            newMovieOpts = Options(width=newFrame.width, height=newFrame.height)
+            newMovieOpts = Options(width=newFrame.width(), height=newFrame.height())
             newMovie = Movie(newMovieOpts)
             # add the frame with the loaded ANSI file to the movie
             newMovie.addFrame(newFrame)
