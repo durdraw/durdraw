@@ -4,7 +4,7 @@
 import curses
 
 import durdraw.durdraw_movie as durdraw_movie
-import durdraw_options
+import durdraw.durdraw_options
 
 class DurPluginAPI:
     """The API object passed to plugins as 'dur'"""
