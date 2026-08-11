@@ -2,11 +2,11 @@ Durdraw Plugin Format Specification, Durdraw Extension API: draft 0.2
 
 Durdraw 0.30.0 and higher allows users to add their own features and extensions through a Plugins API.
 
-Users can create the following plug-in types:
+Users can create these plug-in types:
 
-Effects
-Export
-Menu Items
+* Effects
+* Export
+* Menu Items
 
 Durdraw plugins are Python scripts with the .py file extension.  They can be placed in ~/.durdraw/plugins/ and will be loaded when Durdraw starts.
 
@@ -49,73 +49,51 @@ transform_movie() is passed 3 objects:
     * opts - The user-provided options to the plugin
     * mov - The canvas/movie object (a collection of frames)
 
-The following methods are provided by Durdraw, and can be used in plugins:
+These methods are provided by Durdraw, and can be used in plugins:
 
-dur.color_mode() - The current color mode, "16" or "256"
+| Method | Description |
+| :--- | :--- |
+| `dur.color_mode()` | The current color mode, "16" or "256" |
+| `dur.suspend_ui()` |  Suspend Durdraw UI (curses), so another TUI can be loaded |
+| `dur.resume_ui()` | Resume Durdraw UI (curses), so the plugin can return to Durdraw |
+| `dur.notify(message, pause=True)` | Send a notification message to the user. pause optionally keeps the message up on the screen until the user presses a key. |
+| `dur.color_picker(message=None)` | Opens the color picker for the user, returns an integer containing the selected color value. Optionally message contains a message to show the user while the color picker is open. |
+| `dur.playback_range()` | Returns a tuple containing the playback range set in the UI. |
+| `dur.Movie(lines=25, columns=80)` | returns a new empty Movie object. |
 
-dur.suspend_ui() - Suspend Durdraw UI (curses), so another TUI can be loaded
+"mov" is the currently loaded Movie, passed into the plugin from Durdraw. A Movie is a collection of frames making up the canvas contents, and contains these helper methods:
 
-dur.resume_ui() - Resume Durdraw UI (curses), so the plugin can return to Durdraw
+| Method | Description |
+| :--- | :--- |
+| `mov.addFrame(frame)` | Takes a Frame object and appends it to the end of the movie |
+| `mov.insertFrame(frame)` | Takes a frame object and inserts it after the "current" frame (the frame in the user's canvas) |
+| `mov.addEmptyFrame()` | Appends an empty frame to the movie
+| `mov.insertCloneFrame()` | Clones current frame and adds it after the current frame |
+| `mov.deleteCurrentFrame()` | Deletes the current frame |
+| `mov.moveFramePosition(startPosition, newPosition)` | Moves the frame at startPosition to newPosition |
+| `mov.gotoFrame(frameNumber)` | frameNumber becomes the current frame |
+| `mov.nextFrame()` | Go to the next frame (next frame becomes current frame), or wrap around to the first frame if current frame is the last frame in the movie |
+| `mov.prevFrame()` | Go to the previous frame (previous frame becomes current frame), or wrap around to the last frame if current frame is the first frame |
+| `mov.growCanvasWidth(growthSize)` | Add growthSize number of columns to the canvas (affects all frames) |
+| `mov.shrinkCanvasWidth(shrinkSize)` | Shrinks the canvas by removing rightmost shrinkSize number of columns |
+| `mov.hasMultipleFrames()` | Returns True if the movie has multiple frames, or False if there is only one frame |
+| `Frame.setDelayValue()` | takes a float, and sets the timing delay for the specified frame. |
 
-dur.notify(message, pause=True) - Send a notification message to the user. pause optionally keeps the message up on the screen until the user presses a key.
+The following properties are available:
 
-dur.color_picker(message=None) - Opens the color picker for the user, returns an integer containing the selected color value. Optionally message contains a message to show the user while the color picker is open.
-
-dur.playback_range() - Returns a tuple containing the playback range set in the UI.
-
-dur.Frame() - returns a new empty Frame object.
-
-dur.Movie() - returns a new empty Movie object.
-
-
-mov.frames[] is a list of Frame objects, which make up the currently loaded movie.
-
-mov.addFrame(frame) - Takes a Frame object and appends it to the end of the movie
-
-mov.insertFrame(frame) - Takes a frame object and inserts it after the "current" frame (the frame in the user's canvas)
-
-mov.addEmptyFrame() - Appends an empty frame to the movie
-
-mov.insertCloneFrame() - Clones current frame and adds it after the current frame
-
-mov.deleteCurrentFrame() - Deletes the current frame
-
-mov.moveFramePosition(startPosition, newPosition) - Moves the frame at startPosition to newPosition
-
-mov.gotoFrame(frameNumber) - frameNumber becomes the current frame
-
-mov.nextFrame() - Go to the next frame (next frame becomes current frame), or wrap around to the first frame if current frame is the last frame in the movie
-
-mov.prevFrame() - Go to the previous frame (previous frame becomes current frame), or wrap around to the last frame if current frame is the first frame
-
-mov.growCanvasWidth(growthSize) - add growthSize number of columns to the canvas (affects all frames)
-
-mov.shrinkCanvasWidth(shrinkSize) - Shrinks the canvas by removing rightmost shrinkSize number of columns
-
-mov.hasMultipleFrames() returns True if the movie has multiple frames, or False if there is only one frame
-
-mov.sizeX - Width (columns) of movie/canvas
-
-mov.sizeY - Height (lines) of movie/canvas
-
-
-Frame.sizeX - Width (columns) of frame
-
-Frame.sizeY - Height (lines) of frame
-
-Frame.content - The unicode characters in the frame (without color data)
-
-frame.content[line][col] - read or write to the character at index line and column
-
-Frame.newColorMap - The color data in the frame (without character data)
-
-Frame.newColorMap[line][col] - read or write to the color at index line and column
-
-Frame.setDelayValue() - takes a float, and sets the timing delay for the specified frame.
-
+| Property | Description |
+| :--- | :--- |
+| `mov.frames[]` | A list of Frame objects, which make up the currently loaded movie. |
+| `mov.sizeX` | Width (columns) of movie/canvas |
+| `mov.sizeY` | Height (lines) of movie/canvas |
+| `Frame.sizeX` | Width (columns) of frame |
+| `Frame.sizeY` | Height (lines) of frame |
+| `Frame.content` | The unicode characters in the frame (without color data) |
+| `frame.content[line][col]` | read or write to the character at index line and column |
+| `Frame.newColorMap` | The color data in the frame (without character data) |
+| `Frame.newColorMap[line][col]` | read or write to the color at index line and column |
 
 Here is an example Effects that places random letters and colors on all frames of the movie:
-
 
 ```python
 # Durdraw Plugin
