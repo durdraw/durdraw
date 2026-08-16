@@ -32,6 +32,50 @@ Here is the full list of JSON keys stored in a DurMovie object, and their purpos
 "colorMap" - An array of arrays containing the foreground and background colors for a given line and column in the canvas
 ```
 
+In 256 color mode, the first 16 colors are as follows:
+
+```
+0 black
+1 blue
+2 green
+3 cyan
+4 red
+5 purple
+6 yellow/brown
+7 white
+8 grey/bright black
+9 bright blue
+10 bright green
+11 bright cyan
+12 bright red
+13 bright purple
+14 bright yellow
+15 bright white
+```
+
+Colors 16-255 use the standard Xterm-256color palette index.
+
+In 16 color mode, the first 16 colors begin at index 1 instead of 0:
+
+```
+1 black
+2 blue
+3 green
+4 cyan
+5 red
+6 purple
+7 yellow/brown
+8 white
+9 grey/bright black
+10 bright blue
+11 bright green
+12 bright cyan
+13 bright red
+14 bright purple
+15 bright yellow
+16 bright white
+```
+
 Here is an example Durdraw file, containing an animation with 3 lines, 10 columns and 6 frames:
 
 ```
