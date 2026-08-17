@@ -61,10 +61,12 @@ These methods are provided by Durdraw, and can be used in plugins:
 | `dur.playback_range()` | Returns a tuple containing the playback range set in the UI. |
 | `dur.Movie(lines=25, columns=80)` | returns a new empty Movie object. |
 
-"mov" is the currently loaded Movie, passed into the plugin from Durdraw. A Movie is a collection of frames making up the canvas contents, and contains these helper methods:
+"mov" is the currently loaded Movie, passed into the plugin from Durdraw. A Movie is a collection of frames (in mov.frames[]) making up the canvas contents, and contains these helper methods:
 
 | Method | Description |
 | :--- | :--- |
+| `mov.width()` | Returns width (number of columns) of movie/canvas |
+| `mov.height()` | Return height (number lines) of movie/canvas |
 | `mov.addFrame(frame)` | Takes a Frame object and appends it to the end of the movie |
 | `mov.insertFrame(frame)` | Takes a frame object and inserts it after the "current" frame (the frame in the user's canvas) |
 | `mov.addEmptyFrame()` | Appends an empty frame to the movie
@@ -77,21 +79,19 @@ These methods are provided by Durdraw, and can be used in plugins:
 | `mov.growCanvasWidth(growthSize)` | Add growthSize number of columns to the canvas (affects all frames) |
 | `mov.shrinkCanvasWidth(shrinkSize)` | Shrinks the canvas by removing rightmost shrinkSize number of columns |
 | `mov.hasMultipleFrames()` | Returns True if the movie has multiple frames, or False if there is only one frame |
-| `Frame.setDelayValue()` | takes a float, and sets the timing delay for the specified frame. |
+| `frame.width()` | Returns width (number of columns) of the frame |
+| `frame.height()` | Return height (number lines) of the frame |
+| `frame.setDelayValue()` | takes a float, and sets the timing delay for the specified frame. |
 
 The following properties are available:
 
 | Property | Description |
 | :--- | :--- |
 | `mov.frames[]` | A list of Frame objects, which make up the currently loaded movie. |
-| `mov.sizeX` | Width (columns) of movie/canvas |
-| `mov.sizeY` | Height (lines) of movie/canvas |
-| `Frame.sizeX` | Width (columns) of frame |
-| `Frame.sizeY` | Height (lines) of frame |
-| `Frame.content` | The unicode characters in the frame (without color data) |
+| `frame.content` | The unicode characters in the frame (without color data) |
 | `frame.content[line][col]` | read or write to the character at index line and column |
-| `Frame.newColorMap` | The color data in the frame (without character data) |
-| `Frame.newColorMap[line][col]` | read or write to the color at index line and column |
+| `frame.newColorMap` | The color data in the frame (without character data) |
+| `frame.newColorMap[line][col]` | read or write to the color at index line and column |
 
 Here is an example Effects that places random letters and colors on all frames of the movie:
 
@@ -128,8 +128,8 @@ def transform_movie(dur, opts, mov):
 
 def randomizer(dur, opts, frame):
     # fill canvas with random letters.
-    for line_num in range(frame.sizeY):
-        for col_num in range(frame.sizeX):
+    for line_num in range(frame.height()):
+        for col_num in range(frame.width()):
             frame.content[line_num][col_num] = random.choice(string.ascii_letters)
 
     # Fill canvas with random colors.
@@ -142,8 +142,8 @@ def randomizer(dur, opts, frame):
         max_color = 15
         bg_color = 0
 
-    for line_num in range(frame.sizeY):
-        for col_num in range(frame.sizeX):
+    for line_num in range(frame.height()):
+        for col_num in range(frame.width()):
             # Fg colr
             frame.newColorMap[line_num][col_num][0] = random.randrange(min_color, max_color + 1)
             # Bg colr
