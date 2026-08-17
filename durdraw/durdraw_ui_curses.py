@@ -5901,39 +5901,57 @@ class UserInterface():  # Separate view (curses) from this controller
                 
                 return True
 
-            try:    # Maybe it's a really old Pickle file...
-                if self.appState.debug2: self.notify(f"Unpickling..")
-                pickle_fail = False
-                f.seek(0)
-                unpickler = durfile.DurUnpickler(f)
-                if self.appState.debug2: self.notify(f"self.opts = unpickler.load()")
-                self.opts = unpickler.load()
-                if self.appState.debug2: self.notify(f"self.mov = unpickler.load()")
-                self.mov = unpickler.load()
-                if self.appState.debug2: self.notify(f"self.appState.curOpenFileName = os.path.basename(filename)")
-                self.appState.curOpenFileName = os.path.basename(filename)
-                if self.appState.debug2: self.notify(f"self.appState.playbackRange = (1,self.mov.frameCount)")
-                self.appState.playbackRange = (1,self.mov.frameCount)
-            except Exception as e:
-                pickle_fail = True
-                if self.appState.debug2:
-                    self.notify(f"Exception in unpickling: {type(e)}: {e}")
-            # If the first unpickling fails, try looking for another pickle format
-            if pickle_fail:
-                try:
-                    f.seek(0)
-                    if self.appState.debug2: self.notify(f"self.opts = pickle.load(f ")
-                    self.opts = pickle.load(f)
-                    if self.appState.debug2: self.notify(f"self.mov = pickle.load(f ")
-                    self.mov = pickle.load(f)
-                    self.appState.playbackRange = (1,self.mov.frameCount)
-                    pickle_fail = False
-                except Exception as e:
-                    if self.appState.debug2:
-                        self.notify(f"Exception in unpickling other format: {type(e)}: {e}")
-                    pickle_fail = True
 
-            if pickle_fail: # pickle is still failing
+            pickle_fail = True
+            if durfile.is_pickle_file(filename):
+                self.promptPrint("WARNING: This is a pickle file which can execute code, and may be from an old version of Durdraw. Only open if you trust the file! Proceed? (Y/N)")
+                self.stdscr.nodelay(0) # do not wait for input when calling getch
+                prompting = True
+                pickle_proceed = False
+                while prompting:
+                    c = self.stdscr.getch()
+                    time.sleep(0.01)
+                    if c in [ord('y'), ord('Y')]:
+                        pickle_proceed = True
+                        prompting = False
+                    elif c in [ord('n'), ord('N')]:
+                        pickle_proceed = False
+                        prompting = False
+                        return None
+                if pickle_proceed:
+                    try:    # Maybe it's a really old Pickle file...
+                        pickle_fail = False
+                        if self.appState.debug2: self.notify(f"Unpickling..")
+                        f.seek(0)
+                        unpickler = durfile.DurUnpickler(f)
+                        if self.appState.debug2: self.notify(f"self.opts = unpickler.load()")
+                        self.opts = unpickler.load()
+                        if self.appState.debug2: self.notify(f"self.mov = unpickler.load()")
+                        self.mov = unpickler.load()
+                        if self.appState.debug2: self.notify(f"self.appState.curOpenFileName = os.path.basename(filename)")
+                        self.appState.curOpenFileName = os.path.basename(filename)
+                        if self.appState.debug2: self.notify(f"self.appState.playbackRange = (1,self.mov.frameCount)")
+                        self.appState.playbackRange = (1,self.mov.frameCount)
+                    except Exception as e:
+                        pickle_fail = True
+                        if self.appState.debug2:
+                            self.notify(f"Exception in unpickling: {type(e)}: {e}")
+                    # If the first unpickling fails, try looking for another pickle format
+                    if pickle_fail:
+                        try:
+                            f.seek(0)
+                            if self.appState.debug2: self.notify(f"self.opts = pickle.load(f ")
+                            self.opts = pickle.load(f)
+                            if self.appState.debug2: self.notify(f"self.mov = pickle.load(f ")
+                            self.mov = pickle.load(f)
+                            self.appState.playbackRange = (1,self.mov.frameCount)
+                            pickle_fail = False
+                        except Exception as e:
+                            if self.appState.debug2:
+                                self.notify(f"Exception in unpickling other format: {type(e)}: {e}")
+                            pickle_fail = True
+
+            if pickle_fail: # pickle loading failed, or file is not pickle
                 loadFormat = 'ascii'    # loading .dur format failed, so assume it's ascii instead.
                 # change this to ANSI once ANSI file loading works, stripping out ^M in newlines
                 # change this whole method to call loadDurFile(), loadAnsiFile(),

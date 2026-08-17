@@ -374,6 +374,27 @@ def convert_old_color_to_new(oldPair, colorMode="16"):
     #pdb.set_trace()
     return [newFg, newBg]
 
+def is_pickle_file(file_path):
+    try:
+        with gzip.open(file_path, 'rb') as f:
+            header = f.read(2)
+            if not header:
+                return False
+            
+            # Common pickle opcodes / magic numbers
+            # Proto 0: b'(' or b'cc'
+            # Proto 1: b'}'
+            # Proto 2: b'\x80\x02'
+            # Proto 3: b'\x80\x03'
+            # Proto 4: b'\x80\x04'
+            # Proto 5: b'\x80\x05'
+            if header[0:1] == b'\x80' and header[1:2] in (b'\x02', b'\x03', b'\x04', b'\x05'):
+                return True
+            if header[0:1] in (b'(', b'}', b'c'):
+                return True
+    except IOError:
+        return False
+    return False
 
 class DurUnpickler(pickle.Unpickler):
     """" Custom Unpickler to remove serialized module names (like __main__) from
