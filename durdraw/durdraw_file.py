@@ -114,10 +114,7 @@ def write_frame_to_html_file(mov, appState, frame, file_path, gzipped=False):
         #colNum = 0
         newColorMap = []
         for posY in range(0, mov.sizeY):
-            #newColorMap.append(list())
             for posX in range(0, mov.sizeX):
-                #newColorMap[posX].append(list(frame.colorMap[posY, posX]))
-                #newColorMap[posX].append(frame.newColorMap[posY][posX])
                 durDolor = frame.newColorMap[posY][posX]
                 fgColor = frame.newColorMap[posY][posX][0]
                 bgColor = frame.newColorMap[posY][posX][1]
@@ -125,8 +122,6 @@ def write_frame_to_html_file(mov, appState, frame, file_path, gzipped=False):
         #for line in frame.content:
         #    for c in line: 
                 try:
-                    #fgColor = frame.newColorMap[colNum][lineNum][0]
-                    #bgColor = frame.newColorMap[colNum][lineNum][1]
                     if appState.colorMode == "16":
                         bgColor += 1
                         if bgColor == 9:    # black duplicate
@@ -212,7 +207,6 @@ def serialize_to_json_file(opts, appState, movie, file_path, gzipped=True):
                 for posX in range(0, movie.sizeX):
                     newColorMap.append(list())
                     for posY in range(0, movie.sizeY):
-                        #newColorMap[posX].append(list(frame.colorMap[posY, posX]))
                         try:
                             newColorMap[posX].append(frame.newColorMap[posY][posX])
                         except Exception as E:
@@ -346,7 +340,7 @@ def open_json_dur_file(f, appState):
                 #    colorPair = convert_old_color_to_new(oldColorPair)
                 #    if colorPair == None:
                 #        pdb.set_trace()
-                newMov.frames[currentFrame].colorMap[y, x] = tuple(colorPair)
+                #newMov.frames[currentFrame].colorMap[y, x] = tuple(colorPair)
                 newMov.frames[currentFrame].newColorMap[y][x] = colorPair
         # Add delay for the frame
         newMov.frames[currentFrame].delay = frame['delay']

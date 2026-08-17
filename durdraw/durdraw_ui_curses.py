@@ -1022,8 +1022,6 @@ class UserInterface():  # Separate view (curses) from this controller
             for fn in range(frange[0] - 1, frange[1]):
                 try:
                     self.mov.frames[fn].content[y][x - 1] = chr(c)
-                    #self.mov.frames[fn].colorMap.update(
-                    #        {(y,x - 1):(fg,bg)} )
                     self.mov.frames[fn].newColorMap[y][x - 1] = [fg, bg]
                 except Exception as E:
                     self.notify(f"There was an internal error: {E}", pause=True)
@@ -1032,15 +1030,11 @@ class UserInterface():  # Separate view (curses) from this controller
                     break
             if x < self.mov.sizeX and moveCursor:
                 self.move_cursor_right()
-                #self.xy[1] = self.xy[1] + 1 
         else:
             self.mov.currentFrame.content[y][x - 1] = chr(c)
-            #self.mov.currentFrame.colorMap.update(
-            #        {(y,x - 1):(fg,bg)} )
             self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
             if x < self.mov.sizeX and moveCursor:
                 self.move_cursor_right()
-                #self.xy[1] = self.xy[1] + 1 
 
     def pickUpDrawingChar(self, col, line):
         # Sets the drawing chaaracter to the character under teh cusror.
@@ -5719,11 +5713,8 @@ class UserInterface():  # Separate view (curses) from this controller
         if self.opts.saveFileFormat < 6:
             if self.appState.debug: self.notify(f"Upgrading to format 6. Making new color map.")
             for frame in self.mov.frames:
-                try:
-                    frame.height    # for really old pickle files
-                except:
-                    frame.height = frame.sizeY
-                    frame.width = frame.sizeY
+                frame.height = frame.sizeY
+                frame.width = frame.sizeY
                 for line in range(0, frame.height):
                     for col in range(0, frame.width):
                         oldPair = frame.newColorMap[line][col]
