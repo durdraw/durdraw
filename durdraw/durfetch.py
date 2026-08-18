@@ -93,6 +93,7 @@ def main():
     parser_fake_os_mutex = parser.add_mutually_exclusive_group()
     parser_fake_os_mutex.add_argument("--linux", help="Show a Linux animation", action="store_true")
     parser_fake_os_mutex.add_argument("--bsd", help="Show a BSD animation", action="store_true")
+    parser_fake_os_mutex.add_argument("-a", "--all", help="Play all internal animations", action="store_true")
     parser.add_argument("-V", "--version", help="Show Version information and quit", action="store_true")
     #parser.add_argument("-l", nargs="?", default="list")
     args = parser.parse_args()
@@ -109,6 +110,7 @@ def main():
     #print(args.filename, args.list, args.l, neofetch_data)
     #if args.filename == None:   # no file name passed, so pick an appropriate one.
     faked = None
+    filename = []
     if args.version:
         print(DUR_VER)
         exit(0)
@@ -128,6 +130,9 @@ def main():
             filename = [get_internal_durf_path() + "/" + auto_load_file(fetch_data, fake_os=faked)]
     else:
         filename = args.filename
+    if args.all:
+        #filename = [get_internal_durf_path() + "/" + args.load[0] + ".durf"]
+        filename += all_internal_durf_files()
     #print(filename)
 
     durdraw_args = ["--fetch", "--play"] + filename # filename is alist
