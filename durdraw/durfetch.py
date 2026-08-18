@@ -110,7 +110,6 @@ def main():
     #print(args.filename, args.list, args.l, neofetch_data)
     #if args.filename == None:   # no file name passed, so pick an appropriate one.
     faked = None
-    filename = []
     if args.version:
         print(DUR_VER)
         exit(0)
@@ -132,7 +131,7 @@ def main():
         filename = args.filename
     if args.all:
         #filename = [get_internal_durf_path() + "/" + args.load[0] + ".durf"]
-        filename += all_internal_durf_files()
+        filename = all_internal_durf_files()
     #print(filename)
 
     durdraw_args = ["--fetch", "--play"] + filename # filename is alist
