@@ -94,9 +94,13 @@ def main():
     parser_fake_os_mutex.add_argument("--linux", help="Show a Linux animation", action="store_true")
     parser_fake_os_mutex.add_argument("--bsd", help="Show a BSD animation", action="store_true")
     parser_fake_os_mutex.add_argument("-a", "--all", help="Play all internal animations", action="store_true")
+    parser.add_argument("--list", help="List all available built-in animations and quit", action="store_true")
     parser.add_argument("-V", "--version", help="Show Version information and quit", action="store_true")
     #parser.add_argument("-l", nargs="?", default="list")
     args = parser.parse_args()
+    if args.list:
+        print(epilog_text[:-2]) # slice out 2 of 3 trailing newlines
+        exit(0)
     if (fetcher := neofetcher.find_available_fetcher()):
         print(f"Pulling data from {fetcher}.")
         fetch_data = neofetcher.run(fetcher)
