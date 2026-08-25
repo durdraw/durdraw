@@ -1362,11 +1362,11 @@ class UserInterface():  # Separate view (curses) from this controller
         self.appState.firstCol = 0
         self.playing = False
         self.stdscr.nodelay(1) # do not wait for input when calling getch
-        last_time = time.time()
+        last_time = time.perf_counter()
         self.cursorOff()
         self.playingHelpScreen = True
         self.appState.playingHelpScreen = True
-        new_time = time.time()
+        new_time = time.perf_counter()
         helpMov = self.appState.helpMov
         #if page == 1:
         #    self.appState.sleep_time = (1000.0 / self.appState.helpMovOpts.framerate) / 1000.0
@@ -1442,7 +1442,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     if self.appState.topLine + self.realmaxY < helpMov.sizeY:  # wtf?
                         self.appState.topLine += 1
 
-            new_time = time.time()
+            new_time = time.perf_counter()
             frame_delay = helpMov.currentFrame.delay
             if frame_delay > 0:
                 realDelayTime = frame_delay
@@ -1479,7 +1479,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.appState.firstCol = 0
         self.playing = False
         self.stdscr.nodelay(1) # do not wait for input when calling getch
-        last_time = time.time()
+        last_time = time.perf_counter()
         self.cursorOff()
         self.playingHelpScreen = True
         self.appState.playingHelpScreen = True
@@ -1487,7 +1487,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.appState.playingHelpScreen_2 = True
         else:
             self.appState.playingHelpScreen_2 = False
-        new_time = time.time()
+        new_time = time.perf_counter()
         if page == 2:
             helpMov = self.appState.helpMov_2
         else:
@@ -1515,7 +1515,7 @@ class UserInterface():  # Separate view (curses) from this controller
             c = self.stdscr.getch()
             if c != -1:   # -1 means no keys are pressed.
                 self.playingHelpScreen = False
-            new_time = time.time()
+            new_time = time.perf_counter()
             frame_delay = helpMov.currentFrame.delay
             if frame_delay > 0:
                 realDelayTime = frame_delay
@@ -1745,7 +1745,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.statusBar.animButton.hide()
         self.drawStatusBar()
         self.stdscr.nodelay(1) # do not wait for input when calling getch
-        last_time = time.time()
+        last_time = time.perf_counter()
         #self.statusBar.drawCharPickerButton.hide()
         if self.appState.playOnlyMode:
             self.statusBar.colorPicker.hide()
@@ -1762,7 +1762,7 @@ class UserInterface():  # Separate view (curses) from this controller
             # mode, show extra stuff.
             self.drawStatusBar()
         playedTimes = 1
-        new_time = time.time()
+        new_time = time.perf_counter()
         # see how many milliseconds we have to sleep for
         # then divide by 1000.0 since time.sleep() uses seconds
         self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
@@ -2165,7 +2165,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 if self.appState.playOnlyMode:
                     self.handlePlayOnlyModeInput(self.stdscr.getch())
 
-                new_time = time.time()
+                new_time = time.perf_counter()
                 frame_delay = self.mov.currentFrame.delay
                 if frame_delay > 0:
                     realDelayTime = frame_delay
