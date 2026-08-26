@@ -218,7 +218,6 @@ class ColorPicker:
     def __init__(self, window, x=0, y=0, caller=None, colorMode="256", type="fg"):
         self.hidden = True
         self.window = window
-        self.colorMap = {}
         self.colorMode = colorMode
         self.type = type    # "fg" or "bg," or maybe "fgbg"
         self.x = x
@@ -291,7 +290,6 @@ class ColorSwatch():
         self.window = window
         self.handler = ColorSwatchHandler(self, self.window)
         self.bank = []
-        self.colorMap = {}
         self.x = x
         self.y = y
         for color in range(0,24):
