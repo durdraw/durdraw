@@ -59,7 +59,7 @@ class Frame():
         """ Initialize frame, content[x][y] grid """
         # it's a bunch of rows of ' 'characters.
         self.content = []
-        self.colorMap = {}
+        #self.colorMap = {}
         #pdb.set_trace()
         self.sizeX = columns
         self.sizeY = lines 
@@ -79,13 +79,21 @@ class Frame():
             for y in range(0, columns):
                 self.content[x].append(' ')
 
-        self.initOldColorMap()
+        #self.initOldColorMap()
         #self.initColorMap()
         #self.newColorMap = convert_dict_colorMap(self.colorMap, width, height)
         self.setDelayValue(0)
 
         self.log = log.getLogger('frame')
         self.log.info('frame initialized', {'width': columns, 'height': lines})
+
+    @property
+    def colorMap(self):
+        return self.newColorMap
+
+    @colorMap.setter
+    def colorMap(self, value):
+        self.newColorMap = value
 
     def flip_horizontal(self):
         #pdb.set_trace()
@@ -131,13 +139,6 @@ class Frame():
 
     def setDelayValue(self, delayValue):
         self.delay = delayValue
-
-    def initOldColorMap(self):
-        """ Builds a dictionary mapping X/Y to a FG/BG color pair """
-        self.colorMap = {}
-        for x in range(0, self.sizeY):
-            for y in range(0, self.sizeX):
-                self.colorMap.update( {(x,y):(1,0)} )  # tuple keypair (xy), tuple value (fg and bg)
 
     def initColorMap(self, fg=7, bg=0):
         """ Builds a list of lists """
@@ -191,7 +192,7 @@ class Movie():
         newFrame = Frame(self.sizeX, self.sizeY)
         self.frames.insert(self.currentFrameNumber, newFrame)
         newFrame.content = deepcopy(self.currentFrame.content)
-        newFrame.colorMap = deepcopy(self.currentFrame.colorMap)
+        #newFrame.colorMap = deepcopy(self.currentFrame.colorMap)
         newFrame.newColorMap = deepcopy(self.currentFrame.newColorMap)
         self.frameCount += 1
         return True

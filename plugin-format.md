@@ -90,8 +90,8 @@ The following properties are available:
 | `mov.frames[]` | A list of Frame objects, which make up the currently loaded movie. |
 | `frame.content` | The unicode characters in the frame (without color data) |
 | `frame.content[line][col]` | read or write to the character at index line and column |
-| `frame.newColorMap` | The color data in the frame (without character data) |
-| `frame.newColorMap[line][col]` | read or write to the color at index line and column |
+| `frame.colorMap` | The color data in the frame (without character data) |
+| `frame.colorMap[line][col]` | read or write to the color at index line and column |
 
 Here is an example Effects that places random letters and colors on all frames of the movie:
 
@@ -145,9 +145,9 @@ def randomizer(dur, opts, frame):
     for line_num in range(frame.height()):
         for col_num in range(frame.width()):
             # Fg colr
-            frame.newColorMap[line_num][col_num][0] = random.randrange(min_color, max_color + 1)
+            frame.colorMap[line_num][col_num][0] = random.randrange(min_color, max_color + 1)
             # Bg colr
-            frame.newColorMap[line_num][col_num][1] = 0
+            frame.colorMap[line_num][col_num][1] = 0
     return frame
 ```
 
