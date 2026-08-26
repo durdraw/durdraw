@@ -112,6 +112,9 @@ class DurPlugin:
                     mov = plugin["module"].transform_movie(dur_api, opts, mov)
                 if ui:
                     ui.setPlaybackRange(1, mov.frameCount)
+                # If transformation shortened movie and we're out of range, go to the last frame.
+                if mov.currentFrameNumber - 1 > len(mov.frames):
+                    mov.gotoFrame(len(mov.frames))
                 return mov
         raise ValueError(f"Plugin '{plugin_name}' not found or doesn't provide transform_movie")
 
