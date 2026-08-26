@@ -4190,7 +4190,10 @@ class UserInterface():  # Separate view (curses) from this controller
         if self.playing:
             self.stdscr.nodelay(1)
 
-    def openFromMenu(self):
+    def openExamples(self):
+        self.openFromMenu(examples=True)
+
+    def openFromMenu(self, examples=False):
         #self.stdscr.nodelay(0) # wait for input when calling getch
         self.clearStatusLine()
         if self.appState.modified:
@@ -4209,7 +4212,10 @@ class UserInterface():  # Separate view (curses) from this controller
 
         self.promptPrint("Loading...")
         self.refresh()
-        load_filename, uri_type = self.openFilePicker()
+        if examples:
+            load_filename, uri_type = self.openFilePicker(examples=True)
+        else:
+            load_filename, uri_type = self.openFilePicker()
         if uri_type == "remote":   # Remote URL, from 16colo.rs
             url = load_filename
             #self.notify(f"url: {url}")
@@ -4715,7 +4721,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.log.debug('repopulated file list', {'file_list': file_list})
         return file_list
 
-    def openFilePicker(self):
+    def openFilePicker(self, examples=False):
         """ Draw UI for selecting a file to load, return the filename """
         # get file list
         self.stdscr.nodelay(0) # wait for input when calling getch
@@ -4731,6 +4737,9 @@ class UserInterface():  # Separate view (curses) from this controller
         self.sixteenc_api = None
 
         # set correct color mode for initial picker opening
+        if examples:
+            self.appState.sixteenc_browsing = False
+            self.selected_item_number = 0
         if self.appState.sixteenc_browsing:
             if self.appState.colorMode != "16":
                 self.switchTo16ColorMode()
@@ -4741,18 +4750,26 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.switchTo256ColorMode()
 
         # Set the directory listing for local files
-        if self.appState.workingLoadDirectory: 
-            if os.path.exists(self.appState.workingLoadDirectory):
-                current_directory = self.appState.workingLoadDirectory
+        examples_path = pathlib.Path(__file__).parent.joinpath("examples/")
+        if examples:
+            current_directory = examples_path
+        else:
+            if self.appState.workingLoadDirectory: 
+                if os.path.exists(self.appState.workingLoadDirectory):
+                    current_directory = self.appState.workingLoadDirectory
+                else:
+                    current_directory = os.getcwd()
             else:
                 current_directory = os.getcwd()
-        else:
-            current_directory = os.getcwd()
 
         if not self.appState.sixteenc_browsing:
             file_list = []
             #folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
+            if current_directory == examples_path:
+                folders = []
+            else:
+                folders = ['../']
+            folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
             # remove leading paths
             new_folders = []
             for path_string in folders:
@@ -5580,7 +5597,10 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.stdscr.clear()
                         prompting = False
                         full_path = f"{current_directory}/{file_list[self.selected_item_number]}"
-                        self.appState.workingLoadDirectory = current_directory
+                        if not examples:
+                            self.appState.workingLoadDirectory = current_directory
+                        if examples:
+                            self.selected_item_number = 0
                         self.cursorOn()
                         return full_path, "local"
                     #self.filePickerOptionsPicker()

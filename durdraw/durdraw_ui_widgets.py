@@ -500,6 +500,7 @@ class StatusBar():
         self.menus["Menu"] = mainMenu
         mainMenu.add_item("New/Clear", caller.clearCanvasPrompt, "n", shortcut="esc-C")
         mainMenu.add_item("Open", caller.openFromMenu, "o", shortcut="esc-o")
+        mainMenu.add_item("Open Examples", caller.openExamples, "")
         mainMenu.add_item("Save", caller.save, "s", shortcut="esc-s")
         mainMenu.add_item("Export", caller.openExportMenu, "x", has_submenu=True)
         mainMenu.add_item("Info/Sauce", caller.clickedInfoButton, "i", shortcut="esc-i")
