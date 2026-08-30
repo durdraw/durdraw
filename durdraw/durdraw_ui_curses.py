@@ -1339,7 +1339,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 prompting = False
 
     def increaseFPS(self):
-        if self.opts.framerate != 50: # max 50fps
+        if self.opts.framerate != 240: # max 240fps
             self.opts.framerate += 1
 
     def decreaseFPS(self):
