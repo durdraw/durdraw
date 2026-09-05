@@ -39,7 +39,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 
 ## Requirements
 
-* Python 3 (3.10+ recommended)
+* Python >= 3.10 (3.13.1-3.13.8 not recommended)
 * Linux, macOS, or other Unix-like System
 
 **Optional Requirements**
