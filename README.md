@@ -661,7 +661,7 @@ There are community discussions on Github, where people post art made with Durdr
 Durdraw is what it is thanks to the following people:
 
 - Sam Foster - Creator, primary developer
-- Tom McKeesick - Performnace enhancements, documentation formatting
+- Tom McKeesick - Performance enhancements, documentation formatting
 - Alex Myczko - Man page, Debian ambassador, other bits and pieces
 - sigurdo - Cursor shapes, command-line ANSI export
 - yumpyy - Dockerfile
@@ -670,13 +670,17 @@ Durdraw is what it is thanks to the following people:
 - Frederick Cambus - Documentation update
 - eyooooo - Filename conventions, useful feedback
 - HK - Beta testing, useful feedback
-- ANSI and ASCII artists: `cmang`, `H7`, `LDA`, `HK`
+- ANSI and ASCII artists: `cmang`, `H7`, `LDA`, `HK`, `LnLcFlx`
 
 ### Legal
 
 Durdraw is Copyright (c) 2009-2025 Sam Foster <samfoster@gmail.com>. All rights reserved.
 
 The BSD Daemon is Copyright 1988 by Marshall Kirk McKusick.
+
+The file arch-fire.durf contains Unicode art depicting the Arch Linux logo by Leon Haag-Fank (LnLcFlx).  The original work is available on GitHub Gist and is licensed under a CC-BY 4.0:
+https://gist.github.com/LnLcFlx/18eb10bc74ed9e497d0fedc69468f933
+https://creativecommons.org/licenses/by/4.0/deed.en
 
 This software is distributed under the BSD 3-Clause License. See LICENSE file for details.
 
