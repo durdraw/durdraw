@@ -678,7 +678,7 @@ Durdraw is Copyright (c) 2009-2025 Sam Foster <samfoster@gmail.com>. All rights 
 
 The BSD Daemon is Copyright 1988 by Marshall Kirk McKusick.
 
-The file arch-fire.durf contains Unicode art depicting the Arch Linux logo by Leon Haag-Fank (LnLcFlx).  The original work is available on GitHub Gist and is licensed under a CC-BY 4.0:
+The file arch-fire.durf contains Unicode art depicting the Arch Linux logo by Leon Haag-Fank (LnLcFlx).  The original work is available on GitHub Gist and is licensed under CC BY 4.0:
 https://gist.github.com/LnLcFlx/18eb10bc74ed9e497d0fedc69468f933
 https://creativecommons.org/licenses/by/4.0/deed.en
 
