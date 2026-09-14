@@ -5,7 +5,7 @@ Durdraw
                 _|  |__ __ _____ __|  |_____ _____ __ __ __
                / _  |  |  |   __|  _  |   __|  _  |  |  |  |\
               /_____|_____|__|__|_____|__|___\____|________| | 
-              \_____________________________________________\|  v 0.30.0-BETA
+              \_____________________________________________\|  v 0.30.1
 
 ![durdraw-0 28-demo](https://github.com/user-attachments/assets/3bdb0c46-7f21-4514-9b48-ac00ca62e68e)
 
@@ -32,6 +32,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
   - [Themes](#themes)
 - [Durfetch](#durfetch)
 - [Durview](#durview)
+- [Dur File Format](#dur-file-format)
 - [FAQ](#faq)
 - [Other](#other)
 
@@ -39,7 +40,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 
 ## Requirements
 
-* Python 3 (3.10+ recommended)
+* Python >= 3.10 (3.13.1-3.13.8 not recommended)
 * Linux, macOS, or other Unix-like System
 
 **Optional Requirements**
@@ -59,6 +60,7 @@ You can install `durdraw` via several methods:
 
 - [Via OS Repositories](#via-os-repositories)
 - [Via Source Repository](#via-source-repository)
+- [Via uv](#via-uv)
 - [Via pip](#via-pip)
 - [Via Nix Flakes](#via-nix-flakes)
 
@@ -84,6 +86,26 @@ _If you just want to run it without installing, see [Running Without Installing]
     ```shell
     python3 -m pip install --upgrade .
     ```
+
+### Via uv
+
+You can run the latest Durdraw directly from Pypi using uv:
+
+```shell
+uv tool run -U durdraw
+```
+
+Or durfetch:
+
+```shell
+uv tool run --from durdraw durfetch
+```
+
+Or install Durdraw, durfetch and durview with:
+
+```shell
+uv tool install durdraw
+```
 
 ### Via pip
 
@@ -563,7 +585,19 @@ Here are some `durfetch` examples:
 
 `durview` is an ANSI artpack viewer somewhat reminiscent of AcidView.  By default it connects to https://16colo.rs and lets you browse archived ANSI art scene art packs by year.  It can also view local ANSI, ASCII, DIZ, NFO and DUR files.
 
+## Dur File Format
+
+Durdraw uses a .dur file format to support color, Unicode and animation, which is a gzip compressed JSON file. File format specifications can be found in durformat.md.
+
 ## Development
+
+### Development Branch
+
+New development should always be done in the Devleopment branch. This is also where users can beta test new features.
+
+https://github.com/durdraw/durdraw/tree/dev
+
+Development guidelines can be found in CONTRIBUTING.md.
 
 ### Testing
 
@@ -581,14 +615,17 @@ pytest -vv test/
 
 ## FAQ
 
-#### Q: Durdraw crashed! What do I do?
-A: Oh no! I am sorry and hope nothing important was lost. But you can help fix it. Please take a screenshot of the crash and post it as a bug report at https://github.com/durdraw/durdraw/issues/. Please try to describe what you were trying to do when it happened, and if possible, include the name of your terminal, OS and Python version. I will do my best to try to fix it ASAP. Your terminal will probably start acting weird if Durdraw crashed. You can usually fix it by typing "reset" and pressing enter.
+#### Q: Can I run Durdraw in Windows?
+A: Yes, in WSL or Docker.
+
+#### Q: How can I load an animated .GIF into Durdraw?
+A: You can use the terminal graphics viewer [Gifterm](https://github.com/cmang/gifterm/) to export animated .GIF files as .dur files, which can then be loaded into Durdraw.
 
 #### Q: Don't TheDraw and some other programs already do ANSI animation?
 A: Yes, but traditional ANSI animation does not provide any control over timing, instead relying on terminal baud rate to govern the playback speed. This does not work well on modern systems without baud rate emulation. Durdraw gives the artist fine control over frame rate, and delays per frame. Traditional ANSI animation also updates the animation one character at a time, while Durdraw updates the animation a full frame at a time. This makes it less vulnerable to visual corruption from things like errant terminal characters, resized windows, line noise, etc. Finally, unlike TheDraw, which requires MS-DOS, Durdraw runs in modern Unicode terminals.
 
-#### Q: Can I run Durdraw in Windows?
-A: Yes, in WSL or Docker.
+#### Q: Durdraw crashed! What do I do?
+A: Oh no! I am sorry and hope nothing important was lost. But you can help fix it. Please take a screenshot of the crash (and/or include a copy of durdraw.log) and post it as a bug report at https://github.com/durdraw/durdraw/issues/. Please try to describe what you were trying to do when it happened, and if possible, include the name of your terminal, OS and Python version. If your terminal acts weird after a crash, you should be able to fix it by typing "reset" and pressing enter.
 
 #### Q: Can I run Durdraw on Amiga, MS-DOS, Classic MacOS, iOS, Android, Atari ST, etc?
 A: Probably not easily. Durdraw requires Python 3 and Ncurses. If your platform can support these, it will probably run. However, the file format for Durdraw movies is a plain text JSON format. It should be possible to support this format in different operating systems and in different applications. See `durformat.md` for more details on the `.dur` file format.
@@ -629,9 +666,9 @@ Special thanks to the following individuals and organizations for featuring Durd
 - Korben - https://korben.info/editeur-ansi-ascii-unicode-durdraw-creer-art-terminal.html
 - Jill Bryant and Venn Stone at Linux Game Cast - https://www.youtube.com/watch?v=HvZXkqg2vec&t=568s
 - LinuxLinks - https://www.linuxlinks.com/durdraw-ascii-unicode-ansi-art-editor/
+- Bread on Penguins - https://www.youtube.com/watch?v=3BxIpVk_xZI
 - Harald Markus Wirth (hmw) has made a Web `.dur` Player in JavaScript: https://harald.ist.org/stubs/webdurplayer/
-
-If you write, podcast, vlog, or create content about Durdraw, or if you simply enjoy using it, I'd love to hear from you! Please reach out to me via the GitHub project page or at samfoster@gmail.com.
+- Ly display manager supports using Durdraw .dur files as login screen wallpaper! https://codeberg.org/fairyglade/ly
 
 ### Support
 
@@ -651,7 +688,7 @@ If you need assistance or have questions about Durdraw, feel free to reach out t
 
 ### Community
 
-There are community discussions on Github, where people post art made with Durdraw. Check it out: https://github.com/durdraw/durdraw/discussions
+There are community discussions on Github, where people post art made with Durdraw, as well as support channels. Check it out: https://github.com/durdraw/durdraw/discussions
 
 ### Credits
 
@@ -661,7 +698,7 @@ There are community discussions on Github, where people post art made with Durdr
 Durdraw is what it is thanks to the following people:
 
 - Sam Foster - Creator, primary developer
-- Tom McKeesick - Performnace enhancements, documentation formatting
+- Tom McKeesick - Performance enhancements, documentation formatting
 - Alex Myczko - Man page, Debian ambassador, other bits and pieces
 - sigurdo - Cursor shapes, command-line ANSI export
 - yumpyy - Dockerfile
@@ -670,13 +707,17 @@ Durdraw is what it is thanks to the following people:
 - Frederick Cambus - Documentation update
 - eyooooo - Filename conventions, useful feedback
 - HK - Beta testing, useful feedback
-- ANSI and ASCII artists: `cmang`, `H7`, `LDA`, `HK`
+- ANSI and ASCII artists: `cmang`, `H7`, `LDA`, `HK`, `LnLcFlx`
 
 ### Legal
 
-Durdraw is Copyright (c) 2009-2025 Sam Foster <samfoster@gmail.com>. All rights reserved.
+Durdraw is Copyright (c) 2009 Sam Foster <samfoster@gmail.com>. All rights reserved.
 
 The BSD Daemon is Copyright 1988 by Marshall Kirk McKusick.
+
+The file arch-fire.durf contains Unicode art depicting the Arch Linux logo by Leon Haag-Fank (LnLcFlx).  The original work is available on GitHub Gist and is licensed under CC BY 4.0:
+https://gist.github.com/LnLcFlx/18eb10bc74ed9e497d0fedc69468f933
+https://creativecommons.org/licenses/by/4.0/deed.en
 
 This software is distributed under the BSD 3-Clause License. See LICENSE file for details.
 

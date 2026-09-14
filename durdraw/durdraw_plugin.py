@@ -1,12 +1,5 @@
 # Search the plugin directories for plugins to load, and load them
-# Look in ~/.durdraw/plugins and {durdraw}/plugins/
-# plugin {
-#   name: "My Plugin",
-#   path: "/path/to/file.py",
-#   provides: ["transform_frame", "transform_video"],
-# }
-
-# plugin_list = { }
+# Look in /etc/durdraw/plugins, ~/.durdraw/plugins and {durdraw}/plugins/
 
 import os
 import pathlib
@@ -17,9 +10,8 @@ import durdraw.durdraw_plugin_api as durdraw_plugin_api
 
 class DurPlugin:
     def __init__(self):
-        #self.plugin_dirs = ["./plugins", "~/.durdraw/plugins"]
         self.internal_plugins_path = pathlib.Path(__file__).parent.joinpath("plugins/")
-        self.plugin_dirs = [self.internal_plugins_path, "~/.durdraw/plugins"]
+        self.plugin_dirs = [self.internal_plugins_path, "/etc/durdraw/plugins", "~/.durdraw/plugins"]
         self.loaded_plugins = self.load_plugins(self.plugin_dirs)
 
     def load_plugins(self, directories):
@@ -47,8 +39,6 @@ class DurPlugin:
                             module = importlib.util.module_from_spec(spec)
                             spec.loader.exec_module(module)
                             
-                            #plugin_api_ver = 1
-                            #if isinstance(module.durdraw_plugin_version, int) and isinstance(module.durdraw_plugin, int):
                             if isinstance(module.durdraw_plugin_version, int):
                                 plugin_api_ver = module.durdraw_plugin_version
                             # Check if the module contains a 'durdraw_plugin' dict
@@ -75,22 +65,11 @@ class DurPlugin:
                 print(f"isdir: {os.path.isdir(directory)},  access: {os.access(directory, os.R_OK)}")
         return plugins
 
-    def run_plugin_transform_frame(self, plugin_name, frame, ui=None):
-        if plugin_name in self.loaded_plugins:
-            self.reload_plugin(plugin_name)
-            plugin = self.loaded_plugins[plugin_name]
-            if "transform_frame" in plugin["meta"]["provides"]:
-                if ui:
-                    ui.undo.push()
-                return plugin["module"].transform_frame(frame, appState=ui.appState)
-        raise ValueError(f"Plugin '{plugin_name}' not found or doesn't provide transform_frame")
-
-    def run_plugin_transform_mov(self, plugin_name, mov, ui=None):
+    def run_plugin(self, plugin_name, mov, ui=None):
         if plugin_name in self.loaded_plugins:
             self.reload_plugin(plugin_name)
             plugin = self.loaded_plugins[plugin_name]
 
-            #opts = ui.pluginOptionsPrompt(plugin['module'].opts)
             # If there are optional paramaters, get them from the user.
             if ui:
                 try:
@@ -98,8 +77,6 @@ class DurPlugin:
                     plugin['module'].opts = opts
                 except:
                     pass
-                #if "opts" in plugin['module']:
-                #    plugin['module']["opts"] = opts
 
             if "transform_movie" in plugin["meta"]["provides"]:
                 if ui:
@@ -137,9 +114,6 @@ class DurPlugin:
 
 
 if __name__ == "__main__":
-    # Example usage:
-    #plugin_dirs = ["./plugins_dir"]
-    #plugin_dirs = ["~/.durdraw/plugins", "./plugins"]
     plugin_system = DurPlugin()
     print(f"Loading plugins from {plugin_system.plugin_dirs}")
     loaded_plugins = plugin_system.loaded_plugins
