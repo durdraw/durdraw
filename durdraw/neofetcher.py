@@ -11,7 +11,7 @@ neo_keys = ['OS', 'Host', 'Kernel', 'Uptime', 'Packages', 'Shell', 'Resolution',
 # list of available fetchers - name: cmd
 # dictionary order determines cmd priority if multiple are present
 od_fetchers = OrderedDict({
-    "fastfetch": ["fastfetch", "--pipe", "-l", "none"],
+    "fastfetch": ["fastfetch", "--pipe", "-l", "none", "-c", "neofetch"],
     "neofetch": ["neofetch", "--stdout", "--config", "none"],
 })
 
