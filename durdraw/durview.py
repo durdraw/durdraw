@@ -16,6 +16,16 @@ from durdraw.durdraw_options import Options
 from durdraw.durdraw_version import DUR_VER
 import durdraw.help
 
+
+def readable_directory(path):
+    expanded_path = os.path.abspath(os.path.expanduser(path))
+    if not os.path.isdir(expanded_path):
+        raise argparse.ArgumentTypeError(f"{path} is not a readable directory")
+    if not os.access(expanded_path, os.R_OK | os.X_OK):
+        raise argparse.ArgumentTypeError(f"{path} is not a readable directory")
+    return expanded_path
+
+
 @log.log_on_crash
 def main(fetch_args=None):
     DUR_FILE_VER = 8
@@ -34,12 +44,23 @@ def main(fetch_args=None):
     parser.add_argument("--wrap", help="Number of columns to wrap lines at when loading ASCII and ANSI files (default 80)", nargs=1, type=int)
     parser.add_argument("--nomouse", help="Disable mouse support",
                     action="store_true")
+    parser.add_argument("--dir", help="Browse files starting in DIR", metavar="DIR", type=readable_directory)
+    parser.add_argument("--dir-sort", help="Sort files and directories in --dir mode", choices=("size", "name", "mtime"), default="name")
+    parser.add_argument("--flatten-dirs", help="Recursively show viewable files from --dir in one flat list", action="store_true")
     parser.add_argument("--theme", help="Load a custom theme file", nargs=1)
     parser.add_argument("-V", "--version", help="Show version number and exit",
                     action="store_true")
     parser.add_argument("--debug", action="store_true", help=argparse.SUPPRESS)
             
     args = parser.parse_args(fetch_args)
+    if args.dir and args.filename:
+        parser.error("--dir cannot be used with file arguments")
+    if args.dir_sort != "name" and not args.dir:
+        parser.error("--dir-sort requires --dir")
+    if args.flatten_dirs and not args.dir:
+        is_directory_argument = len(args.filename) == 1 and os.path.isdir(os.path.abspath(os.path.expanduser(args.filename[0])))
+        if not is_directory_argument:
+            parser.error("--flatten-dirs requires --dir or a directory argument")
 
     if args.version:
         print(DUR_VER)
@@ -91,6 +112,8 @@ def main(fetch_args=None):
             app.loadThemeFromConfig("Theme-256")
         else:
             app.loadThemeFromConfig("Theme-16")
+    app.loadLoggingConfig()
+
     if args.theme:
         if app.colorMode == "256":
             app.loadThemeFile(args.theme[0], "Theme-256")
@@ -106,7 +129,7 @@ def main(fetch_args=None):
     app.durhelp256_fullpath = durhelp256_fullpath
     app.durhelp16_fullpath = durhelp16_fullpath
 
-    if args.filename:
+    if args.dir or args.filename:
         app.playOnlyMode = True
         app.editorRunning = False
 
@@ -117,18 +140,26 @@ def main(fetch_args=None):
         ui.initMouse()
     if app.blackbg:
         ui.enableTransBackground()
-    if args.filename:
+    if args.dir:
+        app.workingLoadDirectory = args.dir
+        app.usingDirMode = True
+        app.dirSort = args.dir_sort
+        app.flattenDirs = args.flatten_dirs
+        app.sixteenc_browsing = False
+    elif args.filename:
         if os.path.isdir(args.filename[0]):
             # If the first paramater is a directory, treat that as the starting folder.
-            app.workingLoadDirectory = args.filename[0]
+            app.workingLoadDirectory = os.path.abspath(os.path.expanduser(args.filename[0]))
+            app.usingDirMode = True
+            app.flattenDirs = args.flatten_dirs
             app.sixteenc_browsing = False
         else:   # Otherwise, add all the files to the play queue.
             app.play_queue = args.filename
+            app.play_queue_position = 0
+            app.play_queue_auto_advance = True
     while app.durview_running:
         ui.runDurView()
     ui.verySafeQuit()
 
 if __name__ == "__main__":
     main()
-
-

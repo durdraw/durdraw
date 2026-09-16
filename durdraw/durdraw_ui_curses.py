@@ -23,6 +23,9 @@ import traceback
 import time
 import unicodedata
 import urllib
+import urllib.error
+import urllib.parse
+import urllib.request
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -46,6 +49,9 @@ import durdraw.plugins.reverse_movie as reverse_plugin # transform_movie
 import durdraw.plugins.repeat_movie as repeat_plugin # transform_movie
 import durdraw.plugins.bounce_movie as bounce_plugin # transform_movie
 import durdraw.log as log
+
+DEFAULT_LOAD_FILE_MASKS = ['*.dur', '*.durf', '*.asc', '*.ans', '*.txt', '*.diz', '*.nfo', '*.ice', '*.ansi']
+ALL_FILE_MASKS = ['*']
 
 
 class UserInterface():  # Separate view (curses) from this controller
@@ -1555,6 +1561,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 "+, = - Increase animation speed",
                 "- - Decrease animation speed",
                 "i - Show file information",
+                "n, left mouse - Load next file",
+                "p - Load previous file",
                 "v - Set VGA Terminal Colors",
                 "Enter, Esc - Back to file list",
                 "?, h, F1 - Help",
@@ -1612,6 +1620,49 @@ class UserInterface():  # Separate view (curses) from this controller
             dur_key = '{' + key + '}'
             self.mov.search_and_replace(self, dur_key, self.appState.fetchData[key])
 
+    def requestViewerFileChange(self, direction):
+        if not self.appState.play_queue or self.appState.play_queue_position is None:
+            return False
+        next_position = self.appState.play_queue_position + direction
+        if next_position < 0 or next_position >= len(self.appState.play_queue):
+            return False
+        self.appState.play_queue_direction = direction
+        self.playing = False
+        self.appState.topLine = 0
+        self.appState.firstCol = 0
+        return True
+
+    def getCurrentViewerFilePath(self):
+        if self.appState.play_queue and self.appState.play_queue_position is not None:
+            queue_item = self.appState.play_queue[self.appState.play_queue_position]
+            if self.isSixteenColorsQueueItem(queue_item):
+                return None
+            return os.path.abspath(os.path.expanduser(queue_item))
+
+        filename = self.appState.curOpenFileName
+        if not filename:
+            return None
+        if os.path.isabs(filename):
+            return os.path.abspath(os.path.expanduser(filename))
+
+        working_directory = getattr(self.appState, "workingLoadDirectory", None)
+        if working_directory:
+            candidate = os.path.join(working_directory, filename)
+            if os.path.exists(candidate):
+                return os.path.abspath(os.path.expanduser(candidate))
+
+        return os.path.abspath(os.path.expanduser(filename))
+
+    def logViewerFileClassification(self, classification):
+        file_path = self.getCurrentViewerFilePath()
+        if file_path is None:
+            return False
+        self.log.warning(f"{classification}: {file_path}")
+        return True
+
+    def isSixteenColorsQueueItem(self, item):
+        return isinstance(item, tuple) and len(item) == 3 and item[0] == "16colo.rs"
+
     def handlePlayOnlyModeInput(self, c):
         mouseState = False
         if c == curses.KEY_MOUSE: # to support mouse wheel scrolling
@@ -1622,7 +1673,7 @@ class UserInterface():  # Separate view (curses) from this controller
             realmaxY,realmaxX = self.realstdscr.getmaxyx()
 
             if mouseState == curses.BUTTON1_CLICKED:
-                pass
+                self.requestViewerFileChange(1)
                 #self.showFileInformation()
 
             elif mouseState == curses.BUTTON1_DOUBLE_CLICKED:
@@ -1668,6 +1719,14 @@ class UserInterface():  # Separate view (curses) from this controller
             self.scroll_viewer_left()
         elif c in [curses.KEY_RIGHT, ord('l')]:      # right - scroll right
             self.scroll_viewer_right()
+        elif c in [ord('n')]:
+            self.requestViewerFileChange(1)
+        elif c in [ord('p')]:
+            self.requestViewerFileChange(-1)
+        elif c in [ord('1')]:
+            self.logViewerFileClassification("good")
+        elif c in [ord('0')]:
+            self.logViewerFileClassification("flagged")
         elif c in [ord('v')]:      # v - enable VGA colors
             self.enableTrueVGAColors()
         #elif c in [ord('H')]:  # H = scroll all the way left (like home in editor)
@@ -4216,39 +4275,7 @@ class UserInterface():  # Separate view (curses) from this controller
         else:
             load_filename, uri_type = self.openFilePicker()
         if uri_type == "remote":   # Remote URL, from 16colo.rs
-            url = load_filename
-            #self.notify(f"url: {url}")
-            file_data = b"There was an error downloading the file."
-            # Download remote file
-            try:
-                with urllib.request.urlopen(url) as response:
-                    file_data = response.read()
-                    #f = open(filename, 'r', encoding='cp437')
-            except urllib.request.HTTPError as E:
-                self.notify(f"There was an error downloading the file: {E.code}")
-            # save it to a temporary file
-            #with tempfile.NamedTemporaryFile() as fp:
-            with tempfile.TemporaryDirectory() as temp_path:
-                # write file to temp directory, but with original name
-                filename = pathlib.Path(url).name
-                load_filename = temp_path + '/' + filename
-                #self.notify(f"Full load path: {load_filename}")
-                with open(load_filename, mode='wb') as fp:
-                    fp.write(file_data)
-
-                #fp.write(file_data)
-                #self.notify(f"Length: {len(file_data)}")
-                # Clear the canvas and Open it 
-                load_filename = fp.name
-                self.clearCanvas(prompting=False)
-                #if not self.loadFromFile(load_filename, 'dur'):
-                self.loadFromFile(load_filename, 'dur')
-                self.appState.curOpenFileName = pathlib.Path(url).name
-                self.move_cursor_topleft()
-                self.stdscr.clear()
-                self.hardRefresh()
-                self.appState.fileShortPath = url
-                fp.close()
+            self.loadRemoteFile(load_filename)
                 
 
         elif uri_type == "local" and load_filename != False:   # if not False lol
@@ -4260,6 +4287,45 @@ class UserInterface():  # Separate view (curses) from this controller
 
         elif load_filename == False:    # User hit Esc out of the file picker
             return False
+
+    def getTempDirectoryOptions(self):
+        prefix = os.environ.get("PREFIX")
+        if prefix:
+            termux_tmp = os.path.join(prefix, "tmp")
+            if os.path.isdir(termux_tmp):
+                return {"dir": termux_tmp}
+        return {}
+
+    def loadRemoteFile(self, url):
+        #self.notify(f"url: {url}")
+        if not url:
+            self.notify("There was an error downloading the file: no URL found")
+            return False
+        try:
+            with urllib.request.urlopen(url) as response:
+                file_data = response.read()
+        except urllib.request.HTTPError as E:
+            self.notify(f"There was an error downloading the file: {E.code}")
+            return False
+        except urllib.error.URLError as E:
+            self.notify(f"There was an error downloading the file: {E.reason}")
+            return False
+
+        with tempfile.TemporaryDirectory(**self.getTempDirectoryOptions()) as temp_path:
+            url_path = urllib.parse.unquote(urllib.parse.urlparse(url).path)
+            filename = pathlib.Path(url_path).name or "download.ans"
+            load_filename = os.path.join(temp_path, filename)
+            with open(load_filename, mode='wb') as fp:
+                fp.write(file_data)
+
+            self.clearCanvas(prompting=False)
+            self.loadFromFile(load_filename, 'dur')
+            self.appState.curOpenFileName = filename
+            self.move_cursor_topleft()
+            self.stdscr.clear()
+            self.hardRefresh()
+            self.appState.fileShortPath = url
+        return True
 
     def toggleColorScrolling(self):
         self.appState.scrollColors = not self.appState.scrollColors
@@ -4699,24 +4765,116 @@ class UserInterface():  # Separate view (curses) from this controller
             #for r in res:
             #    print(r.status_code)
 
-    def findLocalFiles(self, current_directory, folders, masks):
-        # update file list
-        self.log.debug('finding local files!!!', {'current_directory': current_directory, 'folders': folders, 'masks': masks})
-        file_list, matched_files = [], []
-        if self.appState.sixteenc_browsing:
-            search_files_list = []
+    def localFileSortKey(self, current_directory, name):
+        clean_name = name.rstrip(os.path.sep)
+        sort_by = "name"
+        if getattr(self.appState, "usingDirMode", False):
+            sort_by = getattr(self.appState, "dirSort", "name")
+        if sort_by == "size":
+            try:
+                return (-os.path.getsize(os.path.join(current_directory, clean_name)), clean_name.lower())
+            except OSError:
+                return (0, clean_name.lower())
+        if sort_by == "mtime":
+            try:
+                return (-os.path.getmtime(os.path.join(current_directory, clean_name)), clean_name.lower())
+            except OSError:
+                return (0, clean_name.lower())
+        return (clean_name.lower(),)
+
+    def sortLocalNames(self, current_directory, names):
+        return sorted(names, key=lambda name: self.localFileSortKey(current_directory, name))
+
+    def getLocalFolders(self, current_directory, include_hidden=False):
+        patterns = [".*/", "*/"] if include_hidden else ["*/"]
+        folders = []
+        for pattern in patterns:
+            folders += filter(os.path.isdir, glob.glob(os.path.join(current_directory, pattern)))
+        folder_names = []
+        for path_string in folders:
+            folder_names.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
+        return ["../"] + self.sortLocalNames(current_directory, folder_names)
+
+    def localFileMatchesMasks(self, name, masks):
+        for mask in masks:
+            if fnmatch.fnmatch(name.lower(), mask.lower()):
+                return True
+        return False
+
+    def getLocalFileNames(self, current_directory, masks, include_hidden=False):
+        matched_files = []
+        if getattr(self.appState, "flattenDirs", False):
+            for root, dirs, files in os.walk(current_directory):
+                if not include_hidden:
+                    dirs[:] = [dirname for dirname in dirs if not dirname.startswith(".")]
+                for filename in files:
+                    if self.localFileMatchesMasks(filename, masks):
+                        full_path = os.path.join(root, filename)
+                        matched_files.append(os.path.relpath(full_path, current_directory))
         else:
-            search_files_list = os.listdir(current_directory)
-        for file in search_files_list:
+            for filename in os.listdir(current_directory):
+                full_path = os.path.join(current_directory, filename)
+                if self.localFileMatchesMasks(filename, masks) and os.path.isfile(full_path):
+                    matched_files.append(filename)
+        return self.sortLocalNames(current_directory, matched_files)
+
+    def getLocalFileList(self, current_directory, masks, include_hidden=False):
+        folders = []
+        if not getattr(self.appState, "flattenDirs", False):
+            folders = self.getLocalFolders(current_directory, include_hidden=True)
+        return folders + self.getLocalFileNames(current_directory, masks, include_hidden=include_hidden), folders
+
+    def setLocalPlayQueue(self, current_directory, file_list, folders, selected_name):
+        selected_path = os.path.join(current_directory, selected_name)
+        play_queue = []
+        for name in file_list:
+            if name in folders:
+                continue
+            full_path = os.path.join(current_directory, name)
+            if os.path.isfile(full_path):
+                play_queue.append(full_path)
+        self.appState.play_queue = play_queue
+        self.appState.play_queue_auto_advance = False
+        self.appState.play_queue_direction = 0
+        try:
+            self.appState.play_queue_position = play_queue.index(selected_path)
+        except ValueError:
+            self.appState.play_queue_position = None
+
+    def setSixteenColorsPlayQueue(self, pack, file_list, folders, selected_name):
+        selected_item = ("16colo.rs", pack, selected_name)
+        play_queue = []
+        for name in file_list:
+            if name in folders:
+                continue
+            play_queue.append(("16colo.rs", pack, name))
+        self.appState.play_queue = play_queue
+        self.appState.play_queue_auto_advance = False
+        self.appState.play_queue_direction = 0
+        try:
+            self.appState.play_queue_position = play_queue.index(selected_item)
+        except ValueError:
+            self.appState.play_queue_position = None
+
+    def filterFileNames(self, names, masks):
+        matched_files = []
+        for file in names:
             for mask in masks:
                 if fnmatch.fnmatch(file.lower(), mask.lower()):
-                    if os.path.isfile(os.path.join(current_directory, file)):
-                    #if os.access(pathlib.Path(file), os.R_OK):
-                        matched_files.append(file)
-                        break
-        for dirname in folders:
-            file_list.append(dirname)
-        file_list += sorted(matched_files)
+                    matched_files.append(file)
+                    break
+        return matched_files
+
+    def buildSixteenColorsFileList(self, folders, names, masks):
+        return list(folders) + sorted(self.filterFileNames(names, masks))
+
+    def findLocalFiles(self, current_directory, folders, masks, include_hidden=False):
+        # update file list
+        self.log.debug('finding local files!!!', {'current_directory': current_directory, 'folders': folders, 'masks': masks})
+        if self.appState.sixteenc_browsing:
+            return list(folders)
+        else:
+            file_list = list(folders) + self.getLocalFileNames(current_directory, masks, include_hidden=include_hidden)
         self.log.debug('repopulated file list', {'file_list': file_list})
         return file_list
 
@@ -4726,7 +4884,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.stdscr.nodelay(0) # wait for input when calling getch
         self.cursorOff()
         folders =  ["../"]
-        default_masks = ['*.dur', '*.durf', '*.asc', '*.ans', '*.txt', '*.diz', '*.nfo', '*.ice', '*.ansi']
+        default_masks = DEFAULT_LOAD_FILE_MASKS
         masks = default_masks
         matched_files = []
         file_list = []
@@ -4762,24 +4920,10 @@ class UserInterface():  # Separate view (curses) from this controller
                 current_directory = os.getcwd()
 
         if not self.appState.sixteenc_browsing:
-            file_list = []
-            #folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-            if current_directory == examples_path:
-                folders = []
-            else:
-                folders = ['../']
-            folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
-            # remove leading paths
-            new_folders = []
-            for path_string in folders:
-                new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-            folders = new_folders
-
-            for file in os.listdir(current_directory):
-                for mask in masks:
-                    if fnmatch.fnmatch(file.lower(), mask.lower()):
-                        matched_files.append(file)
-                        break
+            file_list, folders = self.getLocalFileList(current_directory, masks)
+            if examples:
+                folders = [folder for folder in folders if folder != "../"]
+                file_list = [name for name in file_list if name != "../"]
         elif self.appState.sixteenc_browsing:
             self.sixteenc_api = SixteenColorsAPI()
             if self.sixteenc_years == None:
@@ -4806,19 +4950,17 @@ class UserInterface():  # Separate view (curses) from this controller
             elif self.sixteenc_levels[self.sixteenc_level] == "pack":
                 sixteenc_files = self.sixteenc_api.list_files_for_pack(self.appState.sixteenc_pack)
                 folders = ['../']
-                #file_list = folders
-                file_list = folders + sixteenc_files
+                file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
                 full_file_list = file_list
                 search_files_list = file_list
-                #file_list = sorted(file_list)
 
 
 
-        if not self.appState.sixteenc_browsing:
+        if not self.appState.sixteenc_browsing and file_list == []:
             for dirname in folders:
                 file_list.append(dirname)
 
-        file_list += sorted(matched_files)
+        file_list += self.sortLocalNames(current_directory, matched_files)
 
         # stash away file list so we can use it for search, and pop it back
         # in when user hits esc
@@ -4925,18 +5067,17 @@ class UserInterface():  # Separate view (curses) from this controller
                             self.addstr(current_line_number - top_line, file_column_number, file_list[current_line_number], curses.color_pair(self.appState.theme['promptColor']))
                 current_line_number += 1
 
-            if self.appState.sixteenc_browsing == False:
-                if mask_all:
-                    if sections[current_section] == "showall":
-                        self.addstr(realmaxY - 4, showall_column, f"[X]", curses.A_REVERSE)
-                    else:
-                        self.addstr(realmaxY - 4, showall_column, f"[X]", curses.color_pair(self.appState.theme['clickColor']))
+            if mask_all:
+                if sections[current_section] == "showall":
+                    self.addstr(realmaxY - 4, showall_column, f"[X]", curses.A_REVERSE)
                 else:
-                    if sections[current_section] == "showall":
-                        self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.A_REVERSE)
-                    else:
-                        self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.color_pair(self.appState.theme['clickColor']))
-                self.addstr(realmaxY - 4, showall_column + 4, f"Show All Files", curses.color_pair(self.appState.theme['menuItemColor']))
+                    self.addstr(realmaxY - 4, showall_column, f"[X]", curses.color_pair(self.appState.theme['clickColor']))
+            else:
+                if sections[current_section] == "showall":
+                    self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.A_REVERSE)
+                else:
+                    self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.color_pair(self.appState.theme['clickColor']))
+            self.addstr(realmaxY - 4, showall_column + 4, f"Show All Files", curses.color_pair(self.appState.theme['menuItemColor']))
 
             if self.appState.sixteenc_available:
                 if self.appState.sixteenc_browsing:
@@ -5079,32 +5220,11 @@ class UserInterface():  # Separate view (curses) from this controller
                                                 current_directory = f"{current_directory}/{file_list[self.selected_item_number]}"
                                                 if current_directory[-1] == "/":
                                                     current_directory = current_directory[:-1]
-                                            # get file list
-                                            folders =  ["../"]
-                                            #folders += glob.glob("*/", root_dir=current_directory)
-                                            if not self.appState.sixteenc_browsing: 
-                                                folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) 
-                                                folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
-                                                # remove leading paths
-                                                new_folders = []
-                                                for path_string in folders:
-                                                    new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                                                folders = new_folders
-
                                             if mask_all:
-                                                masks = ['*']
+                                                masks = ALL_FILE_MASKS
                                             else:
                                                 masks = default_masks
-                                            matched_files = []
-                                            file_list = []
-                                            for file in os.listdir(current_directory):
-                                                for mask in masks:
-                                                    if fnmatch.fnmatch(file.lower(), mask.lower()):
-                                                        matched_files.append(file)
-                                                        break
-                                            for dirname in folders:
-                                                file_list.append(dirname)
-                                            file_list += sorted(matched_files)
+                                            file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
                                             # reset ui
                                             self.selected_item_number = 0
                                             search_string = ""
@@ -5156,13 +5276,9 @@ class UserInterface():  # Separate view (curses) from this controller
                                                         pdb.set_trace()
                                                     self.selected_item_number = 0
                                                     folders = ['../']
-                                                    file_list = folders
-                                                    file_list += sixteenc_files
+                                                    file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
                                                     full_file_list = file_list
                                                     search_files_list = file_list
-                                                    #for dirname in folders:
-                                                    #    file_list.append(dirname)
-                                                    file_list = sorted(file_list)
                                                     self.sixteenc_level += 1    # from "year" to "pack"
                                                     top_line = 0
                                                     search_string = ""
@@ -5172,6 +5288,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                                 self.promptPrint("Loading...")
                                                 self.refresh()
                                                 filename = file_list[self.selected_item_number]
+                                                self.setSixteenColorsPlayQueue(self.appState.sixteenc_pack, full_file_list, folders, filename)
                                                 url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                                 self.cursorOn()
                                                 return url, "remote"
@@ -5182,39 +5299,36 @@ class UserInterface():  # Separate view (curses) from this controller
                                             self.promptPrint("Loading...")
                                             self.refresh()
                                             filename = file_list[self.selected_item_number]
+                                            self.setSixteenColorsPlayQueue(self.appState.sixteenc_pack, full_file_list, folders, filename)
                                             url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                             self.cursorOn()
                                             return url, "remote"
                                         else:
                                             full_path = f"{current_directory}/{file_list[self.selected_item_number]}"
+                                            if not examples:
+                                                self.appState.workingLoadDirectory = current_directory
+                                                self.setLocalPlayQueue(current_directory, full_file_list, folders, file_list[self.selected_item_number])
+                                            else:
+                                                self.selected_item_number = 0
                                             self.cursorOn()
                                             return full_path, "local"
                     if mouseLine == realmaxY - 4:    # on the button bar
                         if mouseCol in range(showall_column,showall_column+3):  # clicked [X] All
-                            if self.appState.sixteenc_browsing == False:
-                                if mask_all:
-                                    mask_all = False
-                                    masks = default_masks
-                                else:
-                                    mask_all = True
-                                    masks = ['*']
+                            if mask_all:
+                                mask_all = False
+                                masks = default_masks
+                            else:
+                                mask_all = True
+                                masks = ALL_FILE_MASKS
                         elif self.appState.sixteenc_available and mouseCol in range(sixteen_column,sixteen_column+3):  # clicked [X] 16c
                             self.appState.sixteenc_browsing = not self.appState.sixteenc_browsing
-                            folders =  ["../"]
-                            #folders += glob.glob("*/", root_dir=current_directory)
-                            if not self.appState.sixteenc_browsing: 
-                                folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
-                                    sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                                # remove leading paths
-                                new_folders = []
-                                for path_string in folders:
-                                    new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                                folders = new_folders
-
-
-                        matched_files = []
-                        file_list = []
-                        file_list = self.findLocalFiles(current_directory, folders, masks)
+                            if not self.appState.sixteenc_browsing:
+                                file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
+                            else:
+                                if self.sixteenc_levels[self.sixteenc_level] == "pack":
+                                    file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
+                                else:
+                                    file_list = list(folders)
                         # reset ui
                         self.selected_item_number = 0
                         search_string = ""
@@ -5262,31 +5376,20 @@ class UserInterface():  # Separate view (curses) from this controller
                     # Check or uncheck Show All Files
                     mask_all = not mask_all
                     if mask_all:
-                        masks = ['*']
+                        masks = ALL_FILE_MASKS
                     else:
                         masks = default_masks
-
-
-
                     # update file list
                     matched_files = []
                     file_list = []
                     full_file_list = []
-                    search_files_list = []
-                    if self.appState.sixteenc_browsing: 
+                    if self.appState.sixteenc_browsing:
                         if self.sixteenc_levels[self.sixteenc_level] == "pack":
-                            search_files_list = sixteenc_files
+                            file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
+                        else:
+                            file_list = list(folders)
                     else:
-                        search_files_list = os.listdir(current_directory)
-                    for file in search_files_list:
-                        for mask in masks:
-                            if fnmatch.fnmatch(file.lower(), mask.lower()):
-                                if os.path.isfile(os.path.join(current_directory, file)):
-                                    matched_files.append(file)
-                                    break
-                    for dirname in folders:
-                        file_list.append(dirname)
-                    file_list += sorted(matched_files)
+                        file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
                     # reset ui
                     self.selected_item_number = 0
                     search_string = ""
@@ -5358,18 +5461,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         file_list = []
                         full_file_list = []
 
-                        folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
-                                sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                        
-                        # remove leading paths
-                        new_folders = []
-                        for path_string in folders:
-                            new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                        folders = new_folders
-
-                        matched_files = self.findLocalFiles(current_directory, folders, masks)
-                        self.log.debug('found', {'matched_files': matched_files, 'folders': folders, 'current_directory': current_directory, 'masks': masks})
-                        file_list += matched_files
+                        file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
+                        self.log.debug('found', {'file_list': file_list, 'folders': folders, 'current_directory': current_directory, 'masks': masks})
                         # reset ui
                         self.selected_item_number = 0
                         search_string = ""
@@ -5392,9 +5485,6 @@ class UserInterface():  # Separate view (curses) from this controller
                     pass
                 elif c in [9]:  # 9 == tab key
                     current_section += 1
-                    if self.appState.sixteenc_browsing: # skip hidden Show All button in 16c mode
-                        if sections[current_section] == "showall":
-                            current_section += 1
                     if current_section > len(sections) - 1: # If we've tabbed through all sections,
                         current_section = 0     # circle back to 0 (main file selector)
 
@@ -5495,13 +5585,9 @@ class UserInterface():  # Separate view (curses) from this controller
                                     pdb.set_trace()
                                 self.selected_item_number = 0
                                 folders = ['../']
-                                file_list = folders
-                                file_list += sixteenc_files
+                                file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
                                 full_file_list = file_list
                                 search_files_list = file_list
-                                #for dirname in folders:
-                                #    file_list.append(dirname)
-                                file_list = sorted(file_list)
                                 self.sixteenc_level += 1    # from "year" to "pack"
                                 top_line = 0
                                 search_string = ""
@@ -5527,6 +5613,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.refresh()
                                 filename = file_list[self.selected_item_number]
                                 #pdb.set_trace()
+                                self.setSixteenColorsPlayQueue(self.appState.sixteenc_pack, full_file_list, folders, filename)
                                 url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                 self.cursorOn()
                                 return url, "remote"
@@ -5547,44 +5634,30 @@ class UserInterface():  # Separate view (curses) from this controller
                                 current_directory = f"{current_directory}/{file_list[self.selected_item_number]}"
                                 if current_directory[-1] == "/":
                                     current_directory = current_directory[:-1]
-                        # get file list
-                        folders =  ["../"]
-                        #folders += sorted(glob.glob("*/", root_dir=current_directory))
-                        if self.appState.sixteenc_browsing:
-                            pass
-                        else:
-                            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
-                                    sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                            # remove leading paths
-                        if not self.appState.sixteenc_browsing:
-                            new_folders = []
-                            for path_string in folders:
-                                new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                            folders = new_folders
-
                         if mask_all:
-                            masks = ['*.*']
+                            masks = ALL_FILE_MASKS
                         else:
                             masks = default_masks
                         matched_files = []
                         file_list = []
                         if self.appState.sixteenc_browsing:
+                            folders = ["../"]
                             if self.appState.sixteenc_pack:
                                 search_files_list = sixteenc_files
                             elif self.appState.sixteenc_year:
                                 search_files_list = sixteenc_packs
                             else:
                                 search_files_list = self.sixteenc_years
+                            for file in search_files_list:
+                                for mask in masks:
+                                    if fnmatch.fnmatch(file.lower(), mask.lower()):
+                                        matched_files.append(file)
+                                        break
+                            for dirname in folders:
+                                file_list.append(dirname)
+                            file_list += self.sortLocalNames(current_directory, matched_files)
                         else:
-                            search_files_list = os.listdir(current_directory)
-                        for file in search_files_list:
-                            for mask in masks:
-                                if fnmatch.fnmatch(file.lower(), mask.lower()):
-                                    matched_files.append(file)
-                                    break
-                        for dirname in folders:
-                            file_list.append(dirname)
-                        file_list += sorted(matched_files)
+                            file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
                         # reset ui
                         top_line = 0
                         self.selected_item_number = 0
@@ -5598,7 +5671,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         full_path = f"{current_directory}/{file_list[self.selected_item_number]}"
                         if not examples:
                             self.appState.workingLoadDirectory = current_directory
-                        if examples:
+                            self.setLocalPlayQueue(current_directory, full_file_list, folders, file_list[self.selected_item_number])
+                        else:
                             self.selected_item_number = 0
                         self.cursorOn()
                         return full_path, "local"
@@ -7651,24 +7725,60 @@ Can use ESC or META instead of ALT
         self.statusBar.hide()
         self.appState.drawBorders = True
 
+    def loadPlayQueuePosition(self):
+        if self.appState.play_queue_position is None:
+            return False
+        if self.appState.play_queue_position < 0:
+            return False
+        if self.appState.play_queue_position >= len(self.appState.play_queue):
+            return False
+        queue_item = self.appState.play_queue[self.appState.play_queue_position]
+        if self.isSixteenColorsQueueItem(queue_item):
+            _, pack, filename = queue_item
+            if getattr(self, "sixteenc_api", None) is None:
+                self.sixteenc_api = SixteenColorsAPI()
+            self.appState.sixteenc_pack = pack
+            url = self.sixteenc_api.get_url_for_file(pack, filename)
+            return self.loadRemoteFile(url)
+        self.clearCanvas(prompting=False)
+        self.loadFromFile(queue_item, 'dur')
+        self.move_cursor_topleft()
+        self.stdscr.clear()
+        self.hardRefresh()
+        return True
+
+    def runPlayQueue(self, load_current=True):
+        if not self.appState.play_queue:
+            return
+        if self.appState.play_queue_position is None:
+            self.appState.play_queue_position = 0
+        while self.appState.durview_running:
+            if load_current:
+                if not self.loadPlayQueuePosition():
+                    return
+            self.enterViewMode()
+            direction = self.appState.play_queue_direction
+            self.appState.play_queue_direction = 0
+            load_current = True
+            if direction == 0:
+                if not self.appState.play_queue_auto_advance:
+                    return
+                direction = 1
+            next_position = self.appState.play_queue_position + direction
+            if next_position < 0 or next_position >= len(self.appState.play_queue):
+                return
+            self.appState.play_queue_position = next_position
+
     def runDurView(self):
         """ Launch the UI for the DurView app """
-        # While there are files to read from the openFilePicker(), put them into view mode
-        #
-        #if self.appState.curOpenFileName != "":
-        #    # We already opened a file from the command-line, so play it.
-        #    self.enterViewMode()
-        for movie in self.appState.play_queue:
-            self.loadFromFile(movie, 'dur') # this loads ansi files, too. win
-            self.enterViewMode()
+        self.runPlayQueue()
         while self.appState.durview_running:
             #file = self.openFilePicker()
             opened = self.openFromMenu()
             if opened == False:
                 # User exited file picker with esc, so exit DurView
                 self.appState.durview_running = False
+            elif self.appState.play_queue and self.appState.play_queue_position is not None:
+                self.runPlayQueue(load_current=False)
             else:
                 self.enterViewMode()
-
-
-

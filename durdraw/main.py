@@ -148,14 +148,7 @@ def main(fetch_args=None):
         else:
             app.loadThemeFromConfig("Theme-16")
 
-    if 'Logging' in app.configFile:
-        logging_config = dict(app.configFile['Logging'])
-
-        if 'local-tz' in logging_config:
-            logging_config['local_tz'] = app.configFile['Logging'].getboolean('local-tz')
-            del logging_config['local-tz']
-
-        app.setLogger(**logging_config)
+    app.loadLoggingConfig()
 
     if args.theme:
         if app.colorMode == "256":

@@ -66,6 +66,8 @@ class AppState():
 
         self.play_queue = []    # List of files to switch between with 'n' and 'p' in Durview and/or play mode
         self.play_queue_position = None
+        self.play_queue_direction = 0
+        self.play_queue_auto_advance = False
 
         # Other durdraw runtime stuff
         self.can_inject = False # Allow injecting color codes to override ncurses colors (for BG 256 colors)
@@ -95,6 +97,9 @@ class AppState():
         self.characterSet = "Durdraw Default"
         self.showCharSetButton = False
         self.workingLoadDirectory = None
+        self.usingDirMode = False
+        self.dirSort = "name"
+        self.flattenDirs = False
         self.fileShortPath = None
         self.fileLongPath = None
         # if self.characterSet == "Unicode Block" then Durdraw knows to use a
@@ -190,7 +195,7 @@ class AppState():
             }
         self.theme = self.theme_16
         self.log_level = 'WARNING'
-        self.log_filepath = './durdraw.log'
+        self.log_filepath = log.DEFAULT_LOG_FILEPATH
         self.log_local_tz = False
         self.logger = log.getLogger('appstate')
 
@@ -245,7 +250,7 @@ class AppState():
 
     def setLogger(self, level=log.DEFAULT_LOG_LEVEL, filepath=log.DEFAULT_LOG_FILEPATH, local_tz=False):
         self.log_level = level
-        self.log_filepath = filepath
+        self.log_filepath = log.app_log_filepath(filepath)
         self.log_local_tz = local_tz
         self.logger = log.getLogger(
             'appstate',
@@ -257,6 +262,17 @@ class AppState():
 
     def getLogger(self, name: str):
         return log.getLogger(name, level=self.log_level, filepath=self.log_filepath, local_tz=self.log_local_tz)
+
+    def loadLoggingConfig(self):
+        if not self.configFile or 'Logging' not in self.configFile:
+            return
+
+        logging_config = dict(self.configFile['Logging'])
+        if 'local-tz' in logging_config:
+            logging_config['local_tz'] = self.configFile['Logging'].getboolean('local-tz')
+            del logging_config['local-tz']
+
+        self.setLogger(**logging_config)
 
     def loadThemeList(self, menu=None, path=None):
         """ Look for theme files in internal durdraw directory """
@@ -502,6 +518,3 @@ class AppState():
         #    self.hasHelpFile = False
         #    self.helpMov = None
         #    return False
-
-
-

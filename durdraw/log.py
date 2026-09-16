@@ -24,8 +24,14 @@ usage examples to log messages:
 from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from functools import wraps
+import curses
 import json
 import logging
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
 
 CRITICAL: int = logging.CRITICAL
 ERROR:    int = logging.ERROR
@@ -42,13 +48,65 @@ LOG_LEVEL = {
 }
 
 LOG_ROOT_NAME = 'durdraw'
-DEFAULT_LOG_FILEPATH = './durdraw.log'
+DEFAULT_LOG_FILENAME = 'durdraw.log'
+DEFAULT_LOG_DIR = '~/.config/durdraw'
+DEFAULT_LOG_FILEPATH = os.path.join(DEFAULT_LOG_DIR, DEFAULT_LOG_FILENAME)
 DEFAULT_LOG_LEVEL = 'WARNING'
 
 CURRENT_LOG_LEVEL = DEFAULT_LOG_LEVEL
 CURRENT_LOG_FILEPATH = DEFAULT_LOG_FILEPATH
 CURRENT_LOG_TZ = timezone.utc
 LOGGER_INITIALISED = False
+
+
+def app_log_filepath(filepath: str = DEFAULT_LOG_FILEPATH) -> str:
+    '''
+    Return the application log path, always rooted in ~/.config/durdraw.
+    A configured path may choose the filename, but not the directory.
+    '''
+    filepath = os.path.expanduser(filepath or DEFAULT_LOG_FILEPATH)
+    filename = Path(filepath).name or DEFAULT_LOG_FILENAME
+    return os.path.expanduser(os.path.join(DEFAULT_LOG_DIR, filename))
+
+
+def _ensure_log_dir(filepath: str) -> None:
+    log_dir = os.path.dirname(os.path.expanduser(filepath))
+    if log_dir:
+        os.makedirs(log_dir, exist_ok=True)
+
+
+def reset_terminal_to_normal() -> None:
+    '''
+    Best-effort terminal cleanup for interrupted curses entrypoints.
+    '''
+    try:
+        curses.nocbreak()
+    except curses.error:
+        pass
+    try:
+        curses.echo()
+    except curses.error:
+        pass
+    try:
+        curses.endwin()
+    except curses.error:
+        pass
+
+    if sys.stdout.isatty():
+        # Disable mouse tracking, leave alternate screen buffers, show cursor,
+        # and reset character attributes.
+        sys.stdout.write('\033[?1000l\033[?1002l\033[?1003l\033[?1006l')
+        sys.stdout.write('\033[?1049l\033[?1047l\033[?47l\033[?25h\033[0m')
+        sys.stdout.flush()
+
+    if os.name == 'posix' and sys.stdin.isatty() and shutil.which('stty'):
+        subprocess.run(
+            ['stty', 'sane'],
+            stdin=sys.stdin,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
 
 
 def _json_default(obj: object) -> str:
@@ -132,7 +190,7 @@ def getLogger(
     Creates a logger with the given name, level, and handlers.
     - disable the logger by setting the level to logging.CRITICAL
     - the default log level is 'WARNING'
-    - the default log file is './durdraw.log'
+    - the default log file is '~/.config/durdraw/durdraw.log'
 
     This logger will only create an output file if there is a call to write a log message that matches the log level.
     '''
@@ -145,12 +203,13 @@ def getLogger(
         # create a root logger
         LOGGER_INITIALISED = True
         CURRENT_LOG_LEVEL = level
-        CURRENT_LOG_FILEPATH = filepath
+        CURRENT_LOG_FILEPATH = os.path.expanduser(filepath)
         if local_tz:
             CURRENT_LOG_TZ = datetime.now().astimezone().tzinfo
         else:
             CURRENT_LOG_TZ = timezone.utc
 
+    _ensure_log_dir(CURRENT_LOG_FILEPATH)
     return _getLogger(
         name,
         level=LOG_LEVEL[CURRENT_LOG_LEVEL],
@@ -170,6 +229,9 @@ def log_on_crash(func):
         # run the function, return the result, and log any exceptions
         try:
             return func(*args, **kwargs)
+        except KeyboardInterrupt:
+            reset_terminal_to_normal()
+            raise SystemExit(130)
         except Exception as e:
             logger.exception(
                 'durview crashed',

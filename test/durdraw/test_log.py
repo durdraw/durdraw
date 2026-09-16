@@ -1,11 +1,15 @@
-import durdraw.log as log
-import time
-from datetime import datetime, timedelta
+import configparser
 import io
 import json
 import logging
 import os
 import time
+from datetime import datetime, timedelta
+
+import pytest
+
+import durdraw.log as log
+from durdraw.durdraw_appstate import AppState
 
 def init_test_logger(name='test_log', **kwargs):
     fake_stream = io.StringIO()
@@ -18,6 +22,45 @@ def init_test_logger(name='test_log', **kwargs):
     return logger, fake_stream
 
 class TestLog:
+
+    def test_app_log_filepath_uses_config_dir(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('HOME', str(tmp_path))
+
+        result = log.app_log_filepath()
+
+        assert result == str(tmp_path / '.config' / 'durdraw' / 'durdraw.log')
+
+    def test_app_log_filepath_keeps_only_configured_filename(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('HOME', str(tmp_path))
+
+        result = log.app_log_filepath('/tmp/somewhere/custom.log')
+
+        assert result == str(tmp_path / '.config' / 'durdraw' / 'custom.log')
+
+    def test_appstate_logging_config_uses_config_dir(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('HOME', str(tmp_path))
+        app = AppState()
+        config = configparser.ConfigParser()
+        config['Logging'] = {
+            'filepath': './custom.log',
+            'level': 'INFO',
+            'local-tz': 'False',
+        }
+        app.configFile = config
+
+        app.loadLoggingConfig()
+
+        assert app.log_filepath == str(tmp_path / '.config' / 'durdraw' / 'custom.log')
+        assert app.log_level == 'INFO'
+
+    def test_appstate_logger_creates_config_dir_on_emit(self, monkeypatch, tmp_path):
+        monkeypatch.setenv('HOME', str(tmp_path))
+        app = AppState()
+
+        app.setLogger(level='ERROR')
+        app.logger.error('Hello, world!')
+
+        assert (tmp_path / '.config' / 'durdraw' / 'durdraw.log').exists()
 
     def test_log_complete_format(self):
         logger, fake_stream = init_test_logger()
@@ -195,3 +238,18 @@ class TestLog:
                 'data': {},
             },
         ]
+
+    def test_log_on_crash_resets_terminal_on_keyboard_interrupt(self, monkeypatch):
+        reset_calls = []
+
+        monkeypatch.setattr(log, 'reset_terminal_to_normal', lambda: reset_calls.append(None))
+
+        @log.log_on_crash
+        def interrupted():
+            raise KeyboardInterrupt
+
+        with pytest.raises(SystemExit) as error:
+            interrupted()
+
+        assert error.value.code == 130
+        assert reset_calls == [None]

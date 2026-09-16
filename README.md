@@ -381,7 +381,7 @@ Here is an example `durdraw.ini` file, showing the available options:
 ;theme-256: ~/.durdraw/themes/mutedform-256.dtheme.ini
 
 [Logging]
-; filepath is the path to the log file. Default is ./durdraw.log
+; filepath sets the log filename. Logs are stored in ~/.config/durdraw/
 ;filepath: ./durdraw.log
 
 ; level sets the logging level. Available options: DEBUG, INFO, WARNING, ERROR, CRITICAL. Default is WARNING
