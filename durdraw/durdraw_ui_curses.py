@@ -7651,7 +7651,7 @@ Can use ESC or META instead of ALT
     def copyAnimToClipboard(self, startPoint, height, width):
         """ startPoint is [line, column] """
         animClipBoard = self.copyAnimToBuffer(startPoint, height, width)
-        target = animClipBoard 
+        self.clipBoard = animClipBoard 
 
     def copyAnimToBrush(self, startPoint, height, width):
         """ startPoint is [line, column] """
