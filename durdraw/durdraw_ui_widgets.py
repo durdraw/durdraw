@@ -558,7 +558,8 @@ class StatusBar():
         toolMenu.add_item("Color", self.setCursorModeCol, "c")
         toolMenu.add_item("Erase", self.setCursorModeErase, "e")
         toolMenu.add_item("Eyedrop", self.setCursorModeEyedrop, "y")
-        toolMenu.add_item("Draw/Fill Char", caller.openDrawCharPicker, "h")
+        toolMenu.add_item("Animation Brush", caller.setCursorModeAnimBrush, "a")
+        toolMenu.add_item("Set Draw/Fill Char", caller.openDrawCharPicker, "h")
         self.toolMenu = toolMenu
 
         # Make cursor tool selector button
@@ -707,6 +708,12 @@ class StatusBar():
 
     def setCursorModeDraw(self):
         self.caller.appState.setCursorModeDraw()
+        self.caller.enableMouseReporting()
+        self.toolButton.set_label(self.caller.appState.cursorMode)
+
+
+    def setCursorModeAnimBrush(self):
+        self.caller.appState.setCursorModeAnimBrush()
         self.caller.enableMouseReporting()
         self.toolButton.set_label(self.caller.appState.cursorMode)
 

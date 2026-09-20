@@ -143,6 +143,7 @@ class UserInterface():  # Separate view (curses) from this controller
             except KeyError:
                 pdb.set_trace()
         self.mov = Movie(self.opts) # initialize a new movie to work with
+        #self.appState.openMovs.append(mov)
         self.undo = UndoManager(self, appState = self.appState)   # initialize undo/redo system
         self.undo.setHistorySize(self.appState.undoHistorySize)
         self.xy = [0, 1]     # cursor position x/y - was "curs"
@@ -2048,7 +2049,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         if mouseState == curses.BUTTON1_CLICKED:
                             if self.pressingButton:
                                 self.pressingButton = False
-                                if cursorMode != "Draw" and cursorMode != "Paint":
+                                if cursorMode != "Draw" and cursorMode != "Paint" \
+                                        and cursorMode != "ABrush":
                                     print('\033[?1003l') # disable mouse reporting
                                     self.hardRefresh()
                                     curses.mousemask(1)
@@ -2082,7 +2084,8 @@ class UserInterface():  # Separate view (curses) from this controller
                                     self.hardRefresh()
                             else:
                                 self.pressingButton = False
-                                if cursorMode != "Draw" and cursorMode != "Paint":
+                                if cursorMode != "Draw" and cursorMode != "Paint" \
+                                        and cursorMode != "ABrush":
                                     print('\033[?1003l') # disable mouse reporting
                                     self.hardRefresh()
                                     curses.mousemask(1)
@@ -2276,7 +2279,8 @@ class UserInterface():  # Separate view (curses) from this controller
         self.playing = False
         self.statusBar.toolButton.show()
         self.statusBar.animButton.show()
-        if self.appState.cursorMode == "Draw" or self.appState.cursorMode == "Paint":
+        if self.appState.cursorMode == "Draw" or self.appState.cursorMode == "Paint" \
+                or self.appState.cursorMode == "ABrush":
             self.statusBar.drawCharPickerButton.show()
             self.enableMouseReporting()
 
@@ -2443,7 +2447,12 @@ class UserInterface():  # Separate view (curses) from this controller
             topLine = 0
         #self.appState.topLine = topLine
         if self.xy[0] < self.appState.topLine:   # if cursor is off screen
-            self.xy[0] = self.appState.topLine   # put it back on
+            self.xy[0] = kelf.appState.topLine   # put it back on
+
+    def drawOpenTabs(self, line=None, column=0):
+        real_max_line, real_max_col = self.realstdscr.getmaxyx()
+        if not line:
+            line = realmax
 
     def drawStatusBar(self):
         if self.statusBar.hidden:
@@ -2848,6 +2857,12 @@ class UserInterface():  # Separate view (curses) from this controller
             drawChar_col = self.statusBar.drawCharPickerButton.realY + 1
             self.addstr(drawChar_line, drawChar_col, self.appState.drawChar, curses.color_pair(self.colorpair))
 
+        if self.appState.cursorMode == "ABrush":
+            #pdb.set_trace()
+            if not self.appState.animBrush.is_set():
+                message = "No animation brush set. Use selection tool to make one"
+                self.addstr(statusBarLineNum - 1, 0, message, self.appState.theme['mainColor'])
+                #self.notify(message)
         if resized:
             self.refresh()
             self.showFileInformation()
@@ -2929,7 +2944,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.pressingButton = False
                 if self.pushingToClip:
                     self.pushingToClip = False
-                if cursorMode != "Draw" and cursorMode != "Paint":
+                if cursorMode != "Draw" and cursorMode != "Paint" \
+                         and cursorMode != "ABrush":
                     print('\033[?1003l') # disable mouse reporting
                     self.hardRefresh()
                     curses.mousemask(1)
@@ -3173,7 +3189,8 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.prevFgColor()
                             c = None
                     self.pressingButton = False
-                    if cursorMode != "Draw" and cursorMode != "Paint":
+                    if cursorMode != "Draw" and cursorMode != "Paint" \
+                            and cursorMode != "ABrush":
                         print('\033[?1003l') # disable mouse reporting
                         self.hardRefresh()
                         curses.mousemask(1)
@@ -3182,7 +3199,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.pushingToClip = False
                 else:
                     self.pressingButton = False
-                    if cursorMode != "Draw" and cursorMode != "Paint":
+                    if cursorMode != "Draw" and cursorMode != "Paint" \
+                            and cursorMode != "ABrush":
                         print('\033[?1003l') # disable mouse reporting
                         self.hardRefresh()
                         curses.mousemask(1)
@@ -3204,7 +3222,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.pressingButton = False
                 if self.pushingToClip:
                     self.pushingToClip = False
-                if cursorMode != "Draw" and cursorMode != "Paint":
+                if cursorMode != "Draw" and cursorMode != "Paint" \
+                            and cursorMode != "ABrush":
                     print('\033[?1003l') # disable mouse reporting
                     self.hardRefresh()
                     curses.mousemask(1)
@@ -3291,7 +3310,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 if self.pushingToClip:
                     self.pushingToClip = False
                 cursorMode = self.appState.cursorMode
-                if cursorMode != "Draw" and cursorMode != "Paint":
+                if cursorMode != "Draw" and cursorMode != "Paint" \
+                            and cursorMode != "ABrush":
                     print('\033[?1003l') # disable mouse reporting
                     self.hardRefresh()
                     curses.mousemask(1)
@@ -3320,7 +3340,8 @@ class UserInterface():  # Separate view (curses) from this controller
                     if self.pushingToClip:
                         self.pushingToClip = False
                     cursorMode = self.appState.cursorMode
-                    if cursorMode != "Draw" and cursorMode != "Paint":
+                    if cursorMode != "Draw" and cursorMode != "Paint" \
+                            and cursorMode != "ABrush":
                         print('\033[?1003l') # disable mouse reporting
                         self.hardRefresh()
                         curses.mousemask(1)
@@ -3352,7 +3373,7 @@ class UserInterface():  # Separate view (curses) from this controller
                             self.hardRefresh()
                         if not self.pushingToClip:
                             cmode = self.appState.cursorMode
-                            if cmode == "Draw" or cmode == "Paint" or cmode == "Color" or cmode == "Erase":
+                            if cmode == "Draw" or cmode == "Paint" or cmode == "Color" or cmode == "Erase" or cmode == "ABrush":
                                 self.undo.push()
                                 self.pushingToClip = True
                     elif mouseState & curses.BUTTON1_RELEASED:
@@ -3361,12 +3382,14 @@ class UserInterface():  # Separate view (curses) from this controller
                             if self.pushingToClip:
                                 self.pushingToClip = False
                             cursorMode = self.appState.cursorMode
-                            if cursorMode != "Draw" and cursorMode != "Paint":
+                            if cursorMode != "Draw" and cursorMode != "Paint" \
+                                    and cursorMode != "ABrush":
                                 print('\033[?1003l') # disable mouse reporting
                                 self.hardRefresh()
                                 curses.mousemask(1)
                                 curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                            if cursorMode == "Draw" and cursorMode == "Paint":
+                            if cursorMode == "Draw" or cursorMode == "Paint" \
+                                    or cursorMode == "ABrush":
                                 self.enableMouseReporting()
                             if self.pushingToClip:
                                 self.pushingToClip = False
@@ -3443,6 +3466,33 @@ class UserInterface():  # Separate view (curses) from this controller
                         else:
                             if self.appState.debug:
                                 self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", curses.color_pair(5) | curses.A_BOLD)
+
+
+                    elif self.appState.cursorMode == "ABrush":   # Paint animation brush
+                        if self.pressingButton:
+                            if self.appState.debug:
+                                self.addstr(self.statusBarLineNum-2, 20, "AnimBrush triggered.", curses.color_pair(6) | curses.A_BOLD)
+                            painting = False 
+                            if self.appState.animBrush.is_set():
+                                painting = True
+                            if painting:
+                                if self.appState.debug:
+                                    self.addstr(self.statusBarLineNum-2, 20, "Paint painting.", curses.color_pair(6) | curses.A_BOLD)
+                                try:
+                                    x_param = mouseX + 1 + self.appState.firstCol
+                                    y_param = mouseY + self.appState.topLine
+                                    #self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=False, pushUndo=False)
+                                    self.pasteFromClipboard(startPoint = [y_param, x_param], clipBuffer=self.appState.animBrush.current_frame(), transparent=True, pushUndo=False)
+                                    # Animation brush, so advance brush and movie frames.
+                                    self.appState.animBrush.next_frame()
+                                    self.mov.nextFrame()
+                                except IndexError:
+                                    self.notify(f"Error, debug info: x={x_param}, y={y_param}, topLine={self.appState.topLine}, mouseX={mouseX}, mouseY={mouseY}", pause=True)
+                                self.refresh()
+                        else:
+                            if self.appState.debug:
+                                self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", curses.color_pair(5) | curses.A_BOLD)
+
 
 
                     elif self.appState.cursorMode == "Color":   # Change the color under the cursor
@@ -4187,13 +4237,17 @@ class UserInterface():  # Separate view (curses) from this controller
         else:
             self.statusBar.setCursorModePaint()
 
+    def setCursorModeAnimBrush(self):
+        self.statusBar.setCursorModeAnimBrush()
+
+
     def openMenu(self, current_menu: str):
         menu_open = True
         self.stdscr.nodelay(0) # wait for input when calling getch
 
         cmode = self.appState.cursorMode
-        if cmode == "Draw" or cmode == "Paint":
-            self.disableMouseReporting()
+        #if cmode == "Draw" or cmode == "Paint":
+        self.disableMouseReporting()
 
         if not self.statusBar.toolButton.hidden:
             self.drawStatusBar()
@@ -6875,6 +6929,7 @@ Can use ESC or META instead of ALT
             for colnum in range(firstCol, lastCol):
                 charColor = mov.currentFrame.newColorMap[linenum][colnum]
                 charContent = str(line[colnum])
+
                 if self.appState.cursorMode == "Paint" and not self.playing and not self.appState.playingHelpScreen:
                     if self.appState.brush != None:
                         # draw brush preview
@@ -6898,6 +6953,32 @@ Can use ESC or META instead of ALT
                                     if self.appState.renderMouseCursor:
                                         charContent = brushChar
                                         charColor = self.appState.brush.newColorMap[brush_col][brush_line]
+
+                if self.appState.cursorMode == "ABrush" and not self.playing and not self.appState.playingHelpScreen:
+                    if self.appState.animBrush.is_set():
+                        # draw animation brush preview
+                        # If we're drawing within the brush area:
+                        if linenum in range(self.appState.mouse_line + topLine, self.appState.mouse_line + self.appState.animBrush.current_frame().sizeX + topLine):
+                            if colnum in range(self.appState.mouse_col + self.appState.firstCol, self.appState.mouse_col + self.appState.animBrush.current_frame().sizeY + self.appState.firstCol):
+                                #brush_line = linenum - self.appState.mouse_line
+                                brush_line = linenum - self.appState.mouse_line - topLine
+                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol
+                                try:
+                                    brushChar = self.appState.animBrush.current_frame().content[brush_col][brush_line]
+                                except IndexError:
+                                    # This should really never happen now.
+                                    self.notify(f"Index error: bcol: {brush_col}, bline: {brush_line}, col: {colnum}, line: {linenum}, mcol: {self.appState.mouse_col}, {self.appState.mouse_line}", pause=False)
+                                    brushChar = ' '
+                                # invisible background for brushes
+                                if brushChar == ' ':
+                                    pass
+                                else:
+                                    # It's a character that we should draw as a brush preview
+                                    if self.appState.renderMouseCursor:
+                                        charContent = brushChar
+                                        charColor = self.appState.animBrush.current_frame().newColorMap[brush_col][brush_line]
+
+
                 if linenum == self.appState.mouse_line + topLine and colnum == self.appState.mouse_col + self.appState.firstCol:
                     if self.appState.cursorMode == "Draw" and not self.playing and not self.appState.playingHelpScreen:  # Drawing preview instead
                         if self.appState.renderMouseCursor:
@@ -7211,8 +7292,21 @@ Can use ESC or META instead of ALT
                         self.copyAnimToClipboard([firstLineNum, firstColNum], height, width)
                         prompting = False
                     if chr(prompt_ch) in ['b', 'B']:    # Make Brush
-                        self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
-                        prompting = False
+                        self.clearStatusBar()
+                        self.promptPrint("Normal [B]rush, or [A]nimation brush? " )
+                        while prompting:
+                            prompt_ch = self.stdscr.getch()
+                            if chr(prompt_ch) in ['b', 'B']:    # Normal Brush
+                                self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
+                                prompting = False
+                            elif chr(prompt_ch) in ['a', 'A']:    # Animation Brush
+                                #self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
+                                self.copyAnimToBrush([firstLineNum, firstColNum], height, width)
+                                prompting = False
+                            elif prompt_ch == 27:  # esc, cancel
+                                prompting = False
+                            prompting = False
+                        break   # to prevent triggering "a" copy to all frames
                     #if chr(prompt_ch) in ['m', 'M']:    # move
                     #    prompting = False
                     elif chr(prompt_ch) in ['x', 'X']:    # flip horizontally
@@ -7557,7 +7651,13 @@ Can use ESC or META instead of ALT
     def copyAnimToClipboard(self, startPoint, height, width):
         """ startPoint is [line, column] """
         animClipBoard = self.copyAnimToBuffer(startPoint, height, width)
-        self.clipBoard = animClipBoard 
+        target = animClipBoard 
+
+    def copyAnimToBrush(self, startPoint, height, width):
+        """ startPoint is [line, column] """
+        copied_mov = self.copyAnimToBuffer(startPoint, height, width)
+        self.appState.animBrush.set_mov(copied_mov)
+
 
     def copyAnimToBuffer(self, startPoint, height, width):
         """ Copies the selected area from all frames in the current playback range into a movie object """

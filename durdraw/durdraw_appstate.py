@@ -13,6 +13,7 @@ from sys import version_info
 from durdraw.durdraw_options import Options
 import durdraw.durdraw_file as durfile
 import durdraw.durdraw_sauce as dursauce
+import durdraw.durdraw_animbrush as animbrush
 import durdraw.log as log
 
 class AppState():
@@ -30,6 +31,8 @@ class AppState():
         self.neofetch = None
         self.PIL = None
         self.check_dependencies()
+
+        self.openMovs = []  # open movies
 
         #threading
         self.stop_event = threading.Event()
@@ -118,6 +121,7 @@ class AppState():
         self.playbackRange = (1,1)
         self.drawChar = '$'
         self.brush = None
+        self.animBrush = animbrush.AnimationBrush()
         self.configFile = None
         self.configFileLoaded = False
         self.configFileName = None
@@ -229,6 +233,9 @@ class AppState():
 
     def setCursorModePaint(self):
         self.cursorMode="Paint"
+
+    def setCursorModeAnimBrush(self):
+        self.cursorMode="ABrush"
 
     def setCursorModeCol(self):
         self.cursorMode="Color"
@@ -442,7 +449,6 @@ class AppState():
     def loadDurFileToMov(self, fileName):
         """ Takes a file path, returns a movie object """
         fileName = os.path.expanduser(fileName)
-        #self.helpMov = Movie(self.opts) # initialize a new movie to work with
         try:
             f = open(fileName, 'rb')
         except Exception as e:
@@ -456,14 +462,13 @@ class AppState():
                 return False
         else:
             f.seek(0)
-        try:    # Load json help file
-            #pdb.set_trace()
+        try:    # Load json file
             loadedContainer = durfile.open_json_dur_file(f, self)
             opts = loadedContainer['opts']
             mov = loadedContainer['mov']
             return mov, opts
         except:
-            #pass    # loading json help file failed for some reason, so...
+            # loading json help file failed for some reason, so...
             return False
 
 
@@ -474,7 +479,6 @@ class AppState():
 
     def loadHelpFile(self, helpFileName, page=1):
         helpFileName = os.path.expanduser(helpFileName)
-        #self.helpMov = Movie(self.opts) # initialize a new movie to work with
         try:
             f = open(helpFileName, 'rb')
         except Exception as e:
@@ -494,7 +498,6 @@ class AppState():
         else:
             f.seek(0)
         try:    # Load json help file
-            #pdb.set_trace()
             loadedContainer = durfile.open_json_dur_file(f, self)
             if page == 1:
                 self.helpMovOpts = loadedContainer['opts']
@@ -505,16 +508,15 @@ class AppState():
             self.hasHelpFile = True
             return True
         except:
-            #pass    # loading json help file failed for some reason, so...
+            # loading json help file failed for some reason, so...
             return False
-        #try:    # Load pickle file. This should never happen anymore, so...
-        #    #self.opts = pickle.load(f)
-        #    #self.mov = pickle.load(f)
-        #    self.helpMovOpts = pickle.load(f)
-        #    self.helpMov = pickle.load(f)
-        #    self.hasHelpFile = True
-        #    return True
-        #except Exception as e:
-        #    self.hasHelpFile = False
-        #    self.helpMov = None
-        #    return False
+
+class FileSwitcherItem():
+    """ Encapsulates the movie, movie title, modified or not """
+    def __init__(self):
+        self.mov = None
+        self.filename = None
+        self.modified = False
+
+
+    
