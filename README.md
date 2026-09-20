@@ -27,7 +27,8 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 - [Gallery](#gallery)
 - [Usage](#usage)
   - [Command Line](#command-line)
-  - [Interactive Usage/Editing](#interactive-usageediting)
+  - [Interactive Usage/Editing](#interactive-usage-and-editing)
+  - [Brushes and Animation Brushes](#brushes)
   - [Configuration](#configuration)
   - [Themes](#themes)
 - [Durfetch](#durfetch)
@@ -250,7 +251,7 @@ options:
   -V, --version         Show version number and exit
 ```
 
-### Interactive Usage/Editing
+### Interactive Usage and Editing
 
 - Use the arrow keys (or mouse) and other keys to edit, much like a text editor.
 - You can click highlighted areas of the screen.
@@ -340,6 +341,15 @@ FG:██              (1/21)  [Dur..] <F1░F2▒F3▓F4█F5▀F6▄F7▌F8▐
     To make a brush, use shift-arrow or esc-K to make a selection, then
     press b. To use the brush, click the Mouse Tools menu (esc-t) and select
     Paint (P). You can now use the mouse to paint with your custom brush.
+
+ ANIMATION BRUSHES:
+
+    To make an animation brush, use shift-arrow or esc-K to make a selection,
+    then press b and then a. To use the brush, click the Mouse Tools menu
+    (esc-t) and select Animation Brush (A). You can now use the mouse to
+    "paint" animation frames. When you click in the canvas, the current frame
+    of the animation brush gets painted to the canvas, then the animation
+    brush and canvas both advance to the next frames.
 ```
 
 ### Configuration
