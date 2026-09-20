@@ -335,7 +335,11 @@ FG:██              (1/21)  [Dur..] <F1░F2▒F3▓F4█F5▀F6▄F7▌F8▐
     speed (<FPS> or Frames Per Second) with esc-+ (or esc-=) and esc--.
     F: shows the current frame number, and you can go to a specific frame
     with esc-g.
+```
 
+### Brushes
+
+```
  BRUSHES:
 
     To make a brush, use shift-arrow or esc-K to make a selection, then
