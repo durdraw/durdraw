@@ -29,9 +29,14 @@ classifiers = [
         'Topic :: Utilities'
 ]
 authors = [
-  {name = "Sam Foster", email = "samfoster@gmail.com"},
-  {name = "Durdraw Contributors"},
+  { name = "Sam Foster", email = "samfoster@gmail.com" },
+  { name = "Durdraw Contributors" },
 ]
+
+maintainers = [
+    { name = "Sam Foster", email = "samfoster@gmail.com" }
+]
+
 requires-python = ">=3.10"
 dependencies = [
 ]
