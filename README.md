@@ -278,7 +278,7 @@ esc-] to cycle through the groups of characters in the set.
 #### Mouse
 
 The mouse can be used to click menus and menu items, click on colors in
-the color picker, scroll wheel through menus and colors, and other
+the color picker, scroll wheel through menus and colors, and for other
 functions, like drawing, brush painting, coloring, erasing, etc.
 
 When you first launch Durdraw, clicking on the canvas moves the cursor.
