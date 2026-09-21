@@ -7515,7 +7515,6 @@ Can use ESC or META instead of ALT
                 prompt_ch = self.stdscr.getch()
                 try:
                     if chr(prompt_ch) in ['y', 'Y']:
-                        frange=self.appState.playbackRange
                         prompting = False
                     if chr(prompt_ch) in ['n', 'N']:
                         transparent = False
@@ -7525,7 +7524,26 @@ Can use ESC or META instead of ALT
                 except ValueError:
                     pass    # dgaf crash prevention on weird inputs
 
-            self.pasteMovFromClipboard(transparent=transparent)
+            self.clearStatusBar()
+            self.promptPrint("Stop on last frame, or Loop back around (S/L)? ")
+            prompting = True
+            is_looping = True
+            while prompting:
+                prompt_ch = self.stdscr.getch()
+                try:
+                    if chr(prompt_ch) in ['s', 'S']:
+                        is_looping = False
+                        prompting = False
+                    if chr(prompt_ch) in ['l', 'L']:
+                        is_looping = True
+                        prompting = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        return False
+                except ValueError:
+                    pass    # dgaf crash prevention on weird inputs
+            self.clearStatusBar()
+
+            self.pasteMovFromClipboard(transparent=transparent, looping=is_looping)
         elif isinstance(self.clipBoard, durmovie.Frame):
             transparent = False
             frange=None
@@ -7568,7 +7586,7 @@ Can use ESC or META instead of ALT
             self.undo.push()
             self.pasteFromClipboard(frange=frange, transparent=transparent)
 
-    def pasteMovFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
+    def pasteMovFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True, looping=False):
         # Reject if clipboard is empty or not a movie
         if not clipBuffer:
             clipBuffer = self.clipBoard
@@ -7583,9 +7601,16 @@ Can use ESC or META instead of ALT
         # For each frame in the clipboard,
         # paste it into the next frame of self.mov
         origFrame = self.mov.currentFrameNumber
+        pasting = True
         for frame in clipBuffer.frames:
-            self.pasteFromClipboard(clipBuffer=frame, transparent=transparent, pushUndo=False)
-            self.mov.nextFrame()
+            if not pasting:
+                break
+            else:
+                self.pasteFromClipboard(clipBuffer=frame, transparent=transparent, pushUndo=False)
+            if not looping and self.mov.currentFrameNumber == len(self.mov.frames): # stop pasting on last frame
+                pasting = False
+            else:
+                self.mov.nextFrame()
         #self.mov.gotoFrame(origFrame)   
     
     def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
