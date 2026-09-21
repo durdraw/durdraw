@@ -28,7 +28,12 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 - [Usage](#usage)
   - [Command Line](#command-line)
   - [Interactive Usage/Editing](#interactive-usage-and-editing)
-  - [Brushes and Animation Brushes](#brushes)
+  - [User Interface](#user-interface)
+  - [Mouse](#mouse)
+  - [Animation](#animation)
+  - [Brushes](#brushes)
+  - [Animation Brushes](#animation-brushes)
+  - [Keyboard Shortcuts](#keyboard-shortcuts)
   - [Configuration](#configuration)
   - [Themes](#themes)
 - [Durfetch](#durfetch)
@@ -253,9 +258,77 @@ options:
 
 ### Interactive Usage and Editing
 
-- Use the arrow keys (or mouse) and other keys to edit, much like a text editor.
-- You can click highlighted areas of the screen.
-- You can use the "Esc" (or "Meta") key to access keyboard shortcuts and commands:
+#### User Interface
+
+Durdraw works like a text editor. Use the arrow keys to move the cursor,
+and use the keyboard to type letters, numbers, and punctuation to draw
+your ASCII art.
+
+Pressing Tab switches between the canvas and color picker.
+
+Special (Unicode) characters (displayed on the bottom line of the screen)
+can be entered using F1, F2, F3, etc. Alternatively you can use esc-1,
+esc-2, etc.
+
+To change character sets, type esc-S, or click Menu (esc-m), then Edit,
+then Character Sets. Then use the arrow keys (or type to search) and
+enter to pick a Unicode Block or a Durdraw character set. Use esc-[ and
+esc-] to cycle through the groups of characters in the set.
+
+#### Mouse
+
+The mouse can be used to click menus and menu items, click on colors in
+the color picker, scroll wheel through menus and colors, and other
+functions, like drawing, brush painting, coloring, erasing, etc.
+
+When you first launch Durdraw, clicking on the canvas moves the cursor.
+The Moues Tools menu (esc-t) shows the currently set mouse tool, which
+is "Move." To change the mouse function (eg: to Draw), click the Mouse
+Tools menu (esc-t) and select the desired function.
+
+The following mouse tools are available:
+
+```
+Move - Moves the cursor
+Draw - Draws using selected Draw/Fill character.
+Paint - Paints using a brush (see BRUSHES below)
+Color - Change character color without changing the character
+Erase - Erase character
+Eyedrop - Picks up color from character
+Animation Brush - Paint using animation (see ANIMATION BRUSHES below)
+```
+
+#### Animation
+
+Use the Animation Menu [Anim] or keyboard commands to insert (esc-n),
+delete (esc-d), move (esc-M) and edit frames. Use esc-k and esc-j to
+flip to the next and previous frames. The "Play" button (|> or esc-p)
+starts or stops playback.
+
+When the animation is playing, all changes made effect all frames
+within the current playback/edit Range (R: or esc-R). Change playback
+speed (<FPS> or Frames Per Second) with esc-+ (or esc-=) and esc--.
+F: shows the current frame number, and you can go to a specific frame
+with esc-g.
+
+#### Brushes
+
+To make a brush, use shift-arrow or esc-K to make a selection, then
+press b. To use the brush, click the Mouse Tools menu (esc-t) and select
+Paint (P). You can now use the mouse to paint with your custom brush.
+
+#### Animation Brushes
+
+To make an animation brush, use shift-arrow or esc-K to make a selection,
+then press b and then a. To use the brush, click the Mouse Tools menu
+(esc-t) and select Animation Brush (A). You can now use the mouse to
+"paint" animation frames. When you click in the canvas, the current frame
+of the animation brush gets painted to the canvas, then the animation
+brush and canvas both advance to the next frames.
+
+#### Keyboard Shortcuts
+
+You can use the "Esc" (or "Alt" or "Meta") key to access keyboard shortcuts and commands:
 
 ```
    ____________.       _________   __________ _________  _____          _______
@@ -306,6 +379,10 @@ options:
   : esc-< - delete column            :
   :..................................:
 
+             In some terminals, you can use alt instead of esc.
+
+    Click highlighted areas of the screen, or use keyboard shortcuts:
+
                                                           esc-j  esc-k
                                                           Prev   Next  Canvas
 esc-f  esc-g   esc--                                      Frame  Frame   Size
@@ -322,39 +399,8 @@ esc-m  Go to   esc-+      esc-D   esc-R      esc-t        | esc-p|         |
  Color             Group   Block         Characters     Char Group  Position
   |                  |        |             |                     \       |
 FG:██              (1/21)  [Dur..] <F1░F2▒F3▓F4█F5▀F6▄F7▌F8▐F9■F10·>  (12,10)
-
- ANIMATION:
-
-    Use the Animation Menu [Anim] or keyboard commands to insert (esc-n),
-    delete (esc-d), move (esc-M) and edit frames. Use esc-k and esc-j to
-    flip to the next and previous frames. The "Play" button (|> or esc-p)
-    starts or stops playback.
-
-    When the animation is playing, all changes made effect all frames
-    within the current playback/edit Range (R: or esc-R). Change playback
-    speed (<FPS> or Frames Per Second) with esc-+ (or esc-=) and esc--.
-    F: shows the current frame number, and you can go to a specific frame
-    with esc-g.
 ```
 
-### Brushes
-
-```
- BRUSHES:
-
-    To make a brush, use shift-arrow or esc-K to make a selection, then
-    press b. To use the brush, click the Mouse Tools menu (esc-t) and select
-    Paint (P). You can now use the mouse to paint with your custom brush.
-
- ANIMATION BRUSHES:
-
-    To make an animation brush, use shift-arrow or esc-K to make a selection,
-    then press b and then a. To use the brush, click the Mouse Tools menu
-    (esc-t) and select Animation Brush (A). You can now use the mouse to
-    "paint" animation frames. When you click in the canvas, the current frame
-    of the animation brush gets painted to the canvas, then the animation
-    brush and canvas both advance to the next frames.
-```
 
 ### Configuration
 
