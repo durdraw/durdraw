@@ -64,6 +64,19 @@ class AppState():
         self.sixteenc_year = None
         self.sixteenc_pack = None
 
+        # Brushes and drawing
+        self.drawChar = '$'
+        self.brush = None
+        self.animBrush = animbrush.AnimationBrush()
+
+        # Config file stuff
+        self.configFile = None
+        self.configFileLoaded = False
+        self.configFileName = None
+        self.customThemeFile = None
+
+        # Other runtime
+
         # Durview stuff
         self.durview_running = False
 
@@ -119,13 +132,7 @@ class AppState():
         self.playNumberOfTimes = 0  # 0 = loop forever, default
         self.undoHistorySize = 1000  # How far back our undo history can go
         self.playbackRange = (1,1)
-        self.drawChar = '$'
-        self.brush = None
-        self.animBrush = animbrush.AnimationBrush()
-        self.configFile = None
-        self.configFileLoaded = False
-        self.configFileName = None
-        self.customThemeFile = None
+
         self.sauce = dursauce.SauceParser() # empty sauce
         #self.drawChar = b'\xE2\x96\x88'
         self.CP438_BLOCK = chr(219)
