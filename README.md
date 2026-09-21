@@ -53,7 +53,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 
 1. `ansilove`
 
-    For PNG and animated GIF export, please install `ansilove` (https://ansilove.org/) and make sure it is is in your path.   
+    For PNG and animated GIF export, please install `ansilove` (https://ansilove.org/) and make sure it is in your path.   
     _PNG and GIF export only works in 16-color mode for now, and only with CP437 compatible characters._
 
 2. `fastfetch` or `neofetch`
@@ -282,7 +282,7 @@ the color picker, scroll wheel through menus and colors, and other
 functions, like drawing, brush painting, coloring, erasing, etc.
 
 When you first launch Durdraw, clicking on the canvas moves the cursor.
-The Moues Tools menu (esc-t) shows the currently set mouse tool, which
+The Mouse Tools menu (esc-t) shows the currently set mouse tool, which
 is "Move." To change the mouse function (eg: to Draw), click the Mouse
 Tools menu (esc-t) and select the desired function.
 
@@ -305,7 +305,7 @@ delete (esc-d), move (esc-M) and edit frames. Use esc-k and esc-j to
 flip to the next and previous frames. The "Play" button (|> or esc-p)
 starts or stops playback.
 
-When the animation is playing, all changes made effect all frames
+When the animation is playing, all changes made affect all frames
 within the current playback/edit Range (R: or esc-R). Change playback
 speed (<FPS> or Frames Per Second) with esc-+ (or esc-=) and esc--.
 F: shows the current frame number, and you can go to a specific frame
@@ -344,7 +344,7 @@ You can use the "Esc" (or "Alt" or "Meta") key to access keyboard shortcuts and 
   .. Art Editing .....................   .. Animation .......................
   : F1-F10 - insert character        :   : esc-k - next frame               :
   : esc-1 to esc-0 - same as F1-F10  :   : esc-j - previous frame           :
-  : esc-space - insert draw char     :   : esc-p - start/stop payback       :
+  : esc-space - insert draw char     :   : esc-p - start/stop playback      :
   : esc-c/tab - color picker         :   : esc-n - clone frame              :
   : esc-left - next fg color         :   : esc-N - append empty frame       :
   : esc-right - prev fg color        :   : esc-d - delete frame             :
@@ -542,7 +542,7 @@ menuBorderColor: 24
 
 #### Custom Character Sets
 
-You can create custom character set files and place them in the ~/.durdraw/charsets folder. Character set files must have the file nme extension .ini. Durdraw will automatically scan for these files and include them in the list of character sets (esc-S).
+You can create custom character set files and place them in the ~/.durdraw/charsets folder. Character set files must have the file name extension .ini. Durdraw will automatically scan for these files and include them in the list of character sets (esc-S).
 
 An example character set file is provided in example-charset.ini:
 
@@ -653,7 +653,7 @@ Durdraw uses a .dur file format to support color, Unicode and animation, which i
 
 ### Development Branch
 
-New development should always be done in the Devleopment branch. This is also where users can beta test new features.
+New development should always be done in the Development branch. This is also where users can beta test new features.
 
 https://github.com/durdraw/durdraw/tree/dev
 
