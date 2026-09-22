@@ -21,10 +21,14 @@ class AnimationBrush:
         return frame
 
     def next_frame(self):
-        if self.mode == "loop":
-            self.frameNumber += 1
-            if self.frameNumber > len(self.mov.frames) - 1:
-                self.frameNumber = 0
+        self.frameNumber += 1
+        if self.frameNumber > len(self.mov.frames) - 1:
+            self.frameNumber = 0
+
+    def prev_frame(self):
+        self.frameNumber = self.frameNumber - 1
+        if self.frameNumber < 0:
+            self.frameNumber = len(self.mov.frames) - 1
 
     def set_mode(self, mode): 
         self.mode = mode
