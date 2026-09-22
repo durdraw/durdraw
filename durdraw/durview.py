@@ -73,6 +73,7 @@ def main(fetch_args=None):
     app.showStartupScreen=False
     app.quickStart = True
     app.durview_running = True
+    app.drawBorders = False
     if app.sixteenc_available:
         # Start in 16c mode by default, for now
         app.sixteenc_browsing = True

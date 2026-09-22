@@ -684,7 +684,8 @@ class UserInterface():  # Separate view (curses) from this controller
         if self.appState.maxColors < 256:
             self.notify("Unable to set 256 colors. Check your terminal configuration?")
         else:
-            self.statusBar.drawCharPickerButton.show()
+            if not self.appState.durview_running:
+                self.statusBar.drawCharPickerButton.show()
             self.switchToColorMode("256")
 
     def switchToColorMode(self, newMode: str):
@@ -739,14 +740,14 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.appState.sideBarShowing = True
                 #self.notify("Wide. Showing color picker.")
                 #if self.appState.colorMode == "256":
-                if not self.appState.fetchMode:
+                if not self.appState.fetchMode and not self.appState.durview_running:
                     self.statusBar.colorPicker.show()
                 #if self.appState.colorMode == "16":
                 #    self.statusBar.colorPicker_bg_16.show()
             # Window is too narrow, but tall enough to show more stuff on the bottom.
         elif realmaxY - self.appState.bottomBar_minimum_height > self.mov.sizeY:
             #if self.appState.colorMode == "256":
-            if not self.appState.fetchMode:
+            if not self.appState.fetchMode and not self.appState.durview_running:
                 self.statusBar.colorPicker.show()
             #if self.appState.colorMode == "16":
             #    self.statusBar.colorPicker_bg_16.show()
