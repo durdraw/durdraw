@@ -2447,7 +2447,7 @@ class UserInterface():  # Separate view (curses) from this controller
             topLine = 0
         #self.appState.topLine = topLine
         if self.xy[0] < self.appState.topLine:   # if cursor is off screen
-            self.xy[0] = kelf.appState.topLine   # put it back on
+            self.xy[0] = self.appState.topLine   # put it back on
 
     def drawOpenTabs(self, line=None, column=0):
         real_max_line, real_max_col = self.realstdscr.getmaxyx()
