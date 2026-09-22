@@ -202,10 +202,6 @@ def main(fetch_args=None):
             print("Mouse = Enabled")
         else:
             print("Mouse = Disabled")
-        if app.configFileLoaded:
-            print(f"Configuration file found: {app.configFileName}")
-        else:
-            print(f"Configuration file not found.")
 
         if app.themesEnabled:
             print(f"Theme: {app.themeName}")

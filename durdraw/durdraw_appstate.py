@@ -333,12 +333,22 @@ class AppState():
 
     def loadConfigFile(self):
         # Load configuration filea
-        configFullPath = os.path.expanduser("~/.durdraw/durdraw.ini")
-        configShortFile  = 'durdraw.ini'
-        configFileLocations = [configFullPath, configShortFile]
-        configFile = configparser.ConfigParser()
-        readConfigPaths = configFile.read(configFileLocations)
-        if self.configFile == []:
+        configFilePaths = ["/etc/durdraw/durdraw.ini", "~/.durdraw/durdraw.ini", "~/.config/durdraw/durdraw.ini"]
+        loaded = False
+        for file_path in configFilePaths:
+            file_path = os.path.expanduser(file_path)
+            self.configFileLoaded = False
+            if os.path.isfile(file_path) and os.access(file_path, os.R_OK):
+                configFullPath = os.path.expanduser(file_path)
+                configShortFile  = 'durdraw.ini'
+                configFileLocations = [configFullPath, configShortFile]
+                configFile = configparser.ConfigParser()
+                readConfigPaths = configFile.read(configFileLocations)
+                loaded = True
+        if self.configFile == []: #if self.configFile == None:
+            self.configFileLoaded = False
+            return False 
+        elif not loaded: #if self.configFile == None:
             self.configFileLoaded = False
             return False 
         else:
@@ -369,14 +379,21 @@ class AppState():
             pass
 
         # If there is a theme in the user's config file, load that
-        if 'Theme' in self.configFile:
-            themeConfig = self.configFile['Theme']
-            if 'theme-16' in themeConfig and themeMode == 'Theme-16':
-                self.loadThemeFile(themeConfig['theme-16'], themeMode)
-            if 'theme-256' in themeConfig and themeMode == 'Theme-256':
-                self.loadThemeFile(themeConfig['theme-256'], themeMode)
-        else:
-            pass
+        if not self.configFileLoaded:
+            return False
+
+        try:
+            if 'Theme' in self.configFile:
+                themeConfig = self.configFile['Theme']
+                if 'theme-16' in themeConfig and themeMode == 'Theme-16':
+                    self.loadThemeFile(themeConfig['theme-16'], themeMode)
+                if 'theme-256' in themeConfig and themeMode == 'Theme-256':
+                    self.loadThemeFile(themeConfig['theme-256'], themeMode)
+            else:
+                pass
+        except Exception as E:
+            print(f"Exception E loading theme: {E}")
+            pdb.set_trace()
 
 
 
