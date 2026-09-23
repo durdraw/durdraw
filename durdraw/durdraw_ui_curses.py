@@ -2046,7 +2046,18 @@ class UserInterface():  # Separate view (curses) from this controller
                         except:
                             pass
                         realmaxY,realmaxX = self.realstdscr.getmaxyx()
-                        # enable mouse tracking only when the button is pressed
+
+                        if mouseY == self.appState.ui_zones["fpsBar"][0] and \
+                                mouseX in range(self.appState.ui_zones["fpsBar"][1], self.appState.ui_zones["fpsBar"][1] + 7):
+                            if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                                self.increaseFPS()
+                                # calculate new delta
+                                self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
+                            elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                                self.decreaseFPS()
+                                self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
+
+
                         if mouseState == curses.BUTTON1_CLICKED:
                             if self.pressingButton:
                                 self.pressingButton = False
@@ -2632,8 +2643,9 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
         self.addstr(statusBarLineNum, delayBar_offset, delayBar, curses.color_pair(mainColor))
         self.addstr(statusBarLineNum, rangeBar_offset, rangeBar, curses.color_pair(mainColor))
-        # add elements to zones
+        # update elements in UI zones
         self.appState.ui_zones["frameBar"] = (statusBarLineNum, frameBar_offset)
+        self.appState.ui_zones["fpsBar"] = (statusBarLineNum, fpsBar_offset)
         #if not self.appState.narrowWindow:    # Wide big window
         #    self.addstr(statusBarLineNum, frameBar_offset, frameBar, curses.color_pair(mainColor))
         #    self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
@@ -3368,13 +3380,20 @@ class UserInterface():  # Separate view (curses) from this controller
                 #    and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
 
 
-                # if user clicked in framebar area
+                # did mouse stuff in a status bar element
                 if mouseY == self.appState.ui_zones["frameBar"][0] and \
                         mouseX in range(self.appState.ui_zones["frameBar"][1], self.appState.ui_zones["frameBar"][1] + 7):
                     if mouseState & curses.BUTTON4_PRESSED:   # wheel up
                         self.mov.nextFrame()
                     elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
                         self.mov.prevFrame()
+
+                if mouseY == self.appState.ui_zones["fpsBar"][0] and \
+                        mouseX in range(self.appState.ui_zones["fpsBar"][1], self.appState.ui_zones["fpsBar"][1] + 7):
+                    if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                        self.increaseFPS()
+                    elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                        self.decreaseFPS()
 
                 # did mouse stuff in the canvas.
                 if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX:
