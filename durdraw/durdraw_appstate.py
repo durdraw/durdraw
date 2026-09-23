@@ -85,6 +85,10 @@ class AppState():
         self.play_queue_direction = 0
         self.play_queue_auto_advance = False
 
+        self.ui_zones = {
+            "frameBar": (0, 0)  # line, column
+        }
+
         # Other durdraw runtime stuff
         self.can_inject = False # Allow injecting color codes to override ncurses colors (for BG 256 colors)
         self.sleep_time = 0     # Use this as a delay for playback mode, dictated in ui_curses.py from FPS

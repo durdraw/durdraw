@@ -2632,6 +2632,8 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
         self.addstr(statusBarLineNum, delayBar_offset, delayBar, curses.color_pair(mainColor))
         self.addstr(statusBarLineNum, rangeBar_offset, rangeBar, curses.color_pair(mainColor))
+        # add elements to zones
+        self.appState.ui_zones["frameBar"] = (statusBarLineNum, frameBar_offset)
         #if not self.appState.narrowWindow:    # Wide big window
         #    self.addstr(statusBarLineNum, frameBar_offset, frameBar, curses.color_pair(mainColor))
         #    self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
@@ -3364,6 +3366,17 @@ class UserInterface():  # Separate view (curses) from this controller
                 #    pass
                 #if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                 #    and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
+
+
+                # if user clicked in framebar area
+                if mouseY == self.appState.ui_zones["frameBar"][0] and \
+                        mouseX in range(self.appState.ui_zones["frameBar"][1], self.appState.ui_zones["frameBar"][1] + 7):
+                    if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                        self.mov.nextFrame()
+                    elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                        self.mov.prevFrame()
+
+                # did mouse stuff in the canvas.
                 if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX:
                     # we're in the canvas, not playing
 
@@ -3410,6 +3423,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     except:
                         curses.BUTTON4_PRESSED = 0
                     if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                        #pdb.set_trace()
                         if self.appState.scrollColors:
                             self.nextFgColor()
                         else:
@@ -3564,41 +3578,42 @@ class UserInterface():  # Separate view (curses) from this controller
                         # Add stuff here to take mouse 'commands' like clicking
                         # play/next/etc on transport, or clicking "start button"
                         if mouseY == self.statusBarLineNum: # clicked upper bar 
-                            offset = self.line_1_offset # line 1 of the status bar 
-                            tOffset = self.transportOffset
-                            if not self.appState.narrowWindow:
-                                if mouseX in [tOffset + 6, tOffset + 7]:  # clicked play button
-                                    self.clickHighlight(tOffset + 6, "|>")
-                                    self.startPlaying()
-                                    self.metaKey = 0
-                                elif mouseX in [tOffset + 3, tOffset + 4]: # goto prev frame
-                                    self.clickHighlight(tOffset + 3, "<<")
-                                    self.mov.prevFrame()
-                                elif mouseX in [tOffset + 9, tOffset + 10]: # goto next frame
-                                    self.clickHighlight(tOffset + 9, ">>")
-                                    self.mov.nextFrame()
-                                elif mouseX in [tOffset, tOffset + 1]: # goto first frame
-                                    self.clickHighlight(tOffset, "|<")
-                                    self.mov.gotoFrame(1)
-                                elif mouseX in [tOffset + 12, tOffset + 13]: # goto last frame
-                                    self.clickHighlight(tOffset + 12, ">|")
-                                    self.mov.nextFrame()
-                                    self.mov.gotoFrame(self.mov.frameCount)
-                                if mouseX == 13 + offset:    # clicked FPS down
-                                    self.clickHighlight(13 + offset, "<")
-                                    self.decreaseFPS()
-                                elif mouseX == 17 + offset:    # clicked FPS up
-                                    self.clickHighlight(17 + offset, ">")
-                                    self.increaseFPS()
-                                elif mouseX == 23 + offset:  # clicked Delay button
-                                    self.clickHighlight(23 + offset, "D")
-                                    self.getDelayValue()
-                                elif mouseX == 31 + offset:  # clicked Range button
-                                    self.clickHighlight(31 + offset, "R")
-                                    self.getPlaybackRange()
-                                elif mouseX == 2 + offset:   # clicked Frame button
-                                    self.clickHighlight(2 + offset, "F")
-                                    self.gotoFrameGetInput()
+                            if mouseState & curses.BUTTON1_PRESSED:
+                                offset = self.line_1_offset # line 1 of the status bar 
+                                tOffset = self.transportOffset
+                                if not self.appState.narrowWindow:
+                                    if mouseX in [tOffset + 6, tOffset + 7]:  # clicked play button
+                                        self.clickHighlight(tOffset + 6, "|>")
+                                        self.startPlaying()
+                                        self.metaKey = 0
+                                    elif mouseX in [tOffset + 3, tOffset + 4]: # goto prev frame
+                                        self.clickHighlight(tOffset + 3, "<<")
+                                        self.mov.prevFrame()
+                                    elif mouseX in [tOffset + 9, tOffset + 10]: # goto next frame
+                                        self.clickHighlight(tOffset + 9, ">>")
+                                        self.mov.nextFrame()
+                                    elif mouseX in [tOffset, tOffset + 1]: # goto first frame
+                                        self.clickHighlight(tOffset, "|<")
+                                        self.mov.gotoFrame(1)
+                                    elif mouseX in [tOffset + 12, tOffset + 13]: # goto last frame
+                                        self.clickHighlight(tOffset + 12, ">|")
+                                        self.mov.nextFrame()
+                                        self.mov.gotoFrame(self.mov.frameCount)
+                                    if mouseX == 13 + offset:    # clicked FPS down
+                                        self.clickHighlight(13 + offset, "<")
+                                        self.decreaseFPS()
+                                    elif mouseX == 17 + offset:    # clicked FPS up
+                                        self.clickHighlight(17 + offset, ">")
+                                        self.increaseFPS()
+                                    elif mouseX == 23 + offset:  # clicked Delay button
+                                        self.clickHighlight(23 + offset, "D")
+                                        self.getDelayValue()
+                                    elif mouseX == 31 + offset:  # clicked Range button
+                                        self.clickHighlight(31 + offset, "R")
+                                        self.getPlaybackRange()
+                                    elif mouseX == 2 + offset:   # clicked Frame button
+                                        self.clickHighlight(2 + offset, "F")
+                                        self.gotoFrameGetInput()
 
 
                         elif mouseY == self.statusBarLineNum+1: # clicked bottom bar 
