@@ -2081,39 +2081,41 @@ class UserInterface():  # Separate view (curses) from this controller
                             curses.BUTTON4_PRESSED
                         except:
                             curses.BUTTON4_PRESSED = 0
-                        if mouseState & curses.BUTTON4_PRESSED:   # wheel up
-                            self.move_cursor_up()
-                        elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
-                            self.move_cursor_down()
-                            
-                        if mouseState & curses.BUTTON1_PRESSED:
-                            #if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX: # in edit area
-                            if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
-                                and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
-                                if not self.pressingButton:
-                                    self.pressingButton = True
-                                    print('\033[?1003h') # enable mouse tracking with the XTERM APIP
-                                    self.hardRefresh()
+                        # did mouse stuff in the canvas.
+                        if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX:
+                            if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                                self.move_cursor_up()
+                            elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                                self.move_cursor_down()
+                                
+                            if mouseState & curses.BUTTON1_PRESSED:
+                                #if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX: # in edit area
+                                if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
+                                    and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
+                                    if not self.pressingButton:
+                                        self.pressingButton = True
+                                        print('\033[?1003h') # enable mouse tracking with the XTERM APIP
+                                        self.hardRefresh()
+                                else:
+                                    self.pressingButton = False
+                                    if cursorMode != "Draw" and cursorMode != "Paint" \
+                                            and cursorMode != "ABrush":
+                                        print('\033[?1003l') # disable mouse reporting
+                                        self.hardRefresh()
+                                        curses.mousemask(1)
+                                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+                                    if self.pushingToClip:
+                                        self.pushingToClip = False
                             else:
-                                self.pressingButton = False
-                                if cursorMode != "Draw" and cursorMode != "Paint" \
-                                        and cursorMode != "ABrush":
+                                if self.pressingButton:
+                                    self.pressingButton = False
+                                    if self.pushingToClip:
+                                        self.pushingToClip = False
+                                    #if self.appState.cursorMode != "Draw":
                                     print('\033[?1003l') # disable mouse reporting
                                     self.hardRefresh()
                                     curses.mousemask(1)
                                     curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                                if self.pushingToClip:
-                                    self.pushingToClip = False
-                        else:
-                            if self.pressingButton:
-                                self.pressingButton = False
-                                if self.pushingToClip:
-                                    self.pushingToClip = False
-                                #if self.appState.cursorMode != "Draw":
-                                print('\033[?1003l') # disable mouse reporting
-                                self.hardRefresh()
-                                curses.mousemask(1)
-                                curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                         if self.pressingButton or mouseState == curses.BUTTON1_CLICKED:    # self.playing == True
                             self.gui.got_click("Click", mouseX, mouseY)
                             if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
