@@ -59,10 +59,8 @@ class Frame():
         """ Initialize frame, content[x][y] grid """
         # it's a bunch of rows of ' 'characters.
         self.content = []
-        #self.colorMap = {}
-        #pdb.set_trace()
-        self.sizeX = columns
-        self.sizeY = lines 
+        self.sizeX = columns    # width
+        self.sizeY = lines  # height
         if isinstance(self.sizeY, int):
             self.newColorMap = init_list_colorMap(self.sizeX, self.sizeY)   # [[1,0], [3, 1], ...]
         else:
@@ -79,9 +77,6 @@ class Frame():
             for y in range(0, columns):
                 self.content[x].append(' ')
 
-        #self.initOldColorMap()
-        #self.initColorMap()
-        #self.newColorMap = convert_dict_colorMap(self.colorMap, width, height)
         self.setDelayValue(0)
 
         self.log = log.getLogger('frame')
@@ -99,26 +94,12 @@ class Frame():
         #pdb.set_trace()
         self.content = self.content[::-1]
         self.newColorMap.reverse()
-        #for x in range(0, self.height):
-        #    #for y in range(0, self.width):
-        #    # reverse slicing trick
-        #    self.content[x] = self.content[x][::-1]
-        #    #self.content[x][0] = self.content[x][0][::-1]
-        #    self.newColorMap[x].reverse()
 
     def flip_vertical(self):
-        for x in range(0, self.height):
-            #for y in range(0, self.width):
+        for x in range(0, self.sizeY):
             # reverse slicing trick
             self.content[x] = self.content[x][::-1]
-            #self.content[x][0] = self.content[x][0][::-1]
             self.newColorMap[x].reverse()
-
-    #def flip_horizontal_segment(self, startPoint, height, width, frange=None):
-    #    """ Finish writing this, use it for the alt-k select """
-    #    for x in range(0, self.height):
-    #        self.content[x].reverse()
-    #        self.newColorMap[x].reverse()
 
     def width(self):
         """ Returns the number of columns in the frame """
