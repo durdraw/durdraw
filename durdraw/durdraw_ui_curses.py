@@ -2969,6 +2969,11 @@ class UserInterface():  # Separate view (curses) from this controller
             self.move(self.xy[0], self.xy[1] - 1)  # move cursor to the right
             # spot for refresh
             curses.panel.update_panels()
+
+            if cursorMode == "Draw" or cursorMode == "Paint" \
+                    or cursorMode == "ABrush":
+                self.enableMouseReporting()
+
             self.stdscr.refresh()
             c = self.stdscr.getch() # non-wide characters, for old ncurses
             #c = ord(self.stdscr.get_wch()) # wide characters, for ncursesw
@@ -3794,6 +3799,14 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.showFileInformation()
             self.refresh(refreshScreen=False)
             #self.hardRefresh()
+
+    def anim_brush_prev_frame(self):
+        if self.appState.animBrush.is_set():
+            self.appState.animBrush.prev_frame()
+
+    def anim_brush_next_frame(self):
+        if self.appState.animBrush.is_set():
+            self.appState.animBrush.next_frame()
 
     def selectColorPicker(self, message=None):
         #if self.appState.colorMode == "256":
