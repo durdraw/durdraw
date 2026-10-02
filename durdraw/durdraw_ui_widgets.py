@@ -400,7 +400,8 @@ class StatusBar():
             colorPicker_tooltip.alwaysHidden = True
 
         # Settings menu
-        settingsMenuColumn = 22 # Try to place to the right of the main menu
+        #settingsMenuColumn = 22 # Try to place to the right of the main menu
+        settingsMenuColumn = 34 # Try to place to the right of the main menu
         settingsMenu = Menu(self.window, x = self.x - 2, y = settingsMenuColumn, caller=self, appState=self.appState, statusBar=self, name="Settings")
         self.menus["Settings"] = settingsMenu
         settingsMenu.set_title("Settings:")
@@ -486,6 +487,7 @@ class StatusBar():
         editMenu.add_item("Character Sets", caller.showCharSetPicker, "c", shortcut="esc-S")
         editMenu.add_item("Replace Color", caller.replaceColorUnderCursor, "e", shortcut="esc-L")
         editMenu.add_item("Replace Character", caller.replaceCharUnderCursor, "h", shortcut="")
+        editMenu.add_item("Settings", caller.openSettingsMenu, "s", has_submenu=True)
         #editMenu.is_submenu = True
         editMenu.set_x(self.x - 1)
         self.editMenu = editMenu
@@ -516,7 +518,6 @@ class StatusBar():
         mainMenu.add_item("Color Picker", caller.selectColorPicker, "l", shortcut="tab")
         mainMenu.add_item("Viewer Mode", caller.enterViewMode, "v", shortcut="esc-V")
         #mainMenu.add_item("Edit", caller.openEditMenu, "e", has_submenu=True)
-        mainMenu.add_item("Settings", caller.openSettingsMenu, "t", has_submenu=True)
         # Help and Quit are added after plugins are loaded.
         menuButton = Button("File", 0, 0, caller.openMainMenu, self.window, appState=self.appState)
         menuButton.set_tooltip_command('f')
@@ -661,7 +662,7 @@ class StatusBar():
 
     def initThemesMenu(self):
         # system themes
-        themesMenuColumn = 45
+        themesMenuColumn = 47
         themesMenu = Menu(self.window, x = self.x - 2, y = themesMenuColumn, caller=self, appState=self.appState, statusBar=self, name="Themes")
         themesMenu.set_title("Themes:")
         themesMenu.is_submenu = True
@@ -669,7 +670,7 @@ class StatusBar():
         themesMenu.set_y(themesMenuColumn)
         self.themesMenu = themesMenu
         # user themes
-        userThemesMenuColumn = 45
+        userThemesMenuColumn = 47
         userThemesMenu = Menu(self.window, x = self.x - 2, y = userThemesMenuColumn, caller=self, appState=self.appState, statusBar=self, name="User Themes")
         userThemesMenu.set_title("User Themes:")
         userThemesMenu.is_submenu = True

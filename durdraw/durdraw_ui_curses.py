@@ -4187,15 +4187,15 @@ class UserInterface():  # Separate view (curses) from this controller
         self.appState.loadThemeList(menu=self.statusBar.userThemesMenu,
                                     path="~/.durdraw/")
 
-        self.statusBar.mainMenu.handler.panel.show()
+        self.statusBar.editMenu.handler.panel.show()
         response = self.statusBar.settingsMenu.showHide()
-        self.statusBar.mainMenu.handler.panel.hide()
+        self.statusBar.editMenu.handler.panel.hide()
 
     def openEditMenu(self):
         """ Show the Edit menu """
-        self.statusBar.mainMenu.handler.panel.show()
+        #self.statusBar.mainMenu.handler.panel.show()
         response = self.statusBar.editMenu.showHide()
-        self.statusBar.mainMenu.handler.panel.hide()
+        #self.statusBar.mainMenu.handler.panel.hide()
 
     def askForCharacter(self):
         self.window.nodelay(0) # wait for input when calling getch
