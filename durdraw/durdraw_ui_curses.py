@@ -4522,6 +4522,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def openFromMenu(self, examples=False):
         #self.stdscr.nodelay(0) # wait for input when calling getch
+        self.disableMouseReporting()
         self.clearStatusLine()
         if self.appState.modified:
             self.promptPrint("Changes have not been saved! Are you sure you want to load another file? (Y/N) ")
@@ -5465,9 +5466,11 @@ class UserInterface():  # Separate view (curses) from this controller
             if c == curses.KEY_MOUSE:
                 try:
                     _, mouseCol, mouseLine, _, mouseState = curses.getmouse()
+                    #self.notify(f"Got mouse event state. {mouseState}")
+                    #self.notify(f"curses BUTTON1_PRESSED. {curses.BUTTON1_PRESSED}")
                 except:
                     pass
-                if mouseState == curses.BUTTON1_CLICKED or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
+                if mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
                     if mouseLine < realmaxY - 4:     # above the 'status bar,' in the file list
                         current_section = 0 # switch to "main" section
                         if mouseLine < len(file_list) - top_line:   # clicked item line
@@ -7011,6 +7014,8 @@ class UserInterface():  # Separate view (curses) from this controller
                duration=sleeptime * 1000, loop=0)
 
     def showHelp(self):
+        self.stopPlaying()
+        self.disableMouseReporting()
         self.stdscr.clear()
         if self.appState.hasHelpFile:
             #self.showAnimatedHelpScreen()
