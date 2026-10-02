@@ -2613,11 +2613,13 @@ class UserInterface():  # Separate view (curses) from this controller
 
         # Ugly hardcoded locations. These should be handled in the GUI
         # framework instead.
-        frameBar_offset = 2 + line_1_offset
-        fpsBar_offset = 13 + line_1_offset
+        frameBar_offset = 12 + line_1_offset
+        fpsBar_offset = 22 + line_1_offset
         fpsBar_minus_offset = fpsBar_offset + 4
-        delayBar_offset = 23 + line_1_offset
-        rangeBar_offset = 31 + line_1_offset
+        #delayBar_offset = 23 + line_1_offset
+        delayBar_offset = 31 + line_1_offset
+        #rangeBar_offset = 31 + line_1_offset
+        rangeBar_offset = 39 + line_1_offset
         #chMap_offset = 35    # how far in to show the character map
         if self.appState.narrowWindow:
             if self.appState.colorMode == "16":
@@ -2777,16 +2779,16 @@ class UserInterface():  # Separate view (curses) from this controller
             self.addstr(statusBarLineNum + 1, locationStringOffset - 1, " ", curses.color_pair(3) | curses.A_BOLD)
         if self.realmaxX >= self.appState.full_ui_width:
             # Draw Range, FPS and Delay buttons
-            self.addstr(statusBarLineNum, 13 + line_1_offset, "<", curses.color_pair(clickColor) | curses.A_BOLD)  # FPS buttons
-            self.addstr(statusBarLineNum, 17 + line_1_offset, ">", curses.color_pair(clickColor) | curses.A_BOLD)
+            self.addstr(statusBarLineNum, fpsBar_offset, "<", curses.color_pair(clickColor) | curses.A_BOLD)  # FPS buttons
+            self.addstr(statusBarLineNum, fpsBar_offset + 4, ">", curses.color_pair(clickColor) | curses.A_BOLD)
             if self.appState.modified:
                 self.addstr(statusBarLineNum + 1, realmaxX - 1, "*", curses.color_pair(4) | curses.A_BOLD)
             else:
                 self.addstr(statusBarLineNum + 1, realmaxX - 1, " ", curses.color_pair(4) | curses.A_BOLD)
             if not self.playing:
-                self.addstr(statusBarLineNum, 2 + line_1_offset, "F", curses.color_pair(clickColor) | curses.A_BOLD)  # Frame button
-                self.addstr(statusBarLineNum, 31 + line_1_offset, "R", curses.color_pair(clickColor) | curses.A_BOLD)  # Range button
-                self.addstr(statusBarLineNum, 23 + line_1_offset, "D", curses.color_pair(clickColor) | curses.A_BOLD)  # Delay button
+                self.addstr(statusBarLineNum, frameBar_offset, "F", curses.color_pair(clickColor) | curses.A_BOLD)  # Frame button
+                self.addstr(statusBarLineNum, rangeBar_offset, "R", curses.color_pair(clickColor) | curses.A_BOLD)  # Range button
+                self.addstr(statusBarLineNum, delayBar_offset, "D", curses.color_pair(clickColor) | curses.A_BOLD)  # Delay button
         # draw transport
         transportString = "< |> >" 
         transportOffset = realmaxX - len(transportString) - 9 
@@ -3618,19 +3620,19 @@ class UserInterface():  # Separate view (curses) from this controller
                                     elif mouseX in [tOffset + 4, tOffset + 5]: # goto next frame
                                         self.clickHighlight(tOffset + 4, ">>")
                                         self.mov.nextFrame()
-                                    if mouseX == 13 + offset:    # clicked FPS down
+                                    if mouseX == 22 + offset:    # clicked FPS down
                                         self.clickHighlight(13 + offset, "<")
                                         self.decreaseFPS()
-                                    elif mouseX == 17 + offset:    # clicked FPS up
+                                    elif mouseX == 26 + offset:    # clicked FPS up
                                         self.clickHighlight(17 + offset, ">")
                                         self.increaseFPS()
-                                    elif mouseX == 23 + offset:  # clicked Delay button
+                                    elif mouseX == 31 + offset:  # clicked Delay button
                                         self.clickHighlight(23 + offset, "D")
                                         self.getDelayValue()
-                                    elif mouseX == 31 + offset:  # clicked Range button
-                                        self.clickHighlight(31 + offset, "R")
+                                    elif mouseX in range(39 + offset, 39 + offset + 5):  # clicked Range button or area
+                                        self.clickHighlight(39 + offset, "R")
                                         self.getPlaybackRange()
-                                    elif mouseX == 2 + offset:   # clicked Frame button
+                                    elif mouseX == 12 + offset:   # clicked Frame button
                                         self.clickHighlight(2 + offset, "F")
                                         self.gotoFrameGetInput()
 
