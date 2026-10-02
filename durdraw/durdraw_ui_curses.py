@@ -2777,6 +2777,11 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(statusBarLineNum+1, locationStringOffset, locationString, curses.color_pair(mainColor))
         # Draw mouse mode
         mouseModeString = self.appState.cursorMode
+        if self.appState.cursorMode == "ABrush":
+            if self.appState.animBrush.mode == "loop":
+                mouseModeString = "anim:loop"
+            elif self.appState.animBrush.mode == "clone":
+                mouseModeString = "anim:clone"
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
         self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
         # Draw button indicator
@@ -3414,6 +3419,19 @@ class UserInterface():  # Separate view (curses) from this controller
                     elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
                         self.decreaseFPS()
 
+                # check if scrolled in F1-F10 character map
+                char_area_start = self.chMap_offset
+                char_area_end = self.chMap_offset+len(self.chMapString)
+                if mouseY == self.statusBarLineNum+1: # clicked bottom bar 
+                    if mouseX in range(char_area_start, char_area_end):
+                        if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                            #self.clickHighlight(self.chMap_offset + len(self.chMapString), ">", bar='bottom')
+                            self.nextCharSet()
+                        elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                            #self.clickHighlight(self.chMap_offset - 1, "<", bar='bottom')
+                            self.prevCharSet()
+
+
                 # did mouse stuff in the canvas.
                 if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX:
                     # we're in the canvas, not playing
@@ -3535,10 +3553,17 @@ class UserInterface():  # Separate view (curses) from this controller
                                     x_param = mouseX + 1 + self.appState.firstCol
                                     y_param = mouseY + self.appState.topLine
                                     #self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=False, pushUndo=False)
-                                    self.pasteFromClipboard(startPoint = [y_param, x_param], clipBuffer=self.appState.animBrush.current_frame(), transparent=True, pushUndo=False)
-                                    # Animation brush, so advance brush and movie frames.
-                                    self.appState.animBrush.next_frame()
-                                    self.mov.nextFrame()
+                                    if self.appState.animBrush.mode == "loop":
+                                        self.pasteFromClipboard(startPoint = [y_param, x_param], clipBuffer=self.appState.animBrush.current_frame(), transparent=True, pushUndo=False)
+                                        # Animation brush, so advance brush and movie frames.
+                                        self.appState.animBrush.next_frame()
+                                        self.mov.nextFrame()
+                                    elif self.appState.animBrush.mode == "clone":
+                                        self.cloneToNewFrame()
+                                        self.pasteFromClipboard(startPoint = [y_param, x_param], clipBuffer=self.appState.animBrush.current_frame(), transparent=True, pushUndo=False)
+                                        # Animation brush, so advance brush and movie frames.
+                                        self.appState.animBrush.next_frame()
+                                        self.mov.nextFrame()
                                 except IndexError:
                                     self.notify(f"Error, debug info: x={x_param}, y={y_param}, topLine={self.appState.topLine}, mouseX={mouseX}, mouseY={mouseY}", pause=True)
                                 self.refresh()
@@ -4285,8 +4310,24 @@ class UserInterface():  # Separate view (curses) from this controller
             self.statusBar.setCursorModePaint()
 
     def setCursorModeAnimBrush(self):
+        self.clearStatusLine()
+        self.promptPrint("Animation Brush: (L)oop mode, or (C)lone mode? [L] ")
+        prompting = True
+        while prompting:
+            time.sleep(0.01)
+            c = self.stdscr.getch()
+            if c in [ord('l'), curses.KEY_ENTER]:   # 121 = y
+                self.appState.animBrush.set_mode("loop")
+                prompting = False
+            if c == ord('c'):
+                self.appState.animBrush.set_mode("clone")
+                prompting = False
+            elif c == 27: # 27 == esc, cancel
+                prompting = False
+                return False
+            time.sleep(0.01)
+        self.clearStatusLine()
         self.statusBar.setCursorModeAnimBrush()
-
 
     def openMenu(self, current_menu: str):
         menu_open = True
