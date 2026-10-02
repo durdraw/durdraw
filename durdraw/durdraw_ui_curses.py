@@ -1889,14 +1889,14 @@ class UserInterface():  # Separate view (curses) from this controller
                 elif c in [45]: # esc-- (alt minus) - fps down
                     self.decreaseFPS()
                     self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
-                elif c in [98, curses.KEY_LEFT]:      # alt-left - prev bg color (in 16)
+                elif c in [curses.KEY_LEFT]:      # alt-left - prev bg color (in 16)
                     if self.appState.colorMode == "16":
                         self.prevBgColor()
                     elif self.appState.colorMode == "256":
                         self.prevFgColor()
                         #self.statusBar.colorPicker.handler.move_down_256()
                     c = None 
-                elif c in [102, curses.KEY_RIGHT]:     # alt-right - next bg color
+                elif c in [curses.KEY_RIGHT]:     # alt-right - next bg color
                     if self.appState.colorMode == "16":
                         self.nextBgColor()
                     elif self.appState.colorMode == "256":
@@ -1935,6 +1935,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 #elif c == 109 or c == 102:    # alt-m or alt-f - load menu
                 elif c == ord('f'):    # alt-f - open file menu
                     self.commandMode = False
+                    self.playing = False
                     self.openMenu("File")
                 elif c == ord('e'):    # alt-f - open edit menu
                     self.commandMode = False
