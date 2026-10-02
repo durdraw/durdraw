@@ -2788,7 +2788,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.addstr(statusBarLineNum, 31 + line_1_offset, "R", curses.color_pair(clickColor) | curses.A_BOLD)  # Range button
                 self.addstr(statusBarLineNum, 23 + line_1_offset, "D", curses.color_pair(clickColor) | curses.A_BOLD)  # Delay button
         # draw transport
-        transportString = "|< << |> >> >|" 
+        transportString = "< |> >" 
         transportOffset = realmaxX - len(transportString) - 9 
         self.transportOffset = transportOffset
         if self.appState.narrowWindow:  # small window, only show |>
@@ -2801,11 +2801,11 @@ class UserInterface():  # Separate view (curses) from this controller
 
         else:   # wide window, show full transport
             if self.playing:
-                transportString = "|< << || >> >|" 
+                transportString = "< || >" 
                 self.addstr(statusBarLineNum, transportOffset, transportString, curses.color_pair(mainColor))
-                self.addstr(statusBarLineNum, transportOffset+6, "||", curses.color_pair(clickColor) | curses.A_BOLD)
+                self.addstr(statusBarLineNum, transportOffset+2, "||", curses.color_pair(clickColor) | curses.A_BOLD)
             else:
-                transportString = "|< << |> >> >|" 
+                transportString = "< |> >" 
             self.addstr(statusBarLineNum, transportOffset, transportString, curses.color_pair(clickColor) | curses.A_BOLD)
         # Draw the new status bar
         if self.commandMode:
@@ -2817,9 +2817,9 @@ class UserInterface():  # Separate view (curses) from this controller
             self.addstr(statusBarLineNum, realmaxX - 1, " ", curses.color_pair(2) | curses.A_BOLD)
 
         # More offsets for the tooltips - for transport buttons
-        trans_play_offset = transportOffset + 6
-        trans_prev_offset = transportOffset + 3
-        trans_next_offset = transportOffset + 10
+        trans_play_offset = transportOffset + 2
+        trans_prev_offset = transportOffset + 0
+        trans_next_offset = transportOffset + 5
 
         # Update tooltip locations for free floating tooltips
         frameBar_tip = self.statusBar.other_tooltips.get_tip("g")
@@ -3608,23 +3608,16 @@ class UserInterface():  # Separate view (curses) from this controller
                                 offset = self.line_1_offset # line 1 of the status bar 
                                 tOffset = self.transportOffset
                                 if not self.appState.narrowWindow:
-                                    if mouseX in [tOffset + 6, tOffset + 7]:  # clicked play button
-                                        self.clickHighlight(tOffset + 6, "|>")
+                                    if mouseX in [tOffset + 2, tOffset + 3]:  # clicked play button
+                                        self.clickHighlight(tOffset + 2, "|>")
                                         self.startPlaying()
                                         self.metaKey = 0
-                                    elif mouseX in [tOffset + 3, tOffset + 4]: # goto prev frame
-                                        self.clickHighlight(tOffset + 3, "<<")
+                                    elif mouseX in [tOffset + 0, tOffset + 1]: # goto prev frame
+                                        self.clickHighlight(tOffset + 0, "<<")
                                         self.mov.prevFrame()
-                                    elif mouseX in [tOffset + 9, tOffset + 10]: # goto next frame
-                                        self.clickHighlight(tOffset + 9, ">>")
+                                    elif mouseX in [tOffset + 4, tOffset + 5]: # goto next frame
+                                        self.clickHighlight(tOffset + 4, ">>")
                                         self.mov.nextFrame()
-                                    elif mouseX in [tOffset, tOffset + 1]: # goto first frame
-                                        self.clickHighlight(tOffset, "|<")
-                                        self.mov.gotoFrame(1)
-                                    elif mouseX in [tOffset + 12, tOffset + 13]: # goto last frame
-                                        self.clickHighlight(tOffset + 12, ">|")
-                                        self.mov.nextFrame()
-                                        self.mov.gotoFrame(self.mov.frameCount)
                                     if mouseX == 13 + offset:    # clicked FPS down
                                         self.clickHighlight(13 + offset, "<")
                                         self.decreaseFPS()
