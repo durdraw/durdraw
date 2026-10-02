@@ -422,16 +422,28 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def enableMouseReporting(self):
         # Use xterm API to report location of mouse cursor
-        print('\033[?1003h') # enable mouse tracking with the XTERM API
-        self.hardRefresh()
+        if self.appState.mouse_reporting == False:
+            #self.notify("Enabled mouse reporting.")
+            #pdb.set_trace()
+            print('\033[?1003h') # enable mouse tracking with the XTERM API
+            self.appState.mouse_reporting = True
+            self.hardRefresh()
         #curses.mousemask(1)
         #curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
 
-    def disableMouseReporting(self):
-        print('\033[?1003l') # disable mouse reporting
-        curses.mousemask(1)
-        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-        self.hardRefresh()
+    def disableMouseReporting(self, hard=False):
+        if hard:
+            self.appState.mouse_reporting = True
+        if self.appState.mouse_reporting:
+            #self.notify("Disabled mouse reporting.")
+            #pdb.set_trace()
+            print('\033[?1003l') # disable mouse reporting
+            curses.mousemask(1)
+            curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+            self.appState.mouse_reporting = False
+            self.hardRefresh()
+
+
 
     def enableTransBackground(self):
         curses.use_default_colors()
@@ -2066,6 +2078,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.metaKey = 0
                 c = None 
             elif c != -1:   # -1 means no keys are pressed.
+                #if self.appState.cursorMode in ["Draw", "Paint", "ABrush"]:
+                #    self.enableMouseReporting()
                 # up or down to change framerate, otherwise stop playing
                 #if self.appState.durview_running:   # Extra UI for DurView
                 #    if c in [ord('e')]:     # e - open file in editor
@@ -2097,7 +2111,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.pressingButton = False
                                 if cursorMode != "Draw" and cursorMode != "Paint" \
                                         and cursorMode != "ABrush":
-                                    print('\033[?1003l') # disable mouse reporting
+                                    self.disableMouseReporting()
                                     self.hardRefresh()
                                     curses.mousemask(1)
                                     curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -2134,7 +2148,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                     self.pressingButton = False
                                     if cursorMode != "Draw" and cursorMode != "Paint" \
                                             and cursorMode != "ABrush":
-                                        print('\033[?1003l') # disable mouse reporting
+                                        self.disableMouseReporting()
                                         self.hardRefresh()
                                         curses.mousemask(1)
                                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -2146,7 +2160,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                     if self.pushingToClip:
                                         self.pushingToClip = False
                                     #if self.appState.cursorMode != "Draw":
-                                    print('\033[?1003l') # disable mouse reporting
+                                    self.disableMouseReporting()
                                     self.hardRefresh()
                                     curses.mousemask(1)
                                     curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -2629,6 +2643,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.statusBarLineNum = statusBarLineNum
         # resize window, tell the statusbar buttons
         self.statusBar.menuButton.update_real_xy(x = statusBarLineNum)
+        self.statusBar.editButton.update_real_xy(x = statusBarLineNum)
         self.statusBar.toolButton.update_real_xy(x = statusBarLineNum)
         self.statusBar.animButton.update_real_xy(x = statusBarLineNum)
         self.statusBar.colorPickerButton.update_real_xy(x = statusBarLineNum + 1)
@@ -2809,21 +2824,41 @@ class UserInterface():  # Separate view (curses) from this controller
         # Draw mouse mode
         mouseModeString = self.appState.cursorMode
         if self.appState.cursorMode == "ABrush":
-            if self.appState.animBrush.mode == "loop":
-                mouseModeString = "anim:loop"
-            elif self.appState.animBrush.mode == "clone":
-                mouseModeString = "anim:clone"
+            mouseModeString = "ABrush"
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
         self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
+
+        # Draw Animation Brush frame number
+        if self.appState.cursorMode == "ABrush":
+            if self.appState.animBrush.is_set():
+                abrushFrameString = ''
+                if self.appState.insertMode:
+                    abrushFrameStringOffset = 4
+                else:
+                    abrushFrameStringOffset = 0
+                abrushFrameNumber = self.appState.animBrush.frameNumber + 1
+                abrushTotalFrames = len(self.appState.animBrush.mov.frames)
+                abrushFrameString = f"ABrush: {abrushFrameNumber} / {abrushTotalFrames}"
+
+                if self.appState.animBrush.mode == "loop":
+                    abrushFrameString += " Loop"
+                elif self.appState.animBrush.mode == "clone":
+                    abrushFrameString += " Clone"
+
+                self.addstr(statusBarLineNum-1, abrushFrameStringOffset, abrushFrameString, curses.color_pair(mainColor))
+
+
+
 
         # Draw Insert mode indicator 
         insertModeStringOffset = 0
         if self.appState.insertMode:
             insertModeString = "Ins"
             self.addstr(statusBarLineNum-1, insertModeStringOffset, insertModeString, curses.color_pair(mainColor))
-
         else:
             insertModeString = ""
+
+
         # Draw button indicator
         if self.pressingButton:
             self.addstr(statusBarLineNum + 1, locationStringOffset - 1, "*", curses.color_pair(3) | curses.A_BOLD)
@@ -2909,10 +2944,10 @@ class UserInterface():  # Separate view (curses) from this controller
             prev_tip.alwaysHidden = False
             next_tip.alwaysHidden = False
 
-        #if self.appState.colorMode == "16":
-        #    colorPicker_tip.hide()
-
+        # Let the widget draw itself
         self.statusBar.draw()
+
+
         # if cursor is outside of canvas, fix it
         bottomLine = self.realmaxY - 3 + self.appState.topLine
         if self.xy[0] > self.mov.sizeY - 1:  # cursor is past bottom of the canvas
@@ -3003,16 +3038,17 @@ class UserInterface():  # Separate view (curses) from this controller
 
         curses.noecho()
         while self.appState.editorRunning:    # Real "main loop" - get user input, aka "edit mode"
+            if self.appState.cursorMode in ["Draw", "Paint", "ABrush"]:
+                self.enableMouseReporting()
+            #else:
+            #    self.disableMouseReporting()
+
             self.testWindowSize()
             # print statusbar stuff
             self.drawStatusBar()
             self.move(self.xy[0], self.xy[1] - 1)  # move cursor to the right
             # spot for refresh
             curses.panel.update_panels()
-
-            if cursorMode == "Draw" or cursorMode == "Paint" \
-                    or cursorMode == "ABrush":
-                self.enableMouseReporting()
 
             self.stdscr.refresh()
             c = self.stdscr.getch() # non-wide characters, for old ncurses
@@ -3024,12 +3060,11 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.pressingButton = False
                 if self.pushingToClip:
                     self.pushingToClip = False
-                if cursorMode != "Draw" and cursorMode != "Paint" \
-                         and cursorMode != "ABrush":
-                    print('\033[?1003l') # disable mouse reporting
-                    self.hardRefresh()
-                    curses.mousemask(1)
-                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+                #if cursorMode not in ["Draw", "Paint","ABrush"]:
+                #    self.disableMouseReporting()
+                #    #self.hardRefresh()
+                #    curses.mousemask(1)
+                #    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 if c == 111:                # alt-o - open
                     self.openFromMenu()     # as if we clicked menu->open
                 elif c == 115:                 # alt-s - save
@@ -3190,15 +3225,19 @@ class UserInterface():  # Separate view (curses) from this controller
                     if self.appState.cursorMode == "ABrush":
                         if self.appState.animBrush.is_set():
                             self.appState.animBrush.prev_frame()
-                            print('\033[?1003h') # enable mouse tracking with the XTERM API
-                            self.refresh()
+                            #print('\033[?1003h') # enable mouse tracking with the XTERM API
+                            #self.refresh()
+                            self.drawStatusBar()
+                            #self.enableMouseReporting()
                             #self.notify(f"mouse col: {self.appState.mouse_col}, line: {self.appState.mouse_line}")
                 elif c in [ord('K')]: # alt-K = start marking selection, or next animation brush frame
                     if self.appState.cursorMode == "ABrush":
                         if self.appState.animBrush.is_set():
                             self.appState.animBrush.next_frame()
-                            print('\033[?1003h') # enable mouse tracking with the XTERM API
-                            self.refresh()
+                            #print('\033[?1003h') # enable mouse tracking with the XTERM API
+                            #self.refresh()
+                            self.drawStatusBar()
+                            #self.enableMouseReporting()
                             #self.notify(f"mouse col: {self.appState.mouse_col}, line: {self.appState.mouse_line}")
                     else:
                         startPoint=(self.xy[0] + self.appState.topLine, self.xy[1] + self.appState.firstCol)
@@ -3287,22 +3326,22 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.prevFgColor()
                             c = None
                     self.pressingButton = False
-                    if cursorMode != "Draw" and cursorMode != "Paint" \
-                            and cursorMode != "ABrush":
-                        print('\033[?1003l') # disable mouse reporting
-                        self.hardRefresh()
-                        curses.mousemask(1)
-                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+                    #if cursorMode != "Draw" and cursorMode != "Paint" \
+                    #        and cursorMode != "ABrush":
+                    #    self.disableMouseReporting()
+                    #    self.hardRefresh()
+                    #    curses.mousemask(1)
+                    #    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                     if self.pushingToClip:
                         self.pushingToClip = False
                 else:
                     self.pressingButton = False
-                    if cursorMode != "Draw" and cursorMode != "Paint" \
-                            and cursorMode != "ABrush":
-                        print('\033[?1003l') # disable mouse reporting
-                        self.hardRefresh()
-                        curses.mousemask(1)
-                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+                    #if cursorMode != "Draw" and cursorMode != "Paint" \
+                    #        and cursorMode != "ABrush":
+                    #    self.disableMouseReporting()
+                    #    self.hardRefresh()
+                    #    curses.mousemask(1)
+                    #    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                     if self.pushingToClip:
                         self.pushingToClip = False
                     if self.appState.debug:
@@ -3311,9 +3350,9 @@ class UserInterface():  # Separate view (curses) from this controller
                         else:
                             self.notify("keystroke: %d" % c) # alt-unknown
 
-                if cursorMode == "Draw" or cursorMode == "Paint" \
-                        or cursorMode == "ABrush":
-                    self.enableMouseReporting()
+                #if cursorMode == "Draw" or cursorMode == "Paint" \
+                #        or cursorMode == "ABrush":
+                #    self.enableMouseReporting()
 
                 self.commandMode = False
                 self.metaKey = 0
@@ -3325,17 +3364,17 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.pressingButton = False
                 if self.pushingToClip:
                     self.pushingToClip = False
-                if cursorMode != "Draw" and cursorMode != "Paint" \
-                            and cursorMode != "ABrush":
-                    print('\033[?1003l') # disable mouse reporting
-                    self.hardRefresh()
-                    curses.mousemask(1)
-                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+                #if cursorMode != "Draw" and cursorMode != "Paint" \
+                #            and cursorMode != "ABrush":
+                #    self.disableMouseReporting()
+                #    self.hardRefresh()
+                #    curses.mousemask(1)
+                #    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 self.appState.renderMouseCursor = False
                 c = None
-            if cursorMode == "Draw" or cursorMode == "Paint" \
-                    or cursorMode == "ABrush":
-                self.enableMouseReporting()
+            #if cursorMode == "Draw" or cursorMode == "Paint" \
+            #        or cursorMode == "ABrush":
+            #    self.enableMouseReporting()
             if c == 24: self.safeQuit()     # ctrl-x
             elif c == 15:               # ctrl-o - open # holy crap, this is still in here? lol
                 self.openFromMenu()     # as if we clicked menu->open
@@ -3418,12 +3457,12 @@ class UserInterface():  # Separate view (curses) from this controller
                 if self.pushingToClip:
                     self.pushingToClip = False
                 cursorMode = self.appState.cursorMode
-                if cursorMode != "Draw" and cursorMode != "Paint" \
-                            and cursorMode != "ABrush":
-                    print('\033[?1003l') # disable mouse reporting
-                    self.hardRefresh()
-                    curses.mousemask(1)
-                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+                #if cursorMode != "Draw" and cursorMode != "Paint" \
+                #            and cursorMode != "ABrush":
+                #    self.disableMouseReporting()
+                #    self.hardRefresh()
+                #    curses.mousemask(1)
+                #    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
             elif c == curses.KEY_MOUSE: # We are not playing
                 try:
                     _, mouseX, mouseY, _, mouseState = curses.getmouse()
@@ -3450,7 +3489,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     cursorMode = self.appState.cursorMode
                     if cursorMode != "Draw" and cursorMode != "Paint" \
                             and cursorMode != "ABrush":
-                        print('\033[?1003l') # disable mouse reporting
+                        self.disableMouseReporting()
                         self.hardRefresh()
                         curses.mousemask(1)
                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -3508,7 +3547,8 @@ class UserInterface():  # Separate view (curses) from this controller
                     if mouseState & curses.BUTTON1_PRESSED:
                         if not self.pressingButton:
                             self.pressingButton = True
-                            print('\033[?1003h') # enable mouse tracking with the XTERM API
+                            #print('\033[?1003h') # enable mouse tracking with the XTERM API
+                            self.enableMouseReporting()
                             self.hardRefresh()
                         if not self.pushingToClip:
                             cmode = self.appState.cursorMode
@@ -3523,7 +3563,7 @@ class UserInterface():  # Separate view (curses) from this controller
                             cursorMode = self.appState.cursorMode
                             if cursorMode != "Draw" and cursorMode != "Paint" \
                                     and cursorMode != "ABrush":
-                                print('\033[?1003l') # disable mouse reporting
+                                self.disableMouseReporting()
                                 self.hardRefresh()
                                 curses.mousemask(1)
                                 curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -3672,7 +3712,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     if self.pushingToClip:
                         self.pushingToClip = False
                     if self.appState.cursorMode != "Draw" and self.appState.cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
+                        self.disableMouseReporting()
                         self.hardRefresh()
                         curses.mousemask(1)
                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -3704,8 +3744,8 @@ class UserInterface():  # Separate view (curses) from this controller
                             #if cmode == "Draw" or cmode == "Paint" or cmode == "Color":
                             self.disableMouseReporting()
                             self.gui.got_click("Click", mouseX, mouseY)
-                            if cmode == "Draw" or cmode == "Paint":
-                                self.enableMouseReporting()
+                            #if cmode == "Draw" or cmode == "Paint":
+                            #    self.enableMouseReporting()
 
                         # Add stuff here to take mouse 'commands' like clicking
                         # play/next/etc on transport, or clicking "start button"
@@ -3764,6 +3804,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         else:
                             if self.appState.debug:
                                 self.notify(str([mouseX, mouseY]))
+                        if cmode == "Draw" or cmode == "Paint":
+                            self.enableMouseReporting()
                     # If we clicked in the sidebar area, aka to the right of the canvas
                     # and above the status bar:
                     if self.appState.sideBarEnabled:
@@ -3786,7 +3828,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 if mouseState == curses.BUTTON1_CLICKED:
                     self.pressingButton = False
                     if cursorMode != "Draw" and cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
+                        self.disableMouseReporting()
                         self.hardRefresh()
                         curses.mousemask(1)
                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -4448,9 +4490,9 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.statusBar.animButton.draw()    # redraw as unselected/not-inverse
             if response == "Close":
                 menu_open = False
-                if cmode == "Draw" or cmode == "Paint":
-                    self.enableMouseReporting()
-                self.hardRefresh()
+                #if cmode == "Draw" or cmode == "Paint":
+                #    self.enableMouseReporting()
+                #self.hardRefresh()
             elif response == "Right":
                 # if we're at the rightmost menu
                 if menus.index(current_menu) == len(menus) - 1:
@@ -4469,8 +4511,8 @@ class UserInterface():  # Separate view (curses) from this controller
             #fail_count += 1 # debug
             #if fail_count > 3:
             #    pdb.set_trace()
-        if cmode == "Draw" or cmode == "Paint":
-            self.enableMouseReporting()
+        #if cmode == "Draw" or cmode == "Paint":
+        #    self.enableMouseReporting()
         #self.hardRefresh()
         if self.playing:
             self.stdscr.nodelay(1)
@@ -4806,7 +4848,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     if self.pushingToClip:
                         self.pushingToClip = False
                     if self.appState.cursorMode != "Draw" and self.appState.cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
+                        self.disableMouseReporting()
                         self.hardRefresh()
                         curses.mousemask(1)
                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -7102,6 +7144,7 @@ Can use ESC or META instead of ALT
         screenLineNum = 0
         firstCol = self.appState.firstCol
         lastCol = min(mov.sizeX, self.appState.realmaxX + firstCol)
+        self.cursorOff()
         # Draw each character
         for linenum in range(topLine, lastLineToDraw):
             line = mov.currentFrame.content[linenum]
@@ -7152,10 +7195,8 @@ Can use ESC or META instead of ALT
                                 if brushChar == ' ':
                                     pass
                                 else:
-                                    # It's a character that we should draw as a brush preview
-                                    if self.appState.renderMouseCursor:
-                                        charContent = brushChar
-                                        charColor = self.appState.animBrush.current_frame().newColorMap[brush_col][brush_line]
+                                    charContent = brushChar
+                                    charColor = self.appState.animBrush.current_frame().newColorMap[brush_col][brush_line]
 
 
                 if linenum == self.appState.mouse_line + topLine and colnum == self.appState.mouse_col + self.appState.firstCol:
@@ -7246,6 +7287,7 @@ Can use ESC or META instead of ALT
             curses.panel.update_panels()
         if self.appState.playingHelpScreen:
             self.addstr(self.statusBarLineNum + 1, 0, "Up/Down, Pgup/Pgdown, Home/End or Mouse Wheel to scroll. Enter or Esc to exit.", curses.color_pair(self.appState.theme['promptColor']))
+        self.cursorOn()
         if refreshScreen:
             self.stdscr.refresh()
 

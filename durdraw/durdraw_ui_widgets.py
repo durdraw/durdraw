@@ -716,12 +716,12 @@ class StatusBar():
 
     def setCursorModeMove(self):
         self.caller.appState.setCursorModeMove()
-        self.caller.disableMouseReporting()
+        self.caller.disableMouseReporting(hard=True)
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeSelect(self):
         self.caller.appState.setCursorModeSelect()
-        self.caller.disableMouseReporting()
+        self.caller.disableMouseReporting(hard=True)
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeDraw(self):
@@ -742,17 +742,17 @@ class StatusBar():
 
     def setCursorModeCol(self):
         self.caller.appState.setCursorModeCol()
-        self.caller.disableMouseReporting()
+        self.caller.disableMouseReporting(hard=True)
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeErase(self):
         self.caller.appState.setCursorModeErase()
-        self.caller.disableMouseReporting()
+        self.caller.disableMouseReporting(hard=True)
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeEyedrop(self):
         self.caller.appState.setCursorModeEyedrop()
-        self.caller.disableMouseReporting()
+        self.caller.disableMouseReporting(hard=True)
         #self.toolButton.set_label("Eye")
 
     def updateLocation(self, x, y):
