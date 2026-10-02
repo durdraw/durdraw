@@ -90,6 +90,7 @@ class AppState():
         }
 
         # Other durdraw runtime stuff
+        self.insertMode = False # When the user presses Insert. Insert mode like a text editor
         self.can_inject = False # Allow injecting color codes to override ncurses colors (for BG 256 colors)
         self.sleep_time = 0     # Use this as a delay for playback mode, dictated in ui_curses.py from FPS
         self.showBgColorPicker = False # until BG colors work in 256 color mode. (ncurses 5 color pair limits)

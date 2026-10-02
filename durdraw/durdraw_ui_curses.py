@@ -962,9 +962,15 @@ class UserInterface():  # Separate view (curses) from this controller
             self.undo.push()
             self.xy[1] = self.xy[1] - 1
             if self.playing:
+                insert = self.appState.insertMode   # back state up
+                self.appState.insertMode = False
                 self.insertChar(ord(' '), fg=self.appState.defaultFgColor, bg=self.appState.defaultBgColor, frange=self.appState.playbackRange)
+                self.appState.insertMode = insert
             else:
+                insert = self.appState.insertMode   # back state up
+                self.appState.insertMode = False
                 self.insertChar(ord(' '), fg=self.appState.defaultFgColor, bg=self.appState.defaultFgColor)
+                self.appState.insertMode = insert
             self.xy[1] = self.xy[1] - 1
 
     def deleteKeyPop(self, frange=None):
@@ -1025,23 +1031,46 @@ class UserInterface():  # Separate view (curses) from this controller
             moveCursor = True
         if y == None:
             y = self.xy[0]
-        if frange: # frame range
-            for fn in range(frange[0] - 1, frange[1]):
-                try:
-                    self.mov.frames[fn].content[y][x - 1] = chr(c)
-                    self.mov.frames[fn].newColorMap[y][x - 1] = [fg, bg]
-                except Exception as E:
-                    self.notify(f"There was an internal error: {E}", pause=True)
-                    self.notify(f"Frame: {fn}, x: {x}, y: {y}, fg: {fg}, bg: {bg}")
-                    self.notify(f"Please save your work and restart Durdraw. Sorry for the inconvenience.")
-                    break
-            if x < self.mov.sizeX and moveCursor:
-                self.move_cursor_right()
-        else:
-            self.mov.currentFrame.content[y][x - 1] = chr(c)
-            self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
-            if x < self.mov.sizeX and moveCursor:
-                self.move_cursor_right()
+        if self.appState.insertMode == False:
+            if frange: # frame range
+                for fn in range(frange[0] - 1, frange[1]):
+                    try:
+                        self.mov.frames[fn].content[y][x - 1] = chr(c)
+                        self.mov.frames[fn].newColorMap[y][x - 1] = [fg, bg]
+                    except Exception as E:
+                        self.notify(f"There was an internal error: {E}", pause=True)
+                        self.notify(f"Frame: {fn}, x: {x}, y: {y}, fg: {fg}, bg: {bg}")
+                        self.notify(f"Please save your work and restart Durdraw. Sorry for the inconvenience.")
+                        break
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
+            else:
+                self.mov.currentFrame.content[y][x - 1] = chr(c)
+                self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
+        elif self.appState.insertMode == True:
+            if frange: # frame range
+                for fn in range(frange[0] - 1, frange[1]):
+                    try:
+                        self.mov.frames[fn].content[y].insert(x - 1,  chr(c))
+                        self.mov.frames[fn].content[y].pop()
+                        self.mov.frames[fn].newColorMap[y].insert(x - 1, [fg, bg])
+                        self.mov.frames[fn].newColorMap[y].pop()
+                    except Exception as E:
+                        self.notify(f"There was an internal error: {E}", pause=True)
+                        self.notify(f"Frame: {fn}, x: {x}, y: {y}, fg: {fg}, bg: {bg}")
+                        self.notify(f"Please save your work and restart Durdraw. Sorry for the inconvenience.")
+                        break
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
+            else:
+                self.mov.currentFrame.content[y].insert(x - 1,  chr(c))
+                self.mov.currentFrame.content[y].pop()
+                self.mov.currentFrame.newColorMap[y].insert(x - 1, [fg, bg])
+                self.mov.currentFrame.newColorMap[y].pop()
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
 
     def pickUpDrawingChar(self, col, line):
         # Sets the drawing chaaracter to the character under teh cusror.
@@ -2179,6 +2208,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.xy[1] = 1
                     elif c in [338, curses.KEY_END]:   # 338 = end
                         self.xy[1] = self.mov.sizeX
+                    elif c in [331, curses.KEY_IC]:    # 331 = Insert
+                        self.toggleInsertMode()
                     elif c in [10, 13, curses.KEY_ENTER]:               # enter (10 if we
                         self.move_cursor_enter()
                         # don't do curses.nonl())
@@ -2784,6 +2815,15 @@ class UserInterface():  # Separate view (curses) from this controller
                 mouseModeString = "anim:clone"
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
         self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
+
+        # Draw Insert mode indicator 
+        insertModeStringOffset = 0
+        if self.appState.insertMode:
+            insertModeString = "Ins"
+            self.addstr(statusBarLineNum-1, insertModeStringOffset, insertModeString, curses.color_pair(mainColor))
+
+        else:
+            insertModeString = ""
         # Draw button indicator
         if self.pressingButton:
             self.addstr(statusBarLineNum + 1, locationStringOffset - 1, "*", curses.color_pair(3) | curses.A_BOLD)
@@ -3371,6 +3411,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.move_cursor_home()
             elif c in [338, curses.KEY_END]:   # 338 = end
                 self.move_cursor_end()
+            elif c in [331, curses.KEY_IC]:    # 331 = Insert
+                self.toggleInsertMode()
             elif c != curses.KEY_MOUSE and self.pressingButton:
                 self.pressingButton = False
                 if self.pushingToClip:
@@ -3799,6 +3841,9 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.showFileInformation()
             self.refresh(refreshScreen=False)
             #self.hardRefresh()
+
+    def toggleInsertMode(self):
+        self.appState.insertMode = not self.appState.insertMode
 
     def anim_brush_prev_frame(self):
         if self.appState.animBrush.is_set():

@@ -488,6 +488,7 @@ class StatusBar():
         editMenu.add_item("Character Sets", caller.showCharSetPicker, "c", shortcut="esc-S")
         editMenu.add_item("Replace Color", caller.replaceColorUnderCursor, "e", shortcut="esc-L")
         editMenu.add_item("Replace Character", caller.replaceCharUnderCursor, "h", shortcut="")
+        editMenu.add_item("Insert Mode", caller.toggleInsertMode, "n", shortcut="ins")
         editMenu.add_item("Settings", caller.openSettingsMenu, "s", has_submenu=True)
         #editMenu.is_submenu = True
         editMenu.set_x(self.x - 1)
@@ -547,6 +548,8 @@ class StatusBar():
         animMenu.add_item("Move Frame", caller.moveCurrentFrame, "m", shortcut="esc-M")
         animMenu.add_item("Shift Frames Right", caller.shiftMovieRight, "}", shortcut="esc-}")
         animMenu.add_item("Shift Frames Left", caller.shiftMovieLeft, "{", shortcut="esc-{")
+        animMenu.add_item("Animation Brush Prev Frame", caller.anim_brush_prev_frame, "", shortcut="esc-J")
+        animMenu.add_item("Animation Brush Next Frame", caller.anim_brush_prev_frame, "", shortcut="esc-K")
         animMenu.add_item("Effects", caller.openTransformMenu, "f", has_submenu=True)
         animButton = Button("Anim", 0, animButton_offset, caller.openAnimMenu, self.window, appState=self.appState)
         animButton.set_tooltip_command('a')
