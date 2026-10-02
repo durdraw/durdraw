@@ -479,6 +479,7 @@ class StatusBar():
         self.menus["Edit"] = editMenu
         editMenu.add_item("Undo", caller.clickedUndo, "u", shortcut="esc-z")
         editMenu.add_item("Redo", caller.clickedRedo, "r", shortcut="esc-r")
+        editMenu.add_item("Color Picker", caller.selectColorPicker, "l", shortcut="tab")
         editMenu.add_item("Mark/Select", caller.startSelecting, "k", shortcut="esc-K")
         editMenu.add_item("Paste", caller.pasteFromMenu, "p", shortcut="esc-v")
         editMenu.add_item("Find /", caller.searchForStringPrompt, "/", shortcut="esc-F")
@@ -515,7 +516,6 @@ class StatusBar():
         mainMenu.add_item("Save", caller.save, "s", shortcut="esc-s")
         mainMenu.add_item("Export", caller.openExportMenu, "x", has_submenu=True)
         mainMenu.add_item("Info/Sauce", caller.clickedInfoButton, "i", shortcut="esc-i")
-        mainMenu.add_item("Color Picker", caller.selectColorPicker, "l", shortcut="tab")
         mainMenu.add_item("Viewer Mode", caller.enterViewMode, "v", shortcut="esc-V")
         #mainMenu.add_item("Edit", caller.openEditMenu, "e", has_submenu=True)
         # Help and Quit are added after plugins are loaded.
