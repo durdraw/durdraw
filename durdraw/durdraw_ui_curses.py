@@ -3141,9 +3141,23 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.increaseFPS()
                 elif c in [45]: # esc-- (alt minus) - fps down
                     self.decreaseFPS()
-                elif c in [75]: # alt-K = start marking selection
-                    startPoint=(self.xy[0] + self.appState.topLine, self.xy[1] + self.appState.firstCol)
-                    self.startSelecting(firstkey=c)  # start selecting text
+                elif c in [ord('J')]: # alt-J = previous animation brush frame
+                    if self.appState.cursorMode == "ABrush":
+                        if self.appState.animBrush.is_set():
+                            self.appState.animBrush.prev_frame()
+                            print('\033[?1003h') # enable mouse tracking with the XTERM API
+                            self.refresh()
+                            #self.notify(f"mouse col: {self.appState.mouse_col}, line: {self.appState.mouse_line}")
+                elif c in [ord('K')]: # alt-K = start marking selection, or next animation brush frame
+                    if self.appState.cursorMode == "ABrush":
+                        if self.appState.animBrush.is_set():
+                            self.appState.animBrush.next_frame()
+                            print('\033[?1003h') # enable mouse tracking with the XTERM API
+                            self.refresh()
+                            #self.notify(f"mouse col: {self.appState.mouse_col}, line: {self.appState.mouse_line}")
+                    else:
+                        startPoint=(self.xy[0] + self.appState.topLine, self.xy[1] + self.appState.firstCol)
+                        self.startSelecting(firstkey=c)  # start selecting text
                 elif c in [ord('1')]:    # esc-1 copy of F1 - insert extended character
                     self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg)
                     #self.hardRefresh()
@@ -3251,6 +3265,11 @@ class UserInterface():  # Separate view (curses) from this controller
                             self.set_trace()
                         else:
                             self.notify("keystroke: %d" % c) # alt-unknown
+
+                if cursorMode == "Draw" or cursorMode == "Paint" \
+                        or cursorMode == "ABrush":
+                    self.enableMouseReporting()
+
                 self.commandMode = False
                 self.metaKey = 0
                 c = None
@@ -3269,6 +3288,9 @@ class UserInterface():  # Separate view (curses) from this controller
                     curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 self.appState.renderMouseCursor = False
                 c = None
+            if cursorMode == "Draw" or cursorMode == "Paint" \
+                    or cursorMode == "ABrush":
+                self.enableMouseReporting()
             if c == 24: self.safeQuit()     # ctrl-x
             elif c == 15:               # ctrl-o - open # holy crap, this is still in here? lol
                 self.openFromMenu()     # as if we clicked menu->open
