@@ -6158,12 +6158,15 @@ class UserInterface():  # Separate view (curses) from this controller
 
 
     
-    def save(self):
-        self.clearStatusLine()
-        self.move(self.mov.sizeY, 0)
-        self.promptPrint("File format? [D]UR, [A]NSI, A[N]SIMATION, ASCI[I], [M]IRC, [J]SON, [H]TML, [P]NG, [G]IF: ")
-        self.stdscr.nodelay(0) # do not wait for input when calling getch
-        prompting = True
+    def save(self, saveFormat = ""):
+        if saveFormat == "":
+            self.clearStatusLine()
+            self.move(self.mov.sizeY, 0)
+            self.promptPrint("File format? [D]UR, [A]NSI, A[N]SIMATION, ASCI[I], [M]IRC, [J]SON, [H]TML, [P]NG, [G]IF: ")
+            self.stdscr.nodelay(0) # do not wait for input when calling getch
+            prompting = True
+        else:
+            prompting = False
         saved = False
         while prompting:
             c = self.stdscr.getch()
