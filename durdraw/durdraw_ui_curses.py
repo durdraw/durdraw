@@ -2766,6 +2766,10 @@ class UserInterface():  # Separate view (curses) from this controller
         locationString = "(%i,%i)" % (self.xy[1]-1, self.xy[0])
         locationStringOffset = realmaxX - len(locationString) - 1
         self.addstr(statusBarLineNum+1, locationStringOffset, locationString, curses.color_pair(mainColor))
+        # Draw mouse mode
+        mouseModeString = self.appState.cursorMode
+        mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
+        self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
         # Draw button indicator
         if self.pressingButton:
             self.addstr(statusBarLineNum + 1, locationStringOffset - 1, "*", curses.color_pair(3) | curses.A_BOLD)
@@ -3052,13 +3056,14 @@ class UserInterface():  # Separate view (curses) from this controller
                     #    self.toggleShowFileInformation()
                     #else:
                     #    self.showFileInformation(notify=True)
-                elif c == 109 or c == 102:    # alt-m or alt-f - load menu
+                #elif c == 109 or c == 102:    # alt-m or alt-f - load menu
+                elif c == ord('f'):    # alt-f - open file menu
                     self.commandMode = False
                     self.openMenu("File")
                 elif c == ord('a'):    # alt-a - Animation menu
                     self.commandMode = False
                     self.openMenu("Anim")
-                elif c == 116: # or c =- 84:    # alt-t or alt-T - mouse tools menu
+                elif c == ord('m'):    # alt-m - Mouse Menu
                     self.commandMode = False
                     self.openMenu("Mouse Tools")
                     #self.statusBar.toolButton.on_click()
