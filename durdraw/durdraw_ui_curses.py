@@ -6366,10 +6366,13 @@ class UserInterface():  # Separate view (curses) from this controller
         if saveFormat == 'gif':  # gif = requires PIL
             saved = self.saveGifFile(filename, font=saveFont)
         if saved:
-            self.notify("*Saved* (Press any key to continue)", pause=True)
-            self.appState.curOpenFileName = os.path.basename(filename)
-            self.appState.modified = False
-            self.undo.modifications = 0
+            if saveFormat == 'dur':
+                self.notify("*Saved* (Press any key to continue)", pause=True)
+                self.appState.curOpenFileName = os.path.basename(filename)
+                self.appState.modified = False
+                self.undo.modifications = 0
+            else:
+                self.notify("*Exported* (Press any key to continue)", pause=True)
             #self.setWindowTitle(self.appState.curOpenFileName)
         elif not saved:
             self.notify("Save failed.")
