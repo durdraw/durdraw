@@ -1880,11 +1880,6 @@ class UserInterface():  # Separate view (curses) from this controller
                 # In other words, un-stick the mouse button in case it's stuck:
             if self.metaKey == 1 and not self.appState.playOnlyMode and c != curses.ERR:   # esc
                 self.pressingButton = False
-                #if cursorMode != "Draw" and cursorMode != "Paint":
-                #    print('\033[?1003l') # disable mouse reporting
-                #    self.hardRefresh()
-                #    curses.mousemask(1)
-                #    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 if self.pushingToClip:
                     self.pushingToClip = False
                 if c == 91: c = self.stdscr.getch() # alt-arrow does this in this mrxvt 5.x build
@@ -1937,15 +1932,24 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.delLine(frange=self.appState.playbackRange)
                 elif c == 105:      # alt-i - File/Canvas Information
                     self.clickedInfoButton()
-                elif c == 109 or c == 102:    # alt-m or alt-f - load menu
-                    #self.statusBar.menuButton.on_click() 
+                #elif c == 109 or c == 102:    # alt-m or alt-f - load menu
+                elif c == ord('f'):    # alt-f - open file menu
                     self.commandMode = False
                     self.openMenu("File")
+                elif c == ord('e'):    # alt-f - open edit menu
+                    self.commandMode = False
+                    self.playing = False
+                    self.openMenu("Edit")
+                elif c == ord('a'):    # alt-a - Animation menu
+                    self.commandMode = False
+                    self.playing = False
+                    self.openMenu("Anim")
+                elif c == ord('m'):    # alt-m - Mouse Menu
+                    self.commandMode = False
+                    self.playing = False
+                    self.openMenu("Mouse Tools")
                 elif c == 99:     # alt-c - color picker
                     self.commandMode = False
-                    #if self.appState.colorMode == "256":
-                    #    self.statusBar.colorPickerButton.on_click()
-                    #self.statusBar.colorPickerButton.on_click()
                     self.selectColorPicker()
                 elif c == ord(' '):     # alt-space - insert drawing character
                     drawChar = self.appState.drawChar
@@ -2476,6 +2480,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.appState.narrowWindow = False
             # show menu buttons
             self.statusBar.menuButton.show()
+            self.statusBar.editButton.show()
             self.statusBar.toolButton.show()
             self.statusBar.animButton.show()
             self.statusBar.drawCharPickerButton.show()
@@ -2483,6 +2488,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.appState.narrowWindow = True
             # hide menu buttons
             self.statusBar.menuButton.hide()
+            self.statusBar.editButton.hide()
             self.statusBar.toolButton.hide()
             self.statusBar.animButton.hide()
             self.statusBar.drawCharPickerButton.hide()
@@ -3062,6 +3068,9 @@ class UserInterface():  # Separate view (curses) from this controller
                 elif c == ord('f'):    # alt-f - open file menu
                     self.commandMode = False
                     self.openMenu("File")
+                elif c == ord('e'):    # alt-f - open file menu
+                    self.commandMode = False
+                    self.openMenu("Edit")
                 elif c == ord('a'):    # alt-a - Animation menu
                     self.commandMode = False
                     self.openMenu("Anim")
@@ -4292,7 +4301,7 @@ class UserInterface():  # Separate view (curses) from this controller
         if self.playing:
             menus = ["File"]
         else:
-            menus = ["File", "Anim", "Mouse Tools"]
+            menus = ["File", "Edit", "Anim", "Mouse Tools"]
         #fail_count = 0  # debug
         while menu_open:
             if current_menu == "File":
@@ -4300,6 +4309,11 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.statusBar.menuButton.become_selected()
                 response = self.statusBar.mainMenu.showHide()
                 self.statusBar.menuButton.draw()    # redraw as unselected/not-inverse
+            if current_menu == "Edit":
+                #response = self.statusBar.menuButton.on_click()
+                self.statusBar.editButton.become_selected()
+                response = self.statusBar.editMenu.showHide()
+                self.statusBar.editButton.draw()    # redraw as unselected/not-inverse
             elif current_menu == "Mouse Tools":
                 #response = self.statusBar.toolButton.on_click()
                 self.statusBar.toolButton.become_selected()

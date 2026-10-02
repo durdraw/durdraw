@@ -473,7 +473,7 @@ class StatusBar():
         self.exportPluginsMenu = exportPluginsMenu
 
         # Make the Edit menu
-        editMenuColumn = 22 # Try to place to the right of the main menu
+        editButton_offset = 7 # Try to place to the right of the main menu
         editMenu = Menu(self.window, x = self.x - 1, y = self.y, caller=self, appState=self.appState, statusBar=self, name="Edit")
         self.menus["Edit"] = editMenu
         editMenu.add_item("Undo", caller.clickedUndo, "u", shortcut="esc-z")
@@ -486,10 +486,21 @@ class StatusBar():
         editMenu.add_item("Character Sets", caller.showCharSetPicker, "c", shortcut="esc-S")
         editMenu.add_item("Replace Color", caller.replaceColorUnderCursor, "e", shortcut="esc-L")
         editMenu.add_item("Replace Character", caller.replaceCharUnderCursor, "h", shortcut="")
-        editMenu.is_submenu = True
+        #editMenu.is_submenu = True
         editMenu.set_x(self.x - 1)
-        editMenu.set_y(editMenuColumn)
         self.editMenu = editMenu
+
+
+        editButton = Button("Edit", 0, editButton_offset, caller.openEditMenu, self.window, appState=self.appState)
+        editButton.set_tooltip_command('e')
+        self.editButton = editButton
+        editButton.realX = self.x + editButton.x
+        editButton.realY = self.y + editButton.y
+        editButton.show()
+        self.editButton = editButton
+        editMenu.set_x(editButton.realX - 1)
+        editMenu.set_y(editButton.realY)
+
 
         # main menu items 
         self.menuButton = None
@@ -504,7 +515,7 @@ class StatusBar():
         mainMenu.add_item("Info/Sauce", caller.clickedInfoButton, "i", shortcut="esc-i")
         mainMenu.add_item("Color Picker", caller.selectColorPicker, "l", shortcut="tab")
         mainMenu.add_item("Viewer Mode", caller.enterViewMode, "v", shortcut="esc-V")
-        mainMenu.add_item("Edit", caller.openEditMenu, "e", has_submenu=True)
+        #mainMenu.add_item("Edit", caller.openEditMenu, "e", has_submenu=True)
         mainMenu.add_item("Settings", caller.openSettingsMenu, "t", has_submenu=True)
         # Help and Quit are added after plugins are loaded.
         menuButton = Button("File", 0, 0, caller.openMainMenu, self.window, appState=self.appState)
@@ -521,7 +532,7 @@ class StatusBar():
 
         # Animation menu
         self.animButton = None
-        animButton_offset = 7
+        animButton_offset = 14
         # Create a menu list item, add menu items to it
         animMenu = Menu(self.window, x = animButton_offset, y = self.y, caller=self, appState=self.appState, statusBar=self, name="Anim")
         self.menus["Anim"] = animMenu
@@ -564,7 +575,8 @@ class StatusBar():
 
         # Make cursor tool selector button
         # offset is how far right to put the button in the statusbar:
-        toolButton_offset = 14
+        #toolButton_offset = 14
+        toolButton_offset = 21
         toolButton = Button("Mouse", 0, toolButton_offset, caller.openMouseToolsMenu, self.window, appState=self.appState)
         #toolButton.set_label(self.caller.appState.cursorMode)
         toolButton.set_tooltip_command('m')
@@ -631,6 +643,7 @@ class StatusBar():
         newX = len(str(self.items))
         newY = self.y
         self.items.append(menuButton)
+        self.items.append(editButton)
         self.items.append(toolButton)
         self.items.append(drawCharPickerButton)
         self.items.append(animButton)
@@ -638,6 +651,7 @@ class StatusBar():
             if self.caller.appState.showCharSetButton:
                 self.items.append(charSetButton)
         self.buttons.append(menuButton)
+        self.buttons.append(editButton)
         self.buttons.append(toolButton)
         self.buttons.append(drawCharPickerButton)
         self.buttons.append(animButton)
