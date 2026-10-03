@@ -143,6 +143,11 @@ class Movie():
     def frameCount(self) -> int:
         return len(self.frames)
 
+    @frameCount.setter
+    def frameCount(self, val):
+        # Just ignore it, becaues the getter is pulled from the real data.
+        pass
+
     def width(self):
         """ Returns the number of columns in the movie """
         return self.sizeX
