@@ -2130,7 +2130,7 @@ class UserInterface():  # Separate view (curses) from this controller
                         except:
                             curses.BUTTON4_PRESSED = 0
                         # did mouse stuff in the canvas.
-                        if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX:
+                        if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
                             if mouseState & curses.BUTTON4_PRESSED:   # wheel up
                                 self.move_cursor_up()
                             elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
@@ -3541,7 +3541,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
 
                 # did mouse stuff in the canvas.
-                if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX:
+                if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
                     # we're in the canvas, not playing
 
                     if mouseState & curses.BUTTON1_PRESSED:
@@ -3750,7 +3750,7 @@ class UserInterface():  # Separate view (curses) from this controller
                         # Add stuff here to take mouse 'commands' like clicking
                         # play/next/etc on transport, or clicking "start button"
                         if mouseY == self.statusBarLineNum: # clicked upper bar 
-                            if mouseState & curses.BUTTON1_PRESSED:
+                            if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
                                 offset = self.line_1_offset # line 1 of the status bar 
                                 tOffset = self.transportOffset
                                 if not self.appState.narrowWindow:
