@@ -1,5 +1,4 @@
 from copy import deepcopy
-from durdraw.durdraw_options import Options
 import durdraw.log as log
 import json
 import pdb
@@ -117,7 +116,6 @@ class Frame():
         self.sizeY = lines 
         return true
 
-
     def setDelayValue(self, delayValue):
         self.delay = delayValue
 
@@ -128,7 +126,6 @@ class Frame():
 class Movie():
     """ Contains an array of Frames, options to add, remove, copy them """
     def __init__(self, opts):
-        self.frameCount = 0  # total number of frames
         self.currentFrameNumber = 0
         self.sizeX = opts.sizeX     # Number of columns
         self.sizeY = opts.sizeY     # Number of lines
@@ -136,11 +133,15 @@ class Movie():
         self.frames = []
         self.layers = {}    # Key can be a layer #, or something special. eg: "masks
         self.addEmptyFrame()
-        self.currentFrameNumber = self.frameCount
+        self.currentFrameNumber += 1
         self.currentFrame = self.frames[self.currentFrameNumber - 1]
 
         self.log = log.getLogger('movie')
         self.log.info('movie initialized', {'sizeX': self.sizeX, 'sizeY': self.sizeY})
+
+    @property
+    def frameCount(self) -> int:
+        return len(self.frames)
 
     def width(self):
         """ Returns the number of columns in the movie """
@@ -153,19 +154,16 @@ class Movie():
     def addFrame(self, frame):
         """ takes a Frame object, adds it into the movie """
         self.frames.append(frame)
-        self.frameCount += 1
         return True
 
     def insertFrame(self, frame):
         """ takes a Frame object, inserts it after current frame """
         self.frames.insert(self.currentFrameNumber, frame)
-        self.frameCount += 1
         return True
 
     def addEmptyFrame(self):
         newFrame = Frame(self.sizeX, self.sizeY)
         self.frames.append(newFrame)
-        self.frameCount += 1
         return True
 
     def insertCloneFrame(self):
@@ -175,7 +173,6 @@ class Movie():
         newFrame.content = deepcopy(self.currentFrame.content)
         #newFrame.colorMap = deepcopy(self.currentFrame.colorMap)
         newFrame.newColorMap = deepcopy(self.currentFrame.newColorMap)
-        self.frameCount += 1
         return True
 
     def deleteCurrentFrame(self):
@@ -187,7 +184,6 @@ class Movie():
             self.currentFrame = self.frames[self.currentFrameNumber - 1]
         else:
             del self.frames[self.currentFrameNumber - 1]
-            self.frameCount -= 1
             if (self.currentFrameNumber != 1):
                 self.currentFrameNumber -= 1
             self.currentFrame = self.frames[self.currentFrameNumber - 1]
