@@ -2106,17 +2106,6 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
 
 
-                        if mouseState == curses.BUTTON1_CLICKED:
-                            if self.pressingButton:
-                                self.pressingButton = False
-                                if cursorMode != "Draw" and cursorMode != "Paint" \
-                                        and cursorMode != "ABrush":
-                                    self.disableMouseReporting()
-                                    self.hardRefresh()
-                                    curses.mousemask(1)
-                                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                                if self.pushingToClip:
-                                    self.pushingToClip = False
 
                         if not self.appState.hasMouseScroll:
                             curses.BUTTON5_PRESSED = 0
@@ -2137,25 +2126,13 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.move_cursor_down()
                                 
                             if mouseState & curses.BUTTON1_PRESSED:
-                                #if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX: # in edit area
-                                if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
-                                    and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
-                                    if not self.pressingButton:
-                                        self.pressingButton = True
-                                        print('\033[?1003h') # enable mouse tracking with the XTERM APIP
-                                        self.hardRefresh()
-                                else:
-                                    self.pressingButton = False
-                                    if cursorMode != "Draw" and cursorMode != "Paint" \
-                                            and cursorMode != "ABrush":
-                                        self.disableMouseReporting()
-                                        self.hardRefresh()
-                                        curses.mousemask(1)
-                                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                                    if self.pushingToClip:
-                                        self.pushingToClip = False
+                                self.stdscr.nodelay(0) # block input when calling getch
+                                self.enableMouseReporting()
+                                self.pressingButton = True
                             else:
                                 if self.pressingButton:
+                                    self.stdscr.nodelay(1) # do not block input when calling getch
+                                    self.disableMouseReporting()
                                     self.pressingButton = False
                                     if self.pushingToClip:
                                         self.pushingToClip = False
@@ -2164,7 +2141,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                     self.hardRefresh()
                                     curses.mousemask(1)
                                     curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                        if self.pressingButton or mouseState == curses.BUTTON1_CLICKED:    # self.playing == True
+                        if self.pressingButton or mouseState == curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_PRESSED:    # self.playing == True
                             self.gui.got_click("Click", mouseX, mouseY)
                             if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                                 and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
@@ -2173,18 +2150,18 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.xy[0] = mouseY + self.appState.topLine
                             elif mouseX < realmaxX and mouseY in [self.statusBarLineNum, self.statusBarLineNum+1]:   # we clicked on the status bar while playing.
                                 if mouseY == self.statusBarLineNum: # clicked upper bar
-                                    offset = 6  # making room for the menu bar
-                                    tOffset = realmaxX - (realmaxX - self.transportOffset) + 6
+                                    offset = self.line_1_offset # line 1 of the status bar 
+                                    tOffset = self.transportOffset
                                     if not self.appState.narrowWindow:
-                                        if mouseX in [tOffset, tOffset + 1]:  # clicked pause button
-                                            self.clickHighlight(tOffset, "||")
+                                        if mouseX in [tOffset+2, tOffset+3]:  # clicked pause button
+                                            self.clickHighlight(tOffset+2, "||")
                                             self.stopPlaying()
-                                        elif mouseX == 12 + offset:    # clicked FPS down
-                                            self.clickHighlight(12 + offset, "<")
+                                        elif mouseX == 22 + offset:    # clicked FPS down
+                                            self.clickHighlight(22 + offset, "<")
                                             self.decreaseFPS()
                                             self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
-                                        elif mouseX == 16 + offset:    # clicked FPS up
-                                            self.clickHighlight(16 + offset, ">")
+                                        elif mouseX == 26 + offset:    # clicked FPS up
+                                            self.clickHighlight(26 + offset, ">")
                                             self.increaseFPS()
                                             self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
                                 elif mouseY == self.statusBarLineNum+1:    # clicked bottom bar
