@@ -2851,10 +2851,10 @@ class UserInterface():  # Separate view (curses) from this controller
 
 
         # Draw Insert mode indicator 
-        insertModeStringOffset = 0
+        insertModeStringOffset = self.chMap_offset - 15
         if self.appState.insertMode:
             insertModeString = "Ins"
-            self.addstr(statusBarLineNum-1, insertModeStringOffset, insertModeString, curses.color_pair(mainColor))
+            self.addstr(statusBarLineNum+1, insertModeStringOffset, insertModeString, curses.color_pair(mainColor))
         else:
             insertModeString = ""
 
@@ -7050,8 +7050,8 @@ class UserInterface():  # Separate view (curses) from this controller
       alt-R - set playback/edit Range     alt-pgdn - next character set
       alt-g - Go to frame #               alt-pgup - prev character set
 
-Help file could not be found. You might want to reinstsall Durdraw...
-Can use ESC or META instead of ALT
+Help file could not be found or hasn't loaded yet.
+If this persists, You might want to reinstsall Durdraw...
 ''' % self.appState.durVer 
         # remove the blank first line from helpScreenText..
         # it's easier to edit here with the blank first line.
