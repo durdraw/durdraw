@@ -4844,15 +4844,10 @@ class UserInterface():  # Separate view (curses) from this controller
                     _, mouseCol, mouseLine, _, mouseState = curses.getmouse()
                 except:
                     pass
-                if mouseState == curses.BUTTON1_CLICKED or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
+                if mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
                     self.pressingButton = False
                     if self.pushingToClip:
                         self.pushingToClip = False
-                    if self.appState.cursorMode != "Draw" and self.appState.cursorMode != "Paint":
-                        self.disableMouseReporting()
-                        self.hardRefresh()
-                        curses.mousemask(1)
-                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                     if mouseLine < realmaxY - 4:     # above the 'status bar,' in the file list
                         if mouseLine < len(block_list) - top_line:   # clicked item line
                             if mouseCol < len(block_list[top_line+mouseLine]): # clicked within item width
