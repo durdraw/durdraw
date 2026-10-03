@@ -270,7 +270,7 @@ class MenuHandler:
                     current_option = max(0, current_option - 1)
                 elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
                     current_option = min(len(options) - 1, current_option + 1)
-                else:   # assume a click
+                elif mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:   # assume a click
                     # Did the user click in the menu area?
                     if mouseY > self.menuOriginLine and mouseY < self.menuOriginLine + len(self.menu.items):  # on a menu line?
                         if mouseX < self.x and mouseX > self.x - self.width:    # in a menu column
