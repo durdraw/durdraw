@@ -2949,6 +2949,7 @@ class UserInterface():  # Separate view (curses) from this controller
             if not self.appState.animBrush.is_set():
                 message = "No animation brush set. Use selection tool to make one"
                 self.addstr(statusBarLineNum - 1, 0, message, self.appState.theme['mainColor'])
+                self.refresh()
                 #self.notify(message)
         if resized:
             self.refresh()
@@ -3529,7 +3530,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", curses.color_pair(5) | curses.A_BOLD)
 
 
-                    elif self.appState.cursorMode == "ABrush":   # Paint animation brush
+                    elif self.appState.cursorMode == "ABrush" and self.appState.animBrush.is_set():   # Paint animation brush
                         half_brush_height = int(self.appState.animBrush.current_frame().sizeX  / 2)
                         half_brush_width = int(self.appState.animBrush.current_frame().sizeY  / 2)
                         if self.pressingButton:
@@ -4287,6 +4288,10 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def setCursorModeAnimBrush(self):
         self.clearStatusLine()
+        if not self.appState.animBrush.is_set():
+            message = "No animation brush set. Use selection tool to make one"
+            self.notify(message)
+            return False
         self.promptPrint("Animation Brush: (L)oop mode, or (C)lone mode? [L] ")
         prompting = True
         while prompting:
