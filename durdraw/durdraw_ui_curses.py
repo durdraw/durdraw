@@ -3505,6 +3505,8 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.addstr(self.statusBarLineNum-2, 20, "Draw untriggered.", curses.color_pair(5) | curses.A_BOLD)
 
                     elif self.appState.cursorMode == "Paint":   # Draw Brush under cursor
+                        half_brush_height = int(self.appState.brush.sizeX  / 2)
+                        half_brush_width = int(self.appState.brush.sizeY  / 2)
                         if self.pressingButton:
                             if self.appState.debug:
                                 self.addstr(self.statusBarLineNum-2, 20, "Paint triggered.", curses.color_pair(6) | curses.A_BOLD)
@@ -3518,7 +3520,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                 try:
                                     x_param = mouseX + 1 + self.appState.firstCol
                                     y_param = mouseY + self.appState.topLine
-                                    self.pasteFromClipboard(startPoint = [y_param, x_param], clipBuffer=self.appState.brush, transparent=True, pushUndo=False)
+                                    self.pasteFromClipboard(startPoint = [y_param - half_brush_height, x_param - half_brush_width], clipBuffer=self.appState.brush, transparent=True, pushUndo=False)
                                 except IndexError:
                                     self.notify(f"Error, debug info: x={x_param}, y={y_param}, topLine={self.appState.topLine}, mouseX={mouseX}, mouseY={mouseY}", pause=True)
                                 self.refresh()
@@ -7007,11 +7009,13 @@ If this persists, You might want to reinstsall Durdraw...
                     if self.appState.brush != None:
                         # draw brush preview
                         # If we're drawing within the brush area:
-                        if linenum in range(self.appState.mouse_line + topLine, self.appState.mouse_line + self.appState.brush.sizeX + topLine):
-                            if colnum in range(self.appState.mouse_col + self.appState.firstCol, self.appState.mouse_col + self.appState.brush.sizeY + self.appState.firstCol):
+                        half_brush_height = int(self.appState.brush.sizeX  / 2)
+                        half_brush_width = int(self.appState.brush.sizeY  / 2)
+                        if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.brush.sizeX + topLine - half_brush_height):
+                            if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.brush.sizeY + self.appState.firstCol - half_brush_width):
                                 #brush_line = linenum - self.appState.mouse_line
-                                brush_line = linenum - self.appState.mouse_line - topLine
-                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol
+                                brush_line = linenum - self.appState.mouse_line - topLine - half_brush_height
+                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
                                 try:
                                     brushChar = self.appState.brush.content[brush_col][brush_line]
                                 except IndexError:
