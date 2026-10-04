@@ -254,6 +254,9 @@ Select an area for copy. (Mark selection)
 .TP
 .B esc\-v
 Paste.
+.TP
+.B Insert
+Toggle insert mode.
 .SS Animation
 .TP
 .B esc\-k
@@ -297,6 +300,12 @@ Shift frames left.
 .TP
 .B esc\-}
 Shift frames right.
+.TP
+.B esc\-J
+Previous Animation Brush Frame
+.TP
+.B esc\-K
+Next Animation Brush Frame
 .SS "File operations"
 .TP
 .B esc\-C
@@ -376,16 +385,30 @@ or
 .BR esc\-K ,
 then press
 .B b
-followed by
-.BR a .
-To paint with it, open the Mouse Tools menu
+for "Make Brush," followed by
+.B a
+for "Animation Brush." To paint with it, open the Mouse Tools menu
 .RB ( esc\-t )
 and select
 .BR "Animation Brush" " (" A ")."
+.PP
 You can then use the mouse to "paint" animation frames: clicking on the
 canvas paints the current frame of the animation brush onto the canvas,
 then both the animation brush and the canvas advance to their next
 frame.
+.PP
+In
+.B loop mode
+, when you click or drag in the canvas, the current frame of
+the Animation Brush gets painted to the canvas, then the animation brush
+and canvas both advance to their next frames.
+.PP
+In
+.B clone mode
+, when you click or drag in the canvas, the current frame
+of the canvas is cloned to the next frame, then the current frame f
+the Animation Brush is painted to the canvas, and the animation brush
+and canvas both advance to the next frame.
 .El
 .SH FILES
 .TP
