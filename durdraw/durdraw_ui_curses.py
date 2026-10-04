@@ -1853,12 +1853,12 @@ class UserInterface():  # Separate view (curses) from this controller
             #self.statusBar.colorPicker_bg_16.hide()
             self.appState.sideBarShowing = False
             self.statusBar.hide()
-            self.cursorOff()
             self.setWindowTitle(self.appState.curOpenFileName)
         self.playing = True
         self.metaKey = 0
         if self.appState.playOnlyMode: 
             self.appState.drawBorders = False
+            self.cursorOff()
         if not self.appState.playOnlyMode:
             # mode, show extra stuff.
             self.drawStatusBar()
@@ -3902,6 +3902,7 @@ class UserInterface():  # Separate view (curses) from this controller
     def enterViewMode(self, mov=None, opts=None):
         self.statusBar.hide()
         self.stdscr.clear()
+        self.cursorOff()
         old_xy = self.xy
         old_top_line = self.appState.topLine
         old_first_col = self.appState.firstCol
@@ -7003,7 +7004,8 @@ If this persists, You might want to reinstsall Durdraw...
         screenLineNum = 0
         firstCol = self.appState.firstCol
         lastCol = min(mov.sizeX, self.appState.realmaxX + firstCol)
-        self.cursorOff()
+        #if not self.appState.playOnlyMode:
+        #    self.cursorOff()
         # Draw each character
         for linenum in range(topLine, lastLineToDraw):
             line = mov.currentFrame.content[linenum]
@@ -7150,7 +7152,8 @@ If this persists, You might want to reinstsall Durdraw...
             curses.panel.update_panels()
         if self.appState.playingHelpScreen:
             self.addstr(self.statusBarLineNum + 1, 0, "Up/Down, Pgup/Pgdown, Home/End or Mouse Wheel to scroll. Enter or Esc to exit.", curses.color_pair(self.appState.theme['promptColor']))
-        self.cursorOn()
+        #if not self.appState.playOnlyMode:
+        #    self.cursorOn()
         if refreshScreen:
             self.stdscr.refresh()
 
