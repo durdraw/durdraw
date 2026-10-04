@@ -3671,7 +3671,8 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.clickHighlight(self.chMap_offset - 1, "<", bar='bottom')
                                 self.prevCharSet()
                             elif mouseX in range(char_area_start, char_area_end):
-                                self.clickedChMap(mouseX, mouseY)
+                                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
+                                    self.clickedChMap(mouseX, mouseY)
                             elif self.appState.debug:
                                 self.notify("bottom bar. " + str([mouseX, mouseY]))
                         else:
