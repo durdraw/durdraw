@@ -3685,12 +3685,19 @@ class UserInterface():  # Separate view (curses) from this controller
                     # and above the status bar:
                     if self.appState.sideBarEnabled:
                         # If we're in the right toolbar sort of area
-                        if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
+                        #if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
+                        if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
                             if self.appState.colorMode == "16": # set BG color
                                 if mouseState == curses.BUTTON1_DOUBLE_CLICKED:
                                     self.statusBar.colorPicker.handler.gotDoubleClick(mouseX, mouseY)
                             elif mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
                                 self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
+                            elif mouseState & curses.BUTTON4_PRESSED: # scroll wheel down
+                                if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
+                                    self.statusBar.colorPicker.handler.prev_color()
+                            elif mouseState & curses.BUTTON5_PRESSED: # scroll wheel up
+                                if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
+                                    self.statusBar.colorPicker.handler.next_color()
 
                 if mouseState == curses.BUTTON1_CLICKED:
                     self.pressingButton = False

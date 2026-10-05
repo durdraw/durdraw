@@ -875,6 +875,39 @@ class ColorPickerHandler:
         #print('\033[?1003h') # enable mouse tracking
         return color
 
+    def prev_color(self):
+        color = self.colorPicker.caller.colorfg
+        color += 1
+        if color > self.appState.totalFgColors:
+            if self.appState.colorMode == "16":
+                color = 1
+            elif self.appState.colorMode == "256":
+                color = 0
+        self.colorPicker.caller.setFgColor(color)
+        self.updateFgPicker()
+        self.colorPicker.caller.drawStatusBar()
+
+    def next_color(self):
+        color = self.colorPicker.caller.colorfg
+        color -= 1
+        if self.appState.colorMode == "16":
+            if color <= 0:
+                color = self.appState.totalFgColors 
+        elif self.appState.colorMode == "256":
+            if color < 0:
+                color = self.appState.totalFgColors 
+        self.colorPicker.caller.setFgColor(color)
+        self.updateFgPicker()
+        self.colorPicker.caller.drawStatusBar()
+
+
+    def in_area(self, mouseX, mouseY):
+        # If clicked on a color, set an FG color
+        if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < self.x + len(self.colorGrid[0])-2 and mouseX >= self.x:   # cpicked in the color picker
+            return True
+        else:
+            return False
+
     def gotClick(self, mouseX, mouseY):
         # If clicked on a color, set an FG color
         if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < + self.x + len(self.colorGrid[0])-2:   # cpicked in the color picker
