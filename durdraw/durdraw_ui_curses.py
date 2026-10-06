@@ -7421,17 +7421,33 @@ If this persists, You might want to reinstsall Durdraw...
                 if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON_SHIFT:
                     if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
+                        if not self.pressingButton:
+                            newPointCol = mouseX + self.appState.firstCol # set cursor position
+                            newPointLine = mouseY + self.appState.topLine
+                            startPoint =  [newPointLine,  newPointCol]   # set to wherever the cursor is
                         # We're in in edit/canvas area
                         self.enableMouseReporting()
                         self.pressingButton = True
                 elif mouseState & curses.BUTTON1_RELEASED:
                     self.pressingButton = False
                     self.disableMouseReporting()
+                    prompt_result = self.selectedPrompt([firstLineNum, firstColNum], height, width)
+                    if prompt_result:
+                        mouseX, mouseY = prompt_result
+                        newPointCol = mouseX + self.appState.firstCol # set cursor position
+                        newPointLine = mouseY + self.appState.topLine
+                        startPoint =  [newPointLine,  newPointCol]   # set to wherever the cursor is
+                        self.enableMouseReporting()
+                        self.pressingButton = True
+                        # If selectedPrompt returns True, user clicked the mouse to redo selection.
+                    else:
+                        # Otherwise, assume prompt completed or canceled.
+                        selecting = False
                 if self.pressingButton:
                     if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
                         # We're in in edit/canvas area
-                        self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
+                        self.xy[1] = mouseX + self.appState.firstCol # set cursor position
                         self.xy[0] = mouseY + self.appState.topLine
                             
 
@@ -7450,8 +7466,36 @@ If this persists, You might want to reinstsall Durdraw...
         firstColNum = origin[1]
         self.clearStatusBar()
         self.promptPrint("[C]opy, Cu[t], [D]elete, [F]ill, Co[l]or, Flip [X/Y], Make [B]rush, Copy Ani[m]ation, copy to [A]ll Frames in range? " )
+
+        firstLineNum = origin[0]
+        firstColNum = origin[1]
+        lastLineNum = firstLineNum + height
+        lastColNum = firstColNum + width 
+        # draw selected area inverse
+        for linenum in range(firstLineNum, lastLineNum):
+            for colnum in range(firstColNum - 1, lastColNum - 1):
+                #if colnum == self.mov.sizeX - 1:   # prevent overflow on last line
+                #    colnum -= 1
+                try:
+                    charColor = self.mov.currentFrame.newColorMap[linenum][colnum]
+                except Exception as E:
+                    self.notify(f"Exception E: {E}")
+                    linenum = linenum - 1
+                    charColor = self.mov.currentFrame.newColorMap[linenum][colnum]
+                    #pdb.set_trace()
+                try: # set ncurss color pair
+                    cursesColorPair = self.ansi.colorPairMap[tuple(charColor)] 
+                except: # Or if we can't, fail to the terminal's default color
+                    cursesColorPair = 0
+                self.addstr(linenum - self.appState.topLine, colnum - self.appState.firstCol, self.mov.currentFrame.content[linenum][colnum], curses.color_pair(cursesColorPair) | curses.A_REVERSE)
+
+
         while prompting:
             prompt_ch = self.stdscr.getch()
+            if prompt_ch == curses.KEY_MOUSE:
+                _, mouseX, mouseY, _, mouseState = curses.getmouse()
+                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED or mouseState:
+                    return mouseX, mouseY
             if chr(prompt_ch) in ['c', 'C']:    # Copy
                 self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
                 prompting = False
