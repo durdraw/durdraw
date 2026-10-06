@@ -7494,8 +7494,14 @@ If this persists, You might want to reinstsall Durdraw...
             prompt_ch = self.stdscr.getch()
             if prompt_ch == curses.KEY_MOUSE:
                 _, mouseX, mouseY, _, mouseState = curses.getmouse()
+                # Button clicked...
                 if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED or mouseState:
-                    return mouseX, mouseY
+                    # in the canvas.
+                    if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
+                        return mouseX, mouseY
+                    # otherwise, cancel.
+                    else:
+                        prompting = False
             if chr(prompt_ch) in ['c', 'C']:    # Copy
                 self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
                 prompting = False
