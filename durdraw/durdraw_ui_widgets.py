@@ -568,6 +568,7 @@ class StatusBar():
         self.menus["Mouse"] = toolMenu
         toolMenu.set_title("Mouse Tools:")
         toolMenu.add_item("Move", self.setCursorModeMove, "m")
+        toolMenu.add_item("Select", self.setCursorModeSelect, "s")
         toolMenu.add_item("Draw", self.setCursorModeDraw, "d")
         toolMenu.add_item("Paint", caller.setCursorModePaint, "p")
         toolMenu.add_item("Color", self.setCursorModeCol, "c")
@@ -608,7 +609,7 @@ class StatusBar():
             self.charSetButton = charSetButton
             charSetButton.hide()
 
-        # Brush picker - make me a real brush someday.
+        # Brush picker - make me a real brush someday. (done)
         drawCharPicker_offset = toolButton_offset + 6   # to the right of Draw menu
         drawCharPicker_offset += 4  # accomodate for eyedrop for now. yes, this is dumb
         
@@ -721,7 +722,7 @@ class StatusBar():
 
     def setCursorModeSelect(self):
         self.caller.appState.setCursorModeSelect()
-        self.caller.disableMouseReporting(hard=True)
+        self.caller.disableMouseReporting()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeDraw(self):

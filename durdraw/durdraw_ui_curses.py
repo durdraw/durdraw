@@ -3433,7 +3433,11 @@ class UserInterface():  # Separate view (curses) from this controller
                     # we're in the canvas, not playing
 
                     if mouseState & curses.BUTTON1_PRESSED:
-                        if not self.pressingButton:
+                        if self.appState.cursorMode == "Select":   # this does not exist lol
+                            self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
+                            self.xy[0] = mouseY + self.appState.topLine
+                            self.startSelecting(mouse=True)
+                        elif not self.pressingButton:
                             self.pressingButton = True
                             self.enableMouseReporting()
                             self.hardRefresh()
@@ -3584,10 +3588,6 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.eyeDrop(mouseX + self.appState.firstCol, mouseY + self.appState.topLine)
                         self.statusBar.setCursorModeMove()
                         self.drawStatusBar()
-                    elif self.appState.cursorMode == "Select":   # this does not exist lol
-                        self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
-                        self.xy[0] = mouseY + self.appState.topLine
-                        self.startSelecting(mouse=True)
 
                 # else, not in the canvas
                 elif self.pressingButton:
@@ -4317,6 +4317,12 @@ class UserInterface():  # Separate view (curses) from this controller
             time.sleep(0.01)
         self.clearStatusLine()
         self.statusBar.setCursorModeAnimBrush()
+
+    def setCursorModePaint(self):
+        if self.appState.brush == None:
+            self.notify("No brush set. Please use select tool to make one before using Paint.", pause=True)
+        else:
+            self.statusBar.setCursorModePaint()
 
     def openMenu(self, current_menu: str):
         menu_open = True
@@ -7306,6 +7312,11 @@ If this persists, You might want to reinstsall Durdraw...
         # any other key returns (cancels)
         # print message: "Select mode - Enter to select, Esc to cancel"
         self.undo.push()
+        #if mouse:
+        #    _, mouseX, mouseY, _, mouseState = curses.getmouse()
+        #    startPoint = [mouseY, mouseX]
+        #else:
+        #    startPoint =  [self.xy[0],  self.xy[1]]   # set to wherever the cursor is
         startPoint =  [self.xy[0],  self.xy[1]]   # set to wherever the cursor is
         endPoint = startPoint
         selecting = True
@@ -7313,6 +7324,10 @@ If this persists, You might want to reinstsall Durdraw...
         c = firstkey
         self.clearStatusBar()
         #self.addstr(self.statusBarLineNum, 0, f"Use arrow keys to make selection, enter when done.")
+        #self.pressingButton = False
+        if mouse:
+            self.pressingButton = True
+            self.enableMouseReporting()
         while selecting:
             endPoint =  [self.xy[0],  self.xy[1]]   # set to wherever the cursor is
             self.refresh()
@@ -7372,185 +7387,10 @@ If this persists, You might want to reinstsall Durdraw...
             elif c in [338, curses.KEY_END]:   # 338 = end
                 self.xy[1] = self.mov.sizeX - 1
             elif c in [13, curses.KEY_ENTER]:
-                # Ask user what operation they want, and then do it on the selected area
-                # copy, cut, fill, or copy into all frames :)
-                prompting = True
-                self.clearStatusBar()
-                self.promptPrint("[C]opy, Cu[t], [D]elete, [F]ill, Co[l]or, Flip [X/Y], Make [B]rush, Copy Ani[m]ation, copy to [A]ll Frames in range? " )
-                while prompting:
-                    prompt_ch = self.stdscr.getch()
-                    if chr(prompt_ch) in ['c', 'C']:    # Copy
-                        self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                        prompting = False
-                    if chr(prompt_ch) in ['m', 'M']:    # Copy Animation
-                        self.copyAnimToClipboard([firstLineNum, firstColNum], height, width)
-                        prompting = False
-                    if chr(prompt_ch) in ['b', 'B']:    # Make Brush
-                        self.clearStatusBar()
-                        self.promptPrint("Normal [B]rush, or [A]nimation brush? " )
-                        while prompting:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['b', 'B']:    # Normal Brush
-                                self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
-                                prompting = False
-                            elif chr(prompt_ch) in ['a', 'A']:    # Animation Brush
-                                #self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
-                                self.copyAnimToBrush([firstLineNum, firstColNum], height, width)
-                                prompting = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                prompting = False
-                            prompting = False
-                        break   # to prevent triggering "a" copy to all frames
-                    #if chr(prompt_ch) in ['m', 'M']:    # move
-                    #    prompting = False
-                    elif chr(prompt_ch) in ['x', 'X']:    # flip horizontally
-                        self.flipSegmentHorizontal([firstLineNum, firstColNum], height, width)
-                        #prompting = False
-                        self.refresh()
-                    elif chr(prompt_ch) in ['y', 'Y']:    # flip vertically 
-                        self.flipSegmentVertical([firstLineNum, firstColNum], height, width)
-                        #prompting = False
-                        self.refresh()
-                    #    self.undo.push()
-                    #    self.mov.currentFrame.flip_horizontal()
-                    if chr(prompt_ch) in ['t', 'T']:    # Cut to clipboard
-                        self.clearStatusBar()
-                        if self.mov.hasMultipleFrames():
-                            self.promptPrint("Cut across all frames in playback range (Y/N)? ")
-                            askingAboutRange = True
-                        else:
-                            self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                            self.undo.push()
-                            self.deleteSegment([firstLineNum, firstColNum], height, width)
-                            askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # No, only one frame
-                                self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['d', 'D']:    # delete/clear
-                        self.clearStatusBar()
-                        if self.mov.hasMultipleFrames():
-                            self.promptPrint("Delete across all frames in playback range (Y/N)? ")
-                            askingAboutRange = True
-                        else:
-                            self.undo.push()
-                            self.deleteSegment([firstLineNum, firstColNum], height, width)
-                            askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # yes, all range
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['l', 'L']:    # color
-                        self.clearStatusBar()
-                        if self.mov.hasMultipleFrames():
-                            self.promptPrint("Color across all frames in playback range (Y/N)? ")
-                            askingAboutRange = True
-                        else:
-                            self.undo.push()
-                            self.colorSegment([firstLineNum, firstColNum], height, width)
-                            askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.undo.push()
-                                self.colorSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # yes, all range
-                                self.undo.push()
-                                self.colorSegment([firstLineNum, firstColNum], height, width)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['f', 'F']:    # fill
-                        self.clearStatusBar()
-                        self.promptPrint(f"Enter fill character, or press enter for {self.appState.drawChar}: ")
-                        askingAboutChar = True
-                        canceled = False
-                        drawChar = 'X'
-                        prompt_ch = self.stdscr.getch()
-                        if prompt_ch == 27:     # esc, cancel
-                            canceled = True
-                        elif prompt_ch in [13, curses.KEY_ENTER]:
-                            drawChar = self.appState.drawChar
-                        elif prompt_ch in [curses.KEY_F1]:
-                            drawChar = chr(self.chMap['f1'])
-                        elif prompt_ch in [curses.KEY_F2]:
-                            drawChar = chr(self.chMap['f2'])
-                        elif prompt_ch in [curses.KEY_F3]:
-                            drawChar = chr(self.chMap['f3'])
-                        elif prompt_ch in [curses.KEY_F4]:
-                            drawChar = chr(self.chMap['f4'])
-                        elif prompt_ch in [curses.KEY_F5]:
-                            drawChar = chr(self.chMap['f5'])
-                        elif prompt_ch in [curses.KEY_F6]:
-                            drawChar = chr(self.chMap['f6'])
-                        elif prompt_ch in [curses.KEY_F7]:
-                            drawChar = chr(self.chMap['f7'])
-                        elif prompt_ch in [curses.KEY_F8]:
-                            drawChar = chr(self.chMap['f8'])
-                        elif prompt_ch in [curses.KEY_F9]:
-                            drawChar = chr(self.chMap['f9'])
-                        elif prompt_ch in [curses.KEY_F10]:
-                            drawChar = chr(self.chMap['f10'])
-                        else:
-                            drawChar = chr(prompt_ch)
-                        if canceled:
-                            askingAboutRange = False
-                            prompting = False
-                        else:
-                            self.clearStatusBar()
-                            if self.mov.hasMultipleFrames():
-                                self.promptPrint("Fill across all frames in playback range (Y/N)? ")
-                                askingAboutRange = True
-                            else:   # Just one frame, so don't worry about the range.
-                                self.undo.push()
-                                self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
-                                askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.undo.push()
-                                self.fillSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange, fillChar=drawChar)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # yes, all range
-                                self.undo.push()
-                                self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['a', 'A']:    # copy to all frames
-                        self.copySegmentToAllFrames([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                        prompting = False
-                    elif prompt_ch == 27:  # esc, cancel
-                        self.undo.undo()
-                        prompting = False
-                    elif prompt_ch in [13, curses.KEY_ENTER]: # enter
-                        # Confirm. Don't pop the clipboard like esc does.
-                        prompting = False
+                self.disableMouseReporting()
+                self.selectedPrompt([firstLineNum, firstColNum], height, width)
                 selecting = False
-            elif c == curses.KEY_MOUSE: 
+            elif c == curses.KEY_MOUSE:
                 try:
                     _, mouseX, mouseY, _, mouseState = curses.getmouse()
                 except:
@@ -7578,7 +7418,16 @@ If this persists, You might want to reinstsall Durdraw...
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
                         # We're in in edit/canvas area
                         self.move_cursor_down()
-                if mouseState == curses.BUTTON1_CLICKED or mouseState & curses.BUTTON_SHIFT:
+                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON_SHIFT:
+                    if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
+                        and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
+                        # We're in in edit/canvas area
+                        self.enableMouseReporting()
+                        self.pressingButton = True
+                elif mouseState & curses.BUTTON1_RELEASED:
+                    self.pressingButton = False
+                    self.disableMouseReporting()
+                if self.pressingButton:
                     if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
                         # We're in in edit/canvas area
@@ -7592,6 +7441,188 @@ If this persists, You might want to reinstsall Durdraw...
             self.stdscr.nodelay(1)
         else:
             self.stdscr.nodelay(0)
+
+    def selectedPrompt(self, origin, height, width):
+        # Ask user what operation they want, and then do it on the selected area
+        # copy, cut, fill, or copy into all frames :)
+        prompting = True
+        firstLineNum = origin[0]
+        firstColNum = origin[1]
+        self.clearStatusBar()
+        self.promptPrint("[C]opy, Cu[t], [D]elete, [F]ill, Co[l]or, Flip [X/Y], Make [B]rush, Copy Ani[m]ation, copy to [A]ll Frames in range? " )
+        while prompting:
+            prompt_ch = self.stdscr.getch()
+            if chr(prompt_ch) in ['c', 'C']:    # Copy
+                self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                prompting = False
+            if chr(prompt_ch) in ['m', 'M']:    # Copy Animation
+                self.copyAnimToClipboard([firstLineNum, firstColNum], height, width)
+                prompting = False
+            if chr(prompt_ch) in ['b', 'B']:    # Make Brush
+                self.clearStatusBar()
+                self.promptPrint("Normal [B]rush, or [A]nimation brush? " )
+                while prompting:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['b', 'B']:    # Normal Brush
+                        self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
+                        prompting = False
+                    elif chr(prompt_ch) in ['a', 'A']:    # Animation Brush
+                        #self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
+                        self.copyAnimToBrush([firstLineNum, firstColNum], height, width)
+                        prompting = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        prompting = False
+                    prompting = False
+                break   # to prevent triggering "a" copy to all frames
+            #if chr(prompt_ch) in ['m', 'M']:    # move
+            #    prompting = False
+            elif chr(prompt_ch) in ['x', 'X']:    # flip horizontally
+                self.flipSegmentHorizontal([firstLineNum, firstColNum], height, width)
+                #prompting = False
+                self.refresh()
+            elif chr(prompt_ch) in ['y', 'Y']:    # flip vertically 
+                self.flipSegmentVertical([firstLineNum, firstColNum], height, width)
+                #prompting = False
+                self.refresh()
+            #    self.undo.push()
+            #    self.mov.currentFrame.flip_horizontal()
+            if chr(prompt_ch) in ['t', 'T']:    # Cut to clipboard
+                self.clearStatusBar()
+                if self.mov.hasMultipleFrames():
+                    self.promptPrint("Cut across all frames in playback range (Y/N)? ")
+                    askingAboutRange = True
+                else:
+                    self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                    self.undo.push()
+                    self.deleteSegment([firstLineNum, firstColNum], height, width)
+                    askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # No, only one frame
+                        self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['d', 'D']:    # delete/clear
+                self.clearStatusBar()
+                if self.mov.hasMultipleFrames():
+                    self.promptPrint("Delete across all frames in playback range (Y/N)? ")
+                    askingAboutRange = True
+                else:
+                    self.undo.push()
+                    self.deleteSegment([firstLineNum, firstColNum], height, width)
+                    askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # yes, all range
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['l', 'L']:    # color
+                self.clearStatusBar()
+                if self.mov.hasMultipleFrames():
+                    self.promptPrint("Color across all frames in playback range (Y/N)? ")
+                    askingAboutRange = True
+                else:
+                    self.undo.push()
+                    self.colorSegment([firstLineNum, firstColNum], height, width)
+                    askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.undo.push()
+                        self.colorSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # yes, all range
+                        self.undo.push()
+                        self.colorSegment([firstLineNum, firstColNum], height, width)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['f', 'F']:    # fill
+                self.clearStatusBar()
+                self.promptPrint(f"Enter fill character, or press enter for {self.appState.drawChar}: ")
+                askingAboutChar = True
+                canceled = False
+                drawChar = 'X'
+                prompt_ch = self.stdscr.getch()
+                if prompt_ch == 27:     # esc, cancel
+                    canceled = True
+                elif prompt_ch in [13, curses.KEY_ENTER]:
+                    drawChar = self.appState.drawChar
+                elif prompt_ch in [curses.KEY_F1]:
+                    drawChar = chr(self.chMap['f1'])
+                elif prompt_ch in [curses.KEY_F2]:
+                    drawChar = chr(self.chMap['f2'])
+                elif prompt_ch in [curses.KEY_F3]:
+                    drawChar = chr(self.chMap['f3'])
+                elif prompt_ch in [curses.KEY_F4]:
+                    drawChar = chr(self.chMap['f4'])
+                elif prompt_ch in [curses.KEY_F5]:
+                    drawChar = chr(self.chMap['f5'])
+                elif prompt_ch in [curses.KEY_F6]:
+                    drawChar = chr(self.chMap['f6'])
+                elif prompt_ch in [curses.KEY_F7]:
+                    drawChar = chr(self.chMap['f7'])
+                elif prompt_ch in [curses.KEY_F8]:
+                    drawChar = chr(self.chMap['f8'])
+                elif prompt_ch in [curses.KEY_F9]:
+                    drawChar = chr(self.chMap['f9'])
+                elif prompt_ch in [curses.KEY_F10]:
+                    drawChar = chr(self.chMap['f10'])
+                else:
+                    drawChar = chr(prompt_ch)
+                if canceled:
+                    askingAboutRange = False
+                    prompting = False
+                else:
+                    self.clearStatusBar()
+                    if self.mov.hasMultipleFrames():
+                        self.promptPrint("Fill across all frames in playback range (Y/N)? ")
+                        askingAboutRange = True
+                    else:   # Just one frame, so don't worry about the range.
+                        self.undo.push()
+                        self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
+                        askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.undo.push()
+                        self.fillSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange, fillChar=drawChar)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # yes, all range
+                        self.undo.push()
+                        self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['a', 'A']:    # copy to all frames
+                self.copySegmentToAllFrames([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                prompting = False
+            elif prompt_ch == 27:  # esc, cancel
+                self.undo.undo()
+                prompting = False
+            elif prompt_ch in [13, curses.KEY_ENTER]: # enter
+                # Confirm. Don't pop the clipboard like esc does.
+                prompting = False
+        selecting = False
 
     def pasteFromMenu(self):
         if self.clipBoard:  # If there is something in the clipboard
