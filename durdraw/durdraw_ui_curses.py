@@ -7678,6 +7678,35 @@ If this persists, You might want to reinstsall Durdraw...
         if self.clipBoard:  # If there is something in the clipboard
             self.askHowToPaste()
 
+    def pasteColorsFromMenu(self):
+        self.askHowToPasteColors()
+
+    def askHowToPasteColors(self):
+        if self.clipBoard and isinstance(self.clipBoard, durmovie.Frame):
+            frange=None
+            if self.mov.hasMultipleFrames():
+                self.promptPrint("Paste across all frames in playback range (Y/N)? ")
+                askingAboutRange = True
+                self.stdscr.nodelay(0) # wait for input when calling getch
+            else:   # only one frame
+                askingAboutRange = False
+            while askingAboutRange:
+                prompt_ch = self.stdscr.getch()
+                if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                    frange=self.appState.playbackRange
+                    ranged = True
+                    askingAboutRange = False
+                if chr(prompt_ch) in ['n', 'N']:    # no, single frame only
+                    self.undo.push()
+                    askingAboutRange = False
+                elif prompt_ch == 27:  # esc, cancel
+                    askingAboutRange = False
+                    return False
+            self.undo.push()
+            self.pasteFromClipboard(frange=frange, colors_only=True)
+        else:
+            self.notify("To paste colors, first copy something to the clipboard.")
+
     def askHowToPaste(self):
         self.clearStatusBar()
         if isinstance(self.clipBoard, durmovie.Movie):
@@ -7788,7 +7817,7 @@ If this persists, You might want to reinstsall Durdraw...
                 self.mov.nextFrame()
         #self.mov.gotoFrame(origFrame)   
     
-    def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
+    def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True, colors_only=False):
         """ Pastes a frame object into the canvas """
         # Reject if clipboard is empty or not a frame
         if not clipBuffer:
@@ -7822,7 +7851,10 @@ If this persists, You might want to reinstsall Durdraw...
                             else:
                                 self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
                         else:
-                            self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
+                            if colors_only:
+                                self.insertColor(fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
+                            else:
+                                self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
                     else:
                         if transparent:
                             if chr(character) == ' ' and charBg == 0:
@@ -7830,7 +7862,10 @@ If this persists, You might want to reinstsall Durdraw...
                             else:
                                 self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
                         else:
-                            self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
+                            if colors_only:
+                                self.insertColor(fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
+                            else:
+                                self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
 
     def copySegmentToClipboard(self, startPoint, height, width):
         """ startPoint is [line, column] """
