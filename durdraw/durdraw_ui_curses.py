@@ -1034,7 +1034,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
         #self.mov.currentFrame.newColorMap[self.xy[0]][self.xy[1] - 1] = [self.colorfg, self.colorbg]
 
-    def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True):
+    def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True, insertMode=None):
         """ insert character at current location, move cursor to the right (unless at the edge of canvas) """
         if pushUndo:    # push onto the clipboard stack
             self.undo.push()
@@ -1043,7 +1043,9 @@ class UserInterface():  # Separate view (curses) from this controller
             moveCursor = True
         if y == None:
             y = self.xy[0]
-        if self.appState.insertMode == False:
+        if insertMode == None:
+            insertMode = self.appState.insertMode
+        if not insertMode:
             if frange: # frame range
                 for fn in range(frange[0] - 1, frange[1]):
                     try:
@@ -1061,7 +1063,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
                 if x < self.mov.sizeX and moveCursor:
                     self.move_cursor_right()
-        elif self.appState.insertMode == True:
+        elif insertMode:
             if frange: # frame range
                 for fn in range(frange[0] - 1, frange[1]):
                     try:
@@ -8005,9 +8007,9 @@ If this persists, You might want to reinstsall Durdraw...
                 charBg = self.appState.defaultBgColor
                 if charColumn < self.mov.sizeX + 1 and charLine < self.mov.sizeY:
                     if not frange:
-                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
+                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, insertMode=False)
                     else:
-                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
+                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange, insertMode=False)
 
     def fillSegment(self, startPoint, height, width, frange=None, fillChar="X"):
         """ Fill everyting in the current frame, or framge range, with selected character+color """
