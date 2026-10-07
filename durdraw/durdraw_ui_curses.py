@@ -108,6 +108,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.ansi = AnsiArtStuff(self.appState)   # obj for misc ansi-related stuff
         # Disable mouse scrolling for Python versions below 3.10, as they don't have
         # curses.BUTTON5_*
+        curses.mouseinterval(230);  # make clicking a bit easier. Default 166 according to ai lol.
         self.colorbg = 0    # default bg black
         self.colorfg = 7    # default fg white. These are overriden by the following self.init_x_colors_misc():
         if sys.version_info.major == 3:
@@ -3434,12 +3435,20 @@ class UserInterface():  # Separate view (curses) from this controller
                 if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
                     # we're in the canvas, not playing
 
-                    if mouseState & curses.BUTTON1_PRESSED:
-                        if self.appState.cursorMode == "Select":
+                    # If we just click, move the currsor instead of selecting.
+                    if self.appState.cursorMode == "Select":
+                        if mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_DOUBLE_CLICKED:
                             self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
                             self.xy[0] = mouseY + self.appState.topLine
+                            # Move the cursor instead of selecting
+                        # Otherwise, select
+                        elif mouseState & curses.BUTTON1_PRESSED:
+                            self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
+                            self.xy[0] = mouseY + self.appState.topLine
+                            self.pressingButton = True
                             self.startSelecting(mouse=True)
-                        elif not self.pressingButton:
+                    elif mouseState & curses.BUTTON1_PRESSED:
+                        if not self.pressingButton:
                             self.pressingButton = True
                             self.enableMouseReporting()
                             self.hardRefresh()
@@ -7438,7 +7447,11 @@ If this persists, You might want to reinstsall Durdraw...
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
                         # We're in in edit/canvas area
                         self.move_cursor_down()
-                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON_SHIFT:
+                if mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_DOUBLE_CLICKED:
+                    self.pressingButton = False
+                    selecting = False
+                    break
+                elif mouseState & curses.BUTTON1_PRESSED:
                     if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
                         if not self.pressingButton:
@@ -7447,7 +7460,7 @@ If this persists, You might want to reinstsall Durdraw...
                             startPoint =  [newPointLine,  newPointCol]   # set to wherever the cursor is
                         # We're in in edit/canvas area
                         self.enableMouseReporting()
-                        self.pressingButton = True
+                        #self.pressingButton = True
                 elif mouseState & curses.BUTTON1_RELEASED:
                     self.pressingButton = False
                     self.disableMouseReporting()
@@ -7481,6 +7494,7 @@ If this persists, You might want to reinstsall Durdraw...
     def selectedPrompt(self, origin, height, width):
         # Ask user what operation they want, and then do it on the selected area
         # copy, cut, fill, or copy into all frames :)
+        #pdb.set_trace()
         prompting = True
         firstLineNum = origin[0]
         firstColNum = origin[1]
@@ -7515,8 +7529,14 @@ If this persists, You might want to reinstsall Durdraw...
             if prompt_ch == curses.KEY_MOUSE:
                 _, mouseX, mouseY, _, mouseState = curses.getmouse()
                 # Button clicked...
-                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED or mouseState:
-                    # in the canvas.
+                if mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_DOUBLE_CLICKED or mouseState:
+                    # clicked, so set position and cancel.
+                    self.xy[1] = mouseX + self.appState.firstCol # set cursor position
+                    self.xy[0] = mouseY + self.appState.topLine
+                    prompting = False
+                    self.pressingButton = False
+                elif mouseState & curses.BUTTON1_PRESSED:
+                    # dragged, so return to selecting
                     if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
                         return mouseX, mouseY
                     # otherwise, cancel.
@@ -7692,7 +7712,6 @@ If this persists, You might want to reinstsall Durdraw...
             elif prompt_ch in [13, curses.KEY_ENTER]: # enter
                 # Confirm. Don't pop the clipboard like esc does.
                 prompting = False
-        selecting = False
 
     def pasteFromMenu(self):
         if self.clipBoard:  # If there is something in the clipboard
