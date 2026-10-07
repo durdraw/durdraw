@@ -918,12 +918,20 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(self.statusBarLineNum, 0, message, curses.color_pair(self.appState.theme['notificationColor']))
         self.stdscr.refresh()
         if pause:
+            curses.flushinp()
             if self.playing:
                 self.stdscr.nodelay(0) # wait for input when calling getch
-                self.stdscr.getch()
+            waiting_for_input = True
+            while waiting_for_input:
+                ch = self.stdscr.getch()
+                # -1 when called by setCursorModePaint() when pressing enter
+                # on Paint from Mouse/Mode menu. Not sure why.
+                if ch == -1:
+                    pass
+                else:
+                    waiting_for_input = False
+            if self.playing:
                 self.stdscr.nodelay(1) # do not wait for input when calling getch   
-            else:
-                self.stdscr.getch()
         if not pause:
             curses.napms(wait_time)
             curses.flushinp()
@@ -4300,12 +4308,6 @@ class UserInterface():  # Separate view (curses) from this controller
     def openMouseToolsMenu(self):
         self.openMenu("Mouse Tools")
 
-    def setCursorModePaint(self):
-        if self.appState.brush == None:
-            self.notify("No brush set. Please use select tool to make one before using Paint.", pause=True)
-        else:
-            self.statusBar.setCursorModePaint()
-
     def setCursorModeAnimBrush(self):
         self.clearStatusLine()
         if not self.appState.animBrush.is_set():
@@ -7351,16 +7353,16 @@ If this persists, You might want to reinstsall Durdraw...
         selecting = True
         self.stdscr.nodelay(0)  # wait for getch input
         c = firstkey
-        self.clearStatusBar()
-        #self.addstr(self.statusBarLineNum, 0, f"Use arrow keys to make selection, enter when done.")
-        #self.pressingButton = False
         if mouse:
             self.pressingButton = True
             self.enableMouseReporting()
+        else:
+            self.clearStatusBar()
         while selecting:
             endPoint =  [self.xy[0],  self.xy[1]]   # set to wherever the cursor is
             self.refresh()
-            self.addstr(self.statusBarLineNum + 1, 0, f"Use arrow keys to make selection, enter when done.")
+            if not mouse:
+                self.addstr(self.statusBarLineNum + 1, 0, f"Use arrow keys to make selection, enter when done.")
             # draw block area on top of drawing area
             mov = self.mov
             if endPoint[0] >= startPoint[0]:    # if we're moving right of start point

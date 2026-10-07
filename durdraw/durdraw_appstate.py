@@ -127,7 +127,7 @@ class AppState():
         # unicode block:
         #self.characterSet = "Unicode Block"
         self.unicodeBlock = "Braille Patterns"  # placeholder during initialization
-        self.cursorMode = "Move"  # Move/Select, Draw and Color
+        self.cursorMode = "Select"  # Move/Select, Draw and Color
         self.fetchMode = False    # use neofetch, replace {variables} in dur file
         self.fetchData = None       # a {} dict containing key:value for neofetch output.
         self.inferno = None

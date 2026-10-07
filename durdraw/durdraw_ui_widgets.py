@@ -568,8 +568,8 @@ class StatusBar():
         toolMenu = Menu(self.window, x=45, y=self.y, caller=self, appState=self.appState, statusBar=self, name="Mouse")
         self.menus["Mouse"] = toolMenu
         toolMenu.set_title("Mouse Tools:")
-        toolMenu.add_item("Move", self.setCursorModeMove, "m")
         toolMenu.add_item("Select", self.setCursorModeSelect, "s")
+        toolMenu.add_item("Move", self.setCursorModeMove, "m")
         toolMenu.add_item("Draw", self.setCursorModeDraw, "d")
         toolMenu.add_item("Paint", caller.setCursorModePaint, "p")
         toolMenu.add_item("Color", self.setCursorModeCol, "c")
