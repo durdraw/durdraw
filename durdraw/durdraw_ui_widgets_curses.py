@@ -340,6 +340,8 @@ class DrawCharPickerHandler:
         self.window = window
 
     def pickChar(self):
+        curses.flushinp()
+        self.caller.appState.ui.disableMouseReporting()
         self.window.nodelay(0) # wait for input when calling getch
         maxLines, maxCol = self.window.getmaxyx()
         #pdb.set_trace()
@@ -382,6 +384,8 @@ class DrawCharPickerHandler:
                 prompting = False
             elif c in [27, 13, curses.KEY_ENTER]:   # 27 = esc, 13 = enter, cancel
                 prompting = False
+            elif c in [curses.KEY_MOUSE]:
+                pass
             elif type(c) == str:    # Is a printable/unicode character
                 if c.isprintable():
                     self.caller.appState.drawChar = c

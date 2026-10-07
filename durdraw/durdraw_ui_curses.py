@@ -3435,7 +3435,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     # we're in the canvas, not playing
 
                     if mouseState & curses.BUTTON1_PRESSED:
-                        if self.appState.cursorMode == "Select":   # this does not exist lol
+                        if self.appState.cursorMode == "Select":
                             self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
                             self.xy[0] = mouseY + self.appState.topLine
                             self.startSelecting(mouse=True)
@@ -4272,6 +4272,7 @@ class UserInterface():  # Separate view (curses) from this controller
         return newChar
 
     def openDrawCharPicker(self):
+        self.disableMouseReporting()
         self.stdscr.nodelay(0)
         #if self.appState.debug: self.notify(f"Loading character picker.")
         self.statusBar.drawCharPicker.pickChar()
