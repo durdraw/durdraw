@@ -7062,13 +7062,20 @@ If this persists, You might want to reinstsall Durdraw...
                     if self.appState.brush != None:
                         # draw brush preview
                         # If we're drawing within the brush area:
-                        half_brush_height = int(self.appState.brush.sizeX  / 2)
-                        half_brush_width = int(self.appState.brush.sizeY  / 2)
+                        new_sizeX = self.appState.brush.sizeX 
+                        half_brush_height = int(new_sizeX  / 2) 
+                        new_sizeY = self.appState.brush.sizeY 
+                        half_brush_width = int(new_sizeY  / 2) 
                         if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.brush.sizeX + topLine - half_brush_height):
                             if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.brush.sizeY + self.appState.firstCol - half_brush_width):
-                                #brush_line = linenum - self.appState.mouse_line
-                                brush_line = linenum - self.appState.mouse_line - topLine - half_brush_height
-                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
+                                if self.appState.brush.sizeX % 2 == 0:  # if size is even, then it divides evently
+                                    brush_line = linenum - self.appState.mouse_line - half_brush_height 
+                                else:
+                                    brush_line = linenum - self.appState.mouse_line - half_brush_height - 1
+                                if self.appState.brush.sizeY % 2 == 0:  # if size is even, then it divides evently
+                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
+                                else:
+                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width - 1
                                 try:
                                     brushChar = self.appState.brush.content[brush_col][brush_line]
                                 except IndexError:
