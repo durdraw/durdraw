@@ -923,6 +923,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.stdscr.nodelay(0) # wait for input when calling getch
             waiting_for_input = True
             while waiting_for_input:
+                self.disableMouseReporting()
                 ch = self.stdscr.getch()
                 # -1 when called by setCursorModePaint() when pressing enter
                 # on Paint from Mouse/Mode menu. Not sure why.
@@ -8066,13 +8067,13 @@ If this persists, You might want to reinstsall Durdraw...
 
 
     def clearStatusBarNoRefresh(self):
-        self.addstr(self.statusBarLineNum, 0, " " * self.mov.sizeX) # clear lower status bar
-        self.addstr(self.statusBarLineNum + 1, 0, " " * self.mov.sizeX) # clear upper status bar
+        self.addstr(self.statusBarLineNum, 0, " " * self.appState.realmaxX) # clear lower status bar
+        self.addstr(self.statusBarLineNum + 1, 0, " " * self.appState.realmaxX) # clear upper status bar
 
    
     def clearStatusBar(self):
-        self.addstr(self.statusBarLineNum, 0, " " * self.mov.sizeX) # clear lower status bar
-        self.addstr(self.statusBarLineNum + 1, 0, " " * self.mov.sizeX) # clear upper status bar
+        self.addstr(self.statusBarLineNum, 0, " " * self.appState.realmaxX) # clear lower status bar
+        self.addstr(self.statusBarLineNum + 1, 0, " " * self.appState.realmaxX) # clear upper status bar
         self.refresh()
  
     def parseArgs(self):
