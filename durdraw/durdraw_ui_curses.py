@@ -5454,12 +5454,29 @@ class UserInterface():  # Separate view (curses) from this controller
                                             return full_path, "local"
                     if mouseLine == realmaxY - 4:    # on the button bar
                         if mouseCol in range(showall_column,showall_column+3):  # clicked [X] All
+
+                            # Check or uncheck Show All Files
+                            mask_all = not mask_all
                             if mask_all:
-                                mask_all = False
-                                masks = default_masks
-                            else:
-                                mask_all = True
                                 masks = ALL_FILE_MASKS
+                            else:
+                                masks = default_masks
+                            # update file list
+                            matched_files = []
+                            file_list = []
+                            full_file_list = []
+                            if self.appState.sixteenc_browsing:
+                                if self.sixteenc_levels[self.sixteenc_level] == "pack":
+                                    file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
+                                else:
+                                    file_list = list(folders)
+                            else:
+                                file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
+                            # reset ui
+                            self.selected_item_number = 0
+                            search_string = ""
+                            full_file_list = file_list
+
                         elif self.appState.sixteenc_available and mouseCol in range(sixteen_column,sixteen_column+3):  # clicked [X] 16c
                             self.appState.sixteenc_browsing = not self.appState.sixteenc_browsing
                             if not self.appState.sixteenc_browsing:
