@@ -8,6 +8,14 @@ class AnimationBrush:
         self.frameNumber = 0
         self.mode = "loop"  # "loop" or "clone"
 
+    @property
+    def sizeX(self) -> int:
+        return self.mov.width
+
+    @property
+    def sizeY(self) -> int:
+        return self.mov.height
+
     def set_mov(self, mov):
         self.mov = mov
         self.frameNumber = 0

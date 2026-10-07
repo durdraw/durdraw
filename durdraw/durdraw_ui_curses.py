@@ -1053,6 +1053,10 @@ class UserInterface():  # Separate view (curses) from this controller
             moveCursor = True
         if y == None:
             y = self.xy[0]
+        if x < 1:
+            return False
+        if y < 0:
+            return False
         if insertMode == None:
             insertMode = self.appState.insertMode
         if not insertMode:
@@ -7091,7 +7095,7 @@ If this persists, You might want to reinstsall Durdraw...
                                         charContent = brushChar
                                         charColor = self.appState.brush.newColorMap[brush_col][brush_line]
 
-                if self.appState.cursorMode == "ABrush" and not self.playing and not self.appState.playingHelpScreen:
+                elif self.appState.cursorMode == "ABrush" and not self.playing and not self.appState.playingHelpScreen:
                     if self.appState.animBrush.is_set():
                         # draw animation brush preview
                         # If we're drawing within the brush area:
@@ -7100,8 +7104,18 @@ If this persists, You might want to reinstsall Durdraw...
                         if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.animBrush.current_frame().sizeX + topLine - half_brush_height):
                             if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.animBrush.current_frame().sizeY + self.appState.firstCol - half_brush_width):
                                 #brush_line = linenum - self.appState.mouse_line
-                                brush_line = linenum - self.appState.mouse_line - topLine - half_brush_height
-                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
+                                #brush_line = linenum - self.appState.mouse_line - topLine - half_brush_height
+                                #brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
+
+                                if self.appState.animBrush.sizeX % 2 == 0:  # if size is even, then it divides evently
+                                    brush_line = linenum - self.appState.mouse_line - half_brush_height 
+                                else:
+                                    brush_line = linenum - self.appState.mouse_line - half_brush_height - 1
+                                if self.appState.animBrush.sizeY % 2 == 0:  # if size is even, then it divides evently
+                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
+                                else:
+                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width - 1
+
                                 try:
                                     brushChar = self.appState.animBrush.current_frame().content[brush_col][brush_line]
                                 except IndexError:

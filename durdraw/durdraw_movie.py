@@ -148,10 +148,12 @@ class Movie():
         # Just ignore it, becaues the getter is pulled from the real data.
         pass
 
+    @property
     def width(self):
         """ Returns the number of columns in the movie """
         return self.sizeX
 
+    @property
     def height(self):
         """ Returns the number of lines in the movie """
         return self.sizeY
