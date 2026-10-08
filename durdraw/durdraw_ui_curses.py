@@ -3633,76 +3633,83 @@ class UserInterface():  # Separate view (curses) from this controller
                     curses.BUTTON4_PRESSED
                 except:
                     curses.BUTTON4_PRESSED = 0
-                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON4_PRESSED or mouseState & curses.BUTTON5_PRESSED or b1_press > 0 or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
-                    realmaxY,realmaxX = self.realstdscr.getmaxyx()
-                    cmode = self.appState.cursorMode
 
-                    if mouseX < realmaxX and mouseY in [self.statusBarLineNum, self.statusBarLineNum+1]:   # we clicked on the status bar somewhere..
 
-                        if mouseState & curses.BUTTON1_PRESSED:
-                            self.disableMouseReporting()
-                            self.gui.got_click("Click", mouseX, mouseY)
 
-                        # Add stuff here to take mouse 'commands' like clicking
-                        # play/next/etc on transport, or clicking "start button"
-                        if mouseY == self.statusBarLineNum: # clicked upper bar 
+
+
+                #if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON4_PRESSED or mouseState & curses.BUTTON5_PRESSED or b1_press > 0 or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
+                realmaxY,realmaxX = self.realstdscr.getmaxyx()
+                cmode = self.appState.cursorMode
+
+                if mouseX < realmaxX and mouseY in [self.statusBarLineNum, self.statusBarLineNum+1]:   # we clicked on the status bar somewhere..
+
+                    if mouseState & curses.BUTTON1_PRESSED:
+                        self.disableMouseReporting()
+                        self.gui.got_click("Click", mouseX, mouseY)
+
+                    # Add stuff here to take mouse 'commands' like clicking
+                    # play/next/etc on transport, or clicking "start button"
+                    if mouseY == self.statusBarLineNum: # clicked upper bar 
+                        if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
+                            offset = self.line_1_offset # line 1 of the status bar 
+                            tOffset = self.transportOffset
+                            if not self.appState.narrowWindow:
+                                if mouseX in [tOffset + 2, tOffset + 3]:  # clicked play button
+                                    self.clickHighlight(tOffset + 2, "|>")
+                                    self.startPlaying()
+                                    self.metaKey = 0
+                                elif mouseX in [tOffset + 0, tOffset + 1]: # goto prev frame
+                                    self.clickHighlight(tOffset + 0, "<<")
+                                    self.mov.prevFrame()
+                                elif mouseX in [tOffset + 4, tOffset + 5]: # goto next frame
+                                    self.clickHighlight(tOffset + 4, ">>")
+                                    self.mov.nextFrame()
+                                if mouseX == 22 + offset:    # clicked FPS down
+                                    self.clickHighlight(13 + offset, "<")
+                                    self.decreaseFPS()
+                                elif mouseX == 26 + offset:    # clicked FPS up
+                                    self.clickHighlight(17 + offset, ">")
+                                    self.increaseFPS()
+                                elif mouseX == 31 + offset:  # clicked Delay button
+                                    self.clickHighlight(23 + offset, "D")
+                                    self.getDelayValue()
+                                elif mouseX in range(39 + offset, 39 + offset + 5):  # clicked Range button or area
+                                    self.clickHighlight(39 + offset, "R")
+                                    self.getPlaybackRange()
+                                elif mouseX == 12 + offset:   # clicked Frame button
+                                    self.clickHighlight(2 + offset, "F")
+                                    self.gotoFrameGetInput()
+
+
+                    elif mouseY == self.statusBarLineNum+1: # clicked bottom bar 
+                        if self.appState.colorMode == "16" and self.realmaxX >= self.appState.full_ui_width:
+                            if mouseX in range(3,19): # clicked a fg color
+                                fg = mouseX - 2
+                                self.setFgColor(fg)
+                            elif mouseX in range(25,33):   # clicked a bg color
+                                bg = mouseX - 24
+                                self.setBgColor(bg)
+                        char_area_start = self.chMap_offset
+                        char_area_end = self.chMap_offset+len(self.chMapString)
+                        if mouseX == self.chMap_offset + len(self.chMapString):  # clicked next character set
+                            self.clickHighlight(self.chMap_offset + len(self.chMapString), ">", bar='bottom')
+                            self.nextCharSet()
+                        elif mouseX == self.chMap_offset - 1:  # clicked previous character set
+                            self.clickHighlight(self.chMap_offset - 1, "<", bar='bottom')
+                            self.prevCharSet()
+                        elif mouseX in range(char_area_start, char_area_end):
                             if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
-                                offset = self.line_1_offset # line 1 of the status bar 
-                                tOffset = self.transportOffset
-                                if not self.appState.narrowWindow:
-                                    if mouseX in [tOffset + 2, tOffset + 3]:  # clicked play button
-                                        self.clickHighlight(tOffset + 2, "|>")
-                                        self.startPlaying()
-                                        self.metaKey = 0
-                                    elif mouseX in [tOffset + 0, tOffset + 1]: # goto prev frame
-                                        self.clickHighlight(tOffset + 0, "<<")
-                                        self.mov.prevFrame()
-                                    elif mouseX in [tOffset + 4, tOffset + 5]: # goto next frame
-                                        self.clickHighlight(tOffset + 4, ">>")
-                                        self.mov.nextFrame()
-                                    if mouseX == 22 + offset:    # clicked FPS down
-                                        self.clickHighlight(13 + offset, "<")
-                                        self.decreaseFPS()
-                                    elif mouseX == 26 + offset:    # clicked FPS up
-                                        self.clickHighlight(17 + offset, ">")
-                                        self.increaseFPS()
-                                    elif mouseX == 31 + offset:  # clicked Delay button
-                                        self.clickHighlight(23 + offset, "D")
-                                        self.getDelayValue()
-                                    elif mouseX in range(39 + offset, 39 + offset + 5):  # clicked Range button or area
-                                        self.clickHighlight(39 + offset, "R")
-                                        self.getPlaybackRange()
-                                    elif mouseX == 12 + offset:   # clicked Frame button
-                                        self.clickHighlight(2 + offset, "F")
-                                        self.gotoFrameGetInput()
+                                self.clickedChMap(mouseX, mouseY)
+                        elif self.appState.debug:
+                            self.notify("bottom bar. " + str([mouseX, mouseY]))
+                    else:
+                        if self.appState.debug:
+                            self.notify(str([mouseX, mouseY]))
+                    if cmode == "Draw" or cmode == "Paint":
+                        self.enableMouseReporting()
 
 
-                        elif mouseY == self.statusBarLineNum+1: # clicked bottom bar 
-                            if self.appState.colorMode == "16" and self.realmaxX >= self.appState.full_ui_width:
-                                if mouseX in range(3,19): # clicked a fg color
-                                    fg = mouseX - 2
-                                    self.setFgColor(fg)
-                                elif mouseX in range(25,33):   # clicked a bg color
-                                    bg = mouseX - 24
-                                    self.setBgColor(bg)
-                            char_area_start = self.chMap_offset
-                            char_area_end = self.chMap_offset+len(self.chMapString)
-                            if mouseX == self.chMap_offset + len(self.chMapString):  # clicked next character set
-                                self.clickHighlight(self.chMap_offset + len(self.chMapString), ">", bar='bottom')
-                                self.nextCharSet()
-                            elif mouseX == self.chMap_offset - 1:  # clicked previous character set
-                                self.clickHighlight(self.chMap_offset - 1, "<", bar='bottom')
-                                self.prevCharSet()
-                            elif mouseX in range(char_area_start, char_area_end):
-                                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
-                                    self.clickedChMap(mouseX, mouseY)
-                            elif self.appState.debug:
-                                self.notify("bottom bar. " + str([mouseX, mouseY]))
-                        else:
-                            if self.appState.debug:
-                                self.notify(str([mouseX, mouseY]))
-                        if cmode == "Draw" or cmode == "Paint":
-                            self.enableMouseReporting()
                     # If we clicked in the sidebar area, aka to the right of the canvas
                     # and above the status bar:
                     if self.appState.sideBarEnabled:
