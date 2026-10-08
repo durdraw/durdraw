@@ -1044,7 +1044,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
         #self.mov.currentFrame.newColorMap[self.xy[0]][self.xy[1] - 1] = [self.colorfg, self.colorbg]
 
-    def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True, insertMode=None):
+    def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True, insertMode=False):
         """ insert character at current location, move cursor to the right (unless at the edge of canvas) """
         if pushUndo:    # push onto the clipboard stack
             self.undo.push()
@@ -1057,8 +1057,6 @@ class UserInterface():  # Separate view (curses) from this controller
             return False
         if y < 0:
             return False
-        if insertMode == None:
-            insertMode = self.appState.insertMode
         if not insertMode:
             if frange: # frame range
                 for fn in range(frange[0] - 1, frange[1]):
@@ -2013,7 +2011,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     drawChar = self.appState.drawChar
                     x_param = self.xy[1]
                     y_param = self.xy[0]
-                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True, frange=self.appState.playbackRange)
+                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True, frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                 elif c == 122:  # alt-z = undo
                     self.clickedUndo()
                 elif c == 114:  # alt-r = redo
@@ -2039,52 +2037,52 @@ class UserInterface():  # Separate view (curses) from this controller
                         c = None
                 elif c in [ord('1')]:    # esc-1 copy of F1 - insert extended character
                     self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('2')]:    # esc-2 copy of F2 - insert extended character
                     self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('3')]:    # F3 - insert extended character
                     self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('4')]:    # F4 - insert extended character
                     self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('5')]:    # F5 - insert extended character
                     self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('6')]:    # F6 - insert extended character
                     self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('7')]:    # F7 - insert extended character
                     self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('8')]:    # F8 - insert extended character
                     self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('9')]:    # F9 - insert extended character
                     self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('0')]:    # F10 - insert extended character
                     self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 else:
@@ -2237,46 +2235,46 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.xy[1] = self.mov.sizeX
                     elif c in [curses.KEY_F1]:    # F1 - insert extended character
                         self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F2]:    # F2 - insert extended character
                         self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F3]:    # F3 - insert extended character
                         self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F4]:    # F4 - insert extended character
                         self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F5]:    # F5 - insert extended character
                         self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F6]:    # F6 - insert extended character
                         self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F7]:    # F7 - insert extended character
                         self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F8]:    # F8 - insert extended character
                         self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F9]:    # F9 - insert extended character
                         self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F10]:    # F10 - insert extended character
                         self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c != None and c <= 128 and c >= 32:      # normal printable character
-                        self.insertChar(c, fg=self.colorfg, bg=self.colorbg, frange=self.appState.playbackRange)
+                        self.insertChar(c, fg=self.colorfg, bg=self.colorbg, frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
 
             shouldDraw = False
             while True:
@@ -3118,7 +3116,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     drawChar = self.appState.drawChar
                     x_param = self.xy[1]
                     y_param = self.xy[0]
-                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True)
+                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True, insertMode=self.appState.insertMode)
                 elif c == ord('l'): # alt-l - color under cursor
                     self.insertColor(fg=self.colorfg, bg=self.colorbg, pushUndo=True)
                 elif c == ord('L'): # alt-L - search and replace color
@@ -3203,44 +3201,44 @@ class UserInterface():  # Separate view (curses) from this controller
                         startPoint=(self.xy[0] + self.appState.topLine, self.xy[1] + self.appState.firstCol)
                         self.startSelecting(firstkey=c)  # start selecting text
                 elif c in [ord('1')]:    # esc-1 copy of F1 - insert extended character
-                    self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     #self.hardRefresh()
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('2')]:    # esc-2 copy of F2 - insert extended character
-                    self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('3')]:    # F3 - insert extended character
-                    self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('4')]:    # F4 - insert extended character
-                    self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('5')]:    # F5 - insert extended character
-                    self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('6')]:    # F6 - insert extended character
-                    self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('7')]:    # F7 - insert extended character
-                    self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('8')]:    # F8 - insert extended character
-                    self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('9')]:    # F9 - insert extended character
-                    self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('0')]:    # F10 - insert extended character
-                    self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c == 27:   # 2nd esc byte - possibly alt-arrow.
@@ -3330,34 +3328,34 @@ class UserInterface():  # Separate view (curses) from this controller
             elif c in [5, curses.KEY_END]:      # ctrl-e or end
                 self.move_cursor_end()
             elif c in [curses.KEY_F1]:    # F1 - insert extended character
-                self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F2]:    # F2 - insert extended character
-                self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F3]:    # F3 - insert extended character
-                self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F4]:    # F4 - insert extended character
-                self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F5]:    # F5 - insert extended character
-                self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F6]:    # F6 - insert extended character
-                self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F7]:    # F7 - insert extended character
-                self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F8]:    # F8 - insert extended character
-                self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F9]:    # F9 - insert extended character
-                self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F10]:    # F10 - insert extended character
-                self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c == curses.KEY_LEFT:      # left - move cursor right a character
                 self.move_cursor_left()
@@ -3760,7 +3758,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 # via shift-arrow or mouse.
             elif c == None: pass
             elif c <= 128 and c >= 32:      # printable ASCII character
-                self.insertChar(c, fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(c, fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
 
                 sumbitch.append(chr(c)) # cheat codes
                 if len(sumbitch) >= sumbitch_len:
@@ -8051,9 +8049,9 @@ If this persists, You might want to reinstsall Durdraw...
                 charBg = self.appState.defaultBgColor
                 if charColumn < self.mov.sizeX + 1 and charLine < self.mov.sizeY:
                     if not frange:
-                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, insertMode=False)
+                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
                     else:
-                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange, insertMode=False)
+                        self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
 
     def fillSegment(self, startPoint, height, width, frange=None, fillChar="X"):
         """ Fill everyting in the current frame, or framge range, with selected character+color """
