@@ -5044,6 +5044,7 @@ class UserInterface():  # Separate view (curses) from this controller
         """ Draw UI for selecting a file to load, return the filename """
         # get file list
         self.stdscr.nodelay(0) # wait for input when calling getch
+        self.disableMouseReporting()
         self.cursorOff()
         folders =  ["../"]
         default_masks = DEFAULT_LOAD_FILE_MASKS
