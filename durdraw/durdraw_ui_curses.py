@@ -7127,7 +7127,7 @@ If this persists, You might want to reinstsall Durdraw...
                                     brushChar = self.appState.animBrush.current_frame().content[brush_col][brush_line]
                                 except IndexError:
                                     # This should really never happen now.
-                                    self.notify(f"Index error: bcol: {brush_col}, bline: {brush_line}, col: {colnum}, line: {linenum}, mcol: {self.appState.mouse_col}, {self.appState.mouse_line}", pause=False)
+                                    #self.notify(f"Index error: bcol: {brush_col}, bline: {brush_line}, col: {colnum}, line: {linenum}, mcol: {self.appState.mouse_col}, {self.appState.mouse_line}", pause=False)
                                     brushChar = ' '
                                 # invisible background for brushes
                                 if brushChar == ' ':
