@@ -7089,7 +7089,7 @@ If this persists, You might want to reinstsall Durdraw...
                         if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.brush.sizeX + topLine - half_brush_height):
                             if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.brush.sizeY + self.appState.firstCol - half_brush_width):
                                 brush_line = linenum - self.appState.mouse_line - topLine + half_brush_height 
-                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
+                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol + half_brush_width
                                 try:
                                     brushChar = self.appState.brush.content[brush_col][brush_line]
                                 except IndexError:
