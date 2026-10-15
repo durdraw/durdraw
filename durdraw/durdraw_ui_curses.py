@@ -4165,6 +4165,7 @@ class UserInterface():  # Separate view (curses) from this controller
         curses.nocbreak()
         self.stdscr.keypad(0)
         curses.echo()
+        self.disableMouse()
         curses.endwin()
         #print("Waiting for threads to die...")
         self.killAllHumans()
