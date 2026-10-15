@@ -1150,20 +1150,27 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def searchForStringPrompt(self):
         self.stdscr.nodelay(0) # wait for input when calling getch
+        self.clearStatusLine()
         self.promptPrint("Enter string to search: ")
+        if self.appState.playingHelpScreen:
+            movie = self.appState.helpMov
+        else:
+            movie = self.mov
         curses.echo()
         search_string = self.stdscr.getstr().decode('utf-8')
         curses.noecho()
 
-        search_result = self.mov.search_for_string(search_string)
+        search_result = movie.search_for_string(search_string)
         if search_result == False:
             self.notify("No results found.")
         else:
             line = search_result["line"]
             column = search_result["col"]
             frame_num = search_result["frame"]
-            self.mov.gotoFrame(frame_num)
+            movie.gotoFrame(frame_num)
             self.move_cursor_to_line_and_column(line, column)
+            self.stdscr.clear()
+            self.hardRefresh()
 
         if self.playing:
             elf.stdscr.nodelay(1)
@@ -1481,6 +1488,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.appState.topLine = 0
             elif c in [338, curses.KEY_END]:   # 338 = end
                 self.appState.topLine = helpMov.sizeY - self.realmaxY + 2
+            elif c in [ord('/')]:
+                self.searchForStringPrompt()
             #elif c != -1:   # -1 means no keys are pressed.
             #elif c == curses.KEY_ENTER:
             elif c in [10, 13, curses.KEY_ENTER, 27, ord('q')]:   # 27 == escape key
@@ -7079,14 +7088,8 @@ If this persists, You might want to reinstsall Durdraw...
                         half_brush_width = int(new_sizeY  / 2) 
                         if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.brush.sizeX + topLine - half_brush_height):
                             if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.brush.sizeY + self.appState.firstCol - half_brush_width):
-                                if self.appState.brush.sizeX % 2 == 0:  # if size is even, then it divides evently
-                                    brush_line = linenum - self.appState.mouse_line - half_brush_height 
-                                else:
-                                    brush_line = linenum - self.appState.mouse_line - half_brush_height - 1
-                                if self.appState.brush.sizeY % 2 == 0:  # if size is even, then it divides evently
-                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
-                                else:
-                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width - 1
+                                brush_line = linenum - self.appState.mouse_line - topLine + half_brush_height 
+                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
                                 try:
                                     brushChar = self.appState.brush.content[brush_col][brush_line]
                                 except IndexError:
@@ -7110,19 +7113,8 @@ If this persists, You might want to reinstsall Durdraw...
                         half_brush_width = int(self.appState.animBrush.current_frame().sizeY  / 2)
                         if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.animBrush.current_frame().sizeX + topLine - half_brush_height):
                             if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.animBrush.current_frame().sizeY + self.appState.firstCol - half_brush_width):
-                                #brush_line = linenum - self.appState.mouse_line
-                                #brush_line = linenum - self.appState.mouse_line - topLine - half_brush_height
-                                #brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
-
-                                if self.appState.animBrush.sizeX % 2 == 0:  # if size is even, then it divides evently
-                                    brush_line = linenum - self.appState.mouse_line - half_brush_height 
-                                else:
-                                    brush_line = linenum - self.appState.mouse_line - half_brush_height - 1
-                                if self.appState.animBrush.sizeY % 2 == 0:  # if size is even, then it divides evently
-                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width
-                                else:
-                                    brush_col = colnum - self.appState.mouse_col - self.appState.firstCol - half_brush_width - 1
-
+                                brush_line = linenum - self.appState.mouse_line - topLine + half_brush_height 
+                                brush_col = colnum - self.appState.mouse_col - firstCol + half_brush_width 
                                 try:
                                     brushChar = self.appState.animBrush.current_frame().content[brush_col][brush_line]
                                 except IndexError:
