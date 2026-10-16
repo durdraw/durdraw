@@ -5,7 +5,7 @@ Durdraw
                 _|  |__ __ _____ __|  |_____ _____ __ __ __
                / _  |  |  |   __|  _  |   __|  _  |  |  |  |\
               /_____|_____|__|__|_____|__|___\____|________| | 
-              \_____________________________________________\|  v 0.31.0-BETA
+              \_____________________________________________\|  v 0.31.0
 
 ![durdraw-0 28-demo](https://github.com/user-attachments/assets/3bdb0c46-7f21-4514-9b48-ac00ca62e68e)
 
@@ -320,11 +320,22 @@ Paint (P). You can now use the mouse to paint with your custom brush.
 #### Animation Brushes
 
 To make an animation brush, use shift-arrow or esc-K to make a selection,
-then press b and then a. To use the brush, click the Mouse Tools menu
-(esc-t) and select Animation Brush (A). You can now use the mouse to
-"paint" animation frames. When you click in the canvas, the current frame
-of the animation brush gets painted to the canvas, then the animation
-brush and canvas both advance to the next frames.
+then press b for "Make Brush" and a for "Animation Brush."
+
+To use the brush, click the Mouse menu (esc-t) and select Animation
+Brush (A). You can now use the mouse to "paint" animation frames.
+
+In loop mode, when you click or drag in the canvas, the current frame of
+the Animation Brush gets painted to the canvas, then the animation brush
+and canvas both advance to their next frames.
+
+In clone mode, when you click or drag in the canvas, the current frame
+of the canvas is cloned to the next frame, then the current frame of
+the Animation Brush is painted to the canvas, and the animation brush
+and canvas both advance to the next frame.
+
+In both modes, esc-K advances to the next brush frame, and esc-J
+goes to the previous brush frame.
 
 #### Keyboard Shortcuts
 
