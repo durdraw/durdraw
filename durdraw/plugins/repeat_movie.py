@@ -2,9 +2,6 @@
 # Type: Transform Movie
 # Name: Repeat |> -> |>|>
 
-
-import copy
-
 # Durdraw plugin format version
 durdraw_plugin_version = 1
 
@@ -12,7 +9,7 @@ durdraw_plugin_version = 1
 durdraw_plugin = {
     'name': 'Repeat',
     'author': 'Sam Foster, samfoster@gmail.com',
-    'version':  1,   # Plugin verison, if applicable
+    'version': 1,   # Plugin version, if applicable
     'provides': ['transform_movie'],
     "type": ["effect"],
     'desc': 'Duplicate all frames and append them to the end. |> -> |>|>'
@@ -23,11 +20,14 @@ opts = {
 }
 
 def transform_movie(mov, appState=None, opts=opts):
-    # Make a copy of the frames
-    mov.newframes = copy.deepcopy(mov.frames)
-    # Append it to the movie frames
-    for i in range(0, opts['count']):
-        mov.frames = mov.frames + mov.newframes
-    mov.frameCount = len(mov.frames)
+    count = opts.get('count', 1) if opts else 1
+    original_frame_count = mov.frameCount
+
+    for _ in range(count):
+        for i in range(1, original_frame_count + 1):
+            mov.gotoFrame(i)
+            mov.insertCloneFrame()
+            mov.moveFramePosition(i + 1, mov.frameCount)
+
+    mov.gotoFrame(1)
     return mov
- 

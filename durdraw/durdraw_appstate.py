@@ -13,6 +13,7 @@ from sys import version_info
 from durdraw.durdraw_options import Options
 import durdraw.durdraw_file as durfile
 import durdraw.durdraw_sauce as dursauce
+import durdraw.durdraw_animbrush as animbrush
 import durdraw.log as log
 
 class AppState():
@@ -30,6 +31,8 @@ class AppState():
         self.neofetch = None
         self.PIL = None
         self.check_dependencies()
+
+        self.openMovs = []  # open movies
 
         #threading
         self.stop_event = threading.Event()
@@ -61,13 +64,33 @@ class AppState():
         self.sixteenc_year = None
         self.sixteenc_pack = None
 
+        # Brushes and drawing
+        self.drawChar = '$'
+        self.brush = None
+        self.animBrush = animbrush.AnimationBrush()
+
+        # Config file stuff
+        self.configFile = None
+        self.configFileLoaded = False
+        self.configFileName = None
+        self.customThemeFile = None
+
+        # Other runtime
+
         # Durview stuff
         self.durview_running = False
 
         self.play_queue = []    # List of files to switch between with 'n' and 'p' in Durview and/or play mode
         self.play_queue_position = None
+        self.play_queue_direction = 0
+        self.play_queue_auto_advance = False
+
+        self.ui_zones = {
+            "frameBar": (0, 0)  # line, column
+        }
 
         # Other durdraw runtime stuff
+        self.insertMode = False # When the user presses Insert. Insert mode like a text editor
         self.can_inject = False # Allow injecting color codes to override ncurses colors (for BG 256 colors)
         self.sleep_time = 0     # Use this as a delay for playback mode, dictated in ui_curses.py from FPS
         self.showBgColorPicker = False # until BG colors work in 256 color mode. (ncurses 5 color pair limits)
@@ -95,13 +118,16 @@ class AppState():
         self.characterSet = "Durdraw Default"
         self.showCharSetButton = False
         self.workingLoadDirectory = None
+        self.usingDirMode = False
+        self.dirSort = "name"
+        self.flattenDirs = False
         self.fileShortPath = None
         self.fileLongPath = None
         # if self.characterSet == "Unicode Block" then Durdraw knows to use a
         # unicode block:
         #self.characterSet = "Unicode Block"
         self.unicodeBlock = "Braille Patterns"  # placeholder during initialization
-        self.cursorMode = "Move"  # Move/Select, Draw and Color
+        self.cursorMode = "Select"  # Move/Select, Draw and Color
         self.fetchMode = False    # use neofetch, replace {variables} in dur file
         self.fetchData = None       # a {} dict containing key:value for neofetch output.
         self.inferno = None
@@ -111,12 +137,7 @@ class AppState():
         self.playNumberOfTimes = 0  # 0 = loop forever, default
         self.undoHistorySize = 1000  # How far back our undo history can go
         self.playbackRange = (1,1)
-        self.drawChar = '$'
-        self.brush = None
-        self.configFile = None
-        self.configFileLoaded = False
-        self.configFileName = None
-        self.customThemeFile = None
+
         self.sauce = dursauce.SauceParser() # empty sauce
         #self.drawChar = b'\xE2\x96\x88'
         self.CP438_BLOCK = chr(219)
@@ -127,6 +148,7 @@ class AppState():
         self.hasMouseScroll = True  # Disable for compatibility with older Python versions <3.10
         self.mouse_col = 0
         self.mouse_line = 0
+        self.mouse_reporting = False
         self.helpMov = None
         self.helpMov_2 = None
         self.hasHelpFile = False
@@ -190,7 +212,7 @@ class AppState():
             }
         self.theme = self.theme_16
         self.log_level = 'WARNING'
-        self.log_filepath = './durdraw.log'
+        self.log_filepath = log.DEFAULT_LOG_FILEPATH
         self.log_local_tz = False
         self.logger = log.getLogger('appstate')
 
@@ -225,6 +247,9 @@ class AppState():
     def setCursorModePaint(self):
         self.cursorMode="Paint"
 
+    def setCursorModeAnimBrush(self):
+        self.cursorMode="ABrush"
+
     def setCursorModeCol(self):
         self.cursorMode="Color"
 
@@ -245,7 +270,7 @@ class AppState():
 
     def setLogger(self, level=log.DEFAULT_LOG_LEVEL, filepath=log.DEFAULT_LOG_FILEPATH, local_tz=False):
         self.log_level = level
-        self.log_filepath = filepath
+        self.log_filepath = log.app_log_filepath(filepath)
         self.log_local_tz = local_tz
         self.logger = log.getLogger(
             'appstate',
@@ -257,6 +282,17 @@ class AppState():
 
     def getLogger(self, name: str):
         return log.getLogger(name, level=self.log_level, filepath=self.log_filepath, local_tz=self.log_local_tz)
+
+    def loadLoggingConfig(self):
+        if not self.configFile or 'Logging' not in self.configFile:
+            return
+
+        logging_config = dict(self.configFile['Logging'])
+        if 'local-tz' in logging_config:
+            logging_config['local_tz'] = self.configFile['Logging'].getboolean('local-tz')
+            del logging_config['local-tz']
+
+        self.setLogger(**logging_config)
 
     def loadThemeList(self, menu=None, path=None):
         """ Look for theme files in internal durdraw directory """
@@ -303,12 +339,22 @@ class AppState():
 
     def loadConfigFile(self):
         # Load configuration filea
-        configFullPath = os.path.expanduser("~/.durdraw/durdraw.ini")
-        configShortFile  = 'durdraw.ini'
-        configFileLocations = [configFullPath, configShortFile]
-        configFile = configparser.ConfigParser()
-        readConfigPaths = configFile.read(configFileLocations)
-        if self.configFile == []:
+        configFilePaths = ["/etc/durdraw/durdraw.ini", "~/.durdraw/durdraw.ini", "~/.config/durdraw/durdraw.ini"]
+        loaded = False
+        for file_path in configFilePaths:
+            file_path = os.path.expanduser(file_path)
+            self.configFileLoaded = False
+            if os.path.isfile(file_path) and os.access(file_path, os.R_OK):
+                configFullPath = os.path.expanduser(file_path)
+                configShortFile  = 'durdraw.ini'
+                configFileLocations = [configFullPath, configShortFile]
+                configFile = configparser.ConfigParser()
+                readConfigPaths = configFile.read(configFileLocations)
+                loaded = True
+        if self.configFile == []: #if self.configFile == None:
+            self.configFileLoaded = False
+            return False 
+        elif not loaded: #if self.configFile == None:
             self.configFileLoaded = False
             return False 
         else:
@@ -339,14 +385,21 @@ class AppState():
             pass
 
         # If there is a theme in the user's config file, load that
-        if 'Theme' in self.configFile:
-            themeConfig = self.configFile['Theme']
-            if 'theme-16' in themeConfig and themeMode == 'Theme-16':
-                self.loadThemeFile(themeConfig['theme-16'], themeMode)
-            if 'theme-256' in themeConfig and themeMode == 'Theme-256':
-                self.loadThemeFile(themeConfig['theme-256'], themeMode)
-        else:
-            pass
+        if not self.configFileLoaded:
+            return False
+
+        try:
+            if 'Theme' in self.configFile:
+                themeConfig = self.configFile['Theme']
+                if 'theme-16' in themeConfig and themeMode == 'Theme-16':
+                    self.loadThemeFile(themeConfig['theme-16'], themeMode)
+                if 'theme-256' in themeConfig and themeMode == 'Theme-256':
+                    self.loadThemeFile(themeConfig['theme-256'], themeMode)
+            else:
+                pass
+        except Exception as E:
+            print(f"Exception E loading theme: {E}")
+            pdb.set_trace()
 
 
 
@@ -426,7 +479,6 @@ class AppState():
     def loadDurFileToMov(self, fileName):
         """ Takes a file path, returns a movie object """
         fileName = os.path.expanduser(fileName)
-        #self.helpMov = Movie(self.opts) # initialize a new movie to work with
         try:
             f = open(fileName, 'rb')
         except Exception as e:
@@ -440,14 +492,13 @@ class AppState():
                 return False
         else:
             f.seek(0)
-        try:    # Load json help file
-            #pdb.set_trace()
+        try:    # Load json file
             loadedContainer = durfile.open_json_dur_file(f, self)
             opts = loadedContainer['opts']
             mov = loadedContainer['mov']
             return mov, opts
         except:
-            #pass    # loading json help file failed for some reason, so...
+            # loading json help file failed for some reason, so...
             return False
 
 
@@ -458,7 +509,6 @@ class AppState():
 
     def loadHelpFile(self, helpFileName, page=1):
         helpFileName = os.path.expanduser(helpFileName)
-        #self.helpMov = Movie(self.opts) # initialize a new movie to work with
         try:
             f = open(helpFileName, 'rb')
         except Exception as e:
@@ -478,7 +528,6 @@ class AppState():
         else:
             f.seek(0)
         try:    # Load json help file
-            #pdb.set_trace()
             loadedContainer = durfile.open_json_dur_file(f, self)
             if page == 1:
                 self.helpMovOpts = loadedContainer['opts']
@@ -489,19 +538,15 @@ class AppState():
             self.hasHelpFile = True
             return True
         except:
-            #pass    # loading json help file failed for some reason, so...
+            # loading json help file failed for some reason, so...
             return False
-        #try:    # Load pickle file. This should never happen anymore, so...
-        #    #self.opts = pickle.load(f)
-        #    #self.mov = pickle.load(f)
-        #    self.helpMovOpts = pickle.load(f)
-        #    self.helpMov = pickle.load(f)
-        #    self.hasHelpFile = True
-        #    return True
-        #except Exception as e:
-        #    self.hasHelpFile = False
-        #    self.helpMov = None
-        #    return False
+
+class FileSwitcherItem():
+    """ Encapsulates the movie, movie title, modified or not """
+    def __init__(self):
+        self.mov = None
+        self.filename = None
+        self.modified = False
 
 
-
+    

@@ -9,7 +9,7 @@ description = "Versatile ASCII and ANSI Art terminal text editor"
 readme = "README.md"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
-version = "0.30.1"
+version = "0.31.0"
 classifiers = [
         'Environment :: Console :: Curses',
         'Topic :: Artistic Software',
@@ -29,10 +29,15 @@ classifiers = [
         'Topic :: Utilities'
 ]
 authors = [
-  {name = "Sam Foster", email = "samfoster@gmail.com"},
-  {name = "Durdraw Contributors"},
+  { name = "Sam Foster", email = "samfoster@gmail.com" },
+  { name = "Durdraw Contributors" },
 ]
-requires-python = ">=3.10"
+
+maintainers = [
+    { name = "Sam Foster", email = "samfoster@gmail.com" }
+]
+
+requires-python = ">=3.8, !=3.13.1, !=3.13.2, !=3.13.3, !=3.13.4, !=3.13.5, !=3.13.6, !=3.13.7, !=3.13.8"
 dependencies = [
 ]
 

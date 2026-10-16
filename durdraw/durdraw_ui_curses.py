@@ -23,6 +23,9 @@ import traceback
 import time
 import unicodedata
 import urllib
+import urllib.error
+import urllib.parse
+import urllib.request
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -46,6 +49,9 @@ import durdraw.plugins.reverse_movie as reverse_plugin # transform_movie
 import durdraw.plugins.repeat_movie as repeat_plugin # transform_movie
 import durdraw.plugins.bounce_movie as bounce_plugin # transform_movie
 import durdraw.log as log
+
+DEFAULT_LOAD_FILE_MASKS = ['*.dur', '*.durf', '*.asc', '*.ans', '*.txt', '*.diz', '*.nfo', '*.ice', '*.ansi']
+ALL_FILE_MASKS = ['*']
 
 
 class UserInterface():  # Separate view (curses) from this controller
@@ -102,6 +108,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.ansi = AnsiArtStuff(self.appState)   # obj for misc ansi-related stuff
         # Disable mouse scrolling for Python versions below 3.10, as they don't have
         # curses.BUTTON5_*
+        curses.mouseinterval(230);  # make clicking a bit easier. Default 166 according to ai lol.
         self.colorbg = 0    # default bg black
         self.colorfg = 7    # default fg white. These are overriden by the following self.init_x_colors_misc():
         if sys.version_info.major == 3:
@@ -137,6 +144,7 @@ class UserInterface():  # Separate view (curses) from this controller
             except KeyError:
                 pdb.set_trace()
         self.mov = Movie(self.opts) # initialize a new movie to work with
+        #self.appState.openMovs.append(mov)
         self.undo = UndoManager(self, appState = self.appState)   # initialize undo/redo system
         self.undo.setHistorySize(self.appState.undoHistorySize)
         self.xy = [0, 1]     # cursor position x/y - was "curs"
@@ -415,16 +423,28 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def enableMouseReporting(self):
         # Use xterm API to report location of mouse cursor
-        print('\033[?1003h') # enable mouse tracking with the XTERM API
-        self.hardRefresh()
+        if self.appState.mouse_reporting == False:
+            #self.notify("Enabled mouse reporting.")
+            #pdb.set_trace()
+            print('\033[?1003h') # enable mouse tracking with the XTERM API
+            self.appState.mouse_reporting = True
+            self.hardRefresh()
         #curses.mousemask(1)
         #curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
 
-    def disableMouseReporting(self):
-        print('\033[?1003l') # disable mouse reporting
-        curses.mousemask(1)
-        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-        self.hardRefresh()
+    def disableMouseReporting(self, hard=False):
+        if hard:
+            self.appState.mouse_reporting = True
+        if self.appState.mouse_reporting:
+            #self.notify("Disabled mouse reporting.")
+            #pdb.set_trace()
+            print('\033[?1003l') # disable mouse reporting
+            curses.mousemask(1)
+            curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+            self.appState.mouse_reporting = False
+            self.hardRefresh()
+
+
 
     def enableTransBackground(self):
         curses.use_default_colors()
@@ -677,7 +697,8 @@ class UserInterface():  # Separate view (curses) from this controller
         if self.appState.maxColors < 256:
             self.notify("Unable to set 256 colors. Check your terminal configuration?")
         else:
-            self.statusBar.drawCharPickerButton.show()
+            if not self.appState.durview_running:
+                self.statusBar.drawCharPickerButton.show()
             self.switchToColorMode("256")
 
     def switchToColorMode(self, newMode: str):
@@ -732,14 +753,14 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.appState.sideBarShowing = True
                 #self.notify("Wide. Showing color picker.")
                 #if self.appState.colorMode == "256":
-                if not self.appState.fetchMode:
+                if not self.appState.fetchMode and not self.appState.durview_running:
                     self.statusBar.colorPicker.show()
                 #if self.appState.colorMode == "16":
                 #    self.statusBar.colorPicker_bg_16.show()
             # Window is too narrow, but tall enough to show more stuff on the bottom.
         elif realmaxY - self.appState.bottomBar_minimum_height > self.mov.sizeY:
             #if self.appState.colorMode == "256":
-            if not self.appState.fetchMode:
+            if not self.appState.fetchMode and not self.appState.durview_running:
                 self.statusBar.colorPicker.show()
             #if self.appState.colorMode == "16":
             #    self.statusBar.colorPicker_bg_16.show()
@@ -897,12 +918,21 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(self.statusBarLineNum, 0, message, curses.color_pair(self.appState.theme['notificationColor']))
         self.stdscr.refresh()
         if pause:
+            curses.flushinp()
             if self.playing:
                 self.stdscr.nodelay(0) # wait for input when calling getch
-                self.stdscr.getch()
+            waiting_for_input = True
+            while waiting_for_input:
+                self.disableMouseReporting()
+                ch = self.stdscr.getch()
+                # -1 when called by setCursorModePaint() when pressing enter
+                # on Paint from Mouse/Mode menu. Not sure why.
+                if ch == -1:
+                    pass
+                else:
+                    waiting_for_input = False
+            if self.playing:
                 self.stdscr.nodelay(1) # do not wait for input when calling getch   
-            else:
-                self.stdscr.getch()
         if not pause:
             curses.napms(wait_time)
             curses.flushinp()
@@ -954,9 +984,15 @@ class UserInterface():  # Separate view (curses) from this controller
             self.undo.push()
             self.xy[1] = self.xy[1] - 1
             if self.playing:
+                insert = self.appState.insertMode   # back state up
+                self.appState.insertMode = False
                 self.insertChar(ord(' '), fg=self.appState.defaultFgColor, bg=self.appState.defaultBgColor, frange=self.appState.playbackRange)
+                self.appState.insertMode = insert
             else:
+                insert = self.appState.insertMode   # back state up
+                self.appState.insertMode = False
                 self.insertChar(ord(' '), fg=self.appState.defaultFgColor, bg=self.appState.defaultFgColor)
+                self.appState.insertMode = insert
             self.xy[1] = self.xy[1] - 1
 
     def deleteKeyPop(self, frange=None):
@@ -1008,7 +1044,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
         #self.mov.currentFrame.newColorMap[self.xy[0]][self.xy[1] - 1] = [self.colorfg, self.colorbg]
 
-    def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True):
+    def insertChar(self, c, fg=1, bg=0, frange=None, x=None, y=None, moveCursor = False, pushUndo=True, insertMode=False):
         """ insert character at current location, move cursor to the right (unless at the edge of canvas) """
         if pushUndo:    # push onto the clipboard stack
             self.undo.push()
@@ -1017,23 +1053,50 @@ class UserInterface():  # Separate view (curses) from this controller
             moveCursor = True
         if y == None:
             y = self.xy[0]
-        if frange: # frame range
-            for fn in range(frange[0] - 1, frange[1]):
-                try:
-                    self.mov.frames[fn].content[y][x - 1] = chr(c)
-                    self.mov.frames[fn].newColorMap[y][x - 1] = [fg, bg]
-                except Exception as E:
-                    self.notify(f"There was an internal error: {E}", pause=True)
-                    self.notify(f"Frame: {fn}, x: {x}, y: {y}, fg: {fg}, bg: {bg}")
-                    self.notify(f"Please save your work and restart Durdraw. Sorry for the inconvenience.")
-                    break
-            if x < self.mov.sizeX and moveCursor:
-                self.move_cursor_right()
-        else:
-            self.mov.currentFrame.content[y][x - 1] = chr(c)
-            self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
-            if x < self.mov.sizeX and moveCursor:
-                self.move_cursor_right()
+        if x < 1:
+            return False
+        if y < 0:
+            return False
+        if not insertMode:
+            if frange: # frame range
+                for fn in range(frange[0] - 1, frange[1]):
+                    try:
+                        self.mov.frames[fn].content[y][x - 1] = chr(c)
+                        self.mov.frames[fn].newColorMap[y][x - 1] = [fg, bg]
+                    except Exception as E:
+                        self.notify(f"There was an internal error: {E}", pause=True)
+                        self.notify(f"Frame: {fn}, x: {x}, y: {y}, fg: {fg}, bg: {bg}")
+                        self.notify(f"Please save your work and restart Durdraw. Sorry for the inconvenience.")
+                        break
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
+            else:
+                self.mov.currentFrame.content[y][x - 1] = chr(c)
+                self.mov.currentFrame.newColorMap[y][x - 1] = [fg, bg]
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
+        elif insertMode:
+            if frange: # frame range
+                for fn in range(frange[0] - 1, frange[1]):
+                    try:
+                        self.mov.frames[fn].content[y].insert(x - 1,  chr(c))
+                        self.mov.frames[fn].content[y].pop()
+                        self.mov.frames[fn].newColorMap[y].insert(x - 1, [fg, bg])
+                        self.mov.frames[fn].newColorMap[y].pop()
+                    except Exception as E:
+                        self.notify(f"There was an internal error: {E}", pause=True)
+                        self.notify(f"Frame: {fn}, x: {x}, y: {y}, fg: {fg}, bg: {bg}")
+                        self.notify(f"Please save your work and restart Durdraw. Sorry for the inconvenience.")
+                        break
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
+            else:
+                self.mov.currentFrame.content[y].insert(x - 1,  chr(c))
+                self.mov.currentFrame.content[y].pop()
+                self.mov.currentFrame.newColorMap[y].insert(x - 1, [fg, bg])
+                self.mov.currentFrame.newColorMap[y].pop()
+                if x < self.mov.sizeX and moveCursor:
+                    self.move_cursor_right()
 
     def pickUpDrawingChar(self, col, line):
         # Sets the drawing chaaracter to the character under teh cusror.
@@ -1087,20 +1150,27 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def searchForStringPrompt(self):
         self.stdscr.nodelay(0) # wait for input when calling getch
+        self.clearStatusLine()
         self.promptPrint("Enter string to search: ")
+        if self.appState.playingHelpScreen:
+            movie = self.appState.helpMov
+        else:
+            movie = self.mov
         curses.echo()
         search_string = self.stdscr.getstr().decode('utf-8')
         curses.noecho()
 
-        search_result = self.mov.search_for_string(search_string)
+        search_result = movie.search_for_string(search_string)
         if search_result == False:
             self.notify("No results found.")
         else:
             line = search_result["line"]
             column = search_result["col"]
             frame_num = search_result["frame"]
-            self.mov.gotoFrame(frame_num)
+            movie.gotoFrame(frame_num)
             self.move_cursor_to_line_and_column(line, column)
+            self.stdscr.clear()
+            self.hardRefresh()
 
         if self.playing:
             elf.stdscr.nodelay(1)
@@ -1418,6 +1488,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.appState.topLine = 0
             elif c in [338, curses.KEY_END]:   # 338 = end
                 self.appState.topLine = helpMov.sizeY - self.realmaxY + 2
+            elif c in [ord('/')]:
+                self.searchForStringPrompt()
             #elif c != -1:   # -1 means no keys are pressed.
             #elif c == curses.KEY_ENTER:
             elif c in [10, 13, curses.KEY_ENTER, 27, ord('q')]:   # 27 == escape key
@@ -1555,6 +1627,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 "+, = - Increase animation speed",
                 "- - Decrease animation speed",
                 "i - Show file information",
+                "n, left mouse - Load next file",
+                "p - Load previous file",
                 "v - Set VGA Terminal Colors",
                 "Enter, Esc - Back to file list",
                 "?, h, F1 - Help",
@@ -1612,6 +1686,49 @@ class UserInterface():  # Separate view (curses) from this controller
             dur_key = '{' + key + '}'
             self.mov.search_and_replace(self, dur_key, self.appState.fetchData[key])
 
+    def requestViewerFileChange(self, direction):
+        if not self.appState.play_queue or self.appState.play_queue_position is None:
+            return False
+        next_position = self.appState.play_queue_position + direction
+        if next_position < 0 or next_position >= len(self.appState.play_queue):
+            return False
+        self.appState.play_queue_direction = direction
+        self.playing = False
+        self.appState.topLine = 0
+        self.appState.firstCol = 0
+        return True
+
+    def getCurrentViewerFilePath(self):
+        if self.appState.play_queue and self.appState.play_queue_position is not None:
+            queue_item = self.appState.play_queue[self.appState.play_queue_position]
+            if self.isSixteenColorsQueueItem(queue_item):
+                return None
+            return os.path.abspath(os.path.expanduser(queue_item))
+
+        filename = self.appState.curOpenFileName
+        if not filename:
+            return None
+        if os.path.isabs(filename):
+            return os.path.abspath(os.path.expanduser(filename))
+
+        working_directory = getattr(self.appState, "workingLoadDirectory", None)
+        if working_directory:
+            candidate = os.path.join(working_directory, filename)
+            if os.path.exists(candidate):
+                return os.path.abspath(os.path.expanduser(candidate))
+
+        return os.path.abspath(os.path.expanduser(filename))
+
+    def logViewerFileClassification(self, classification):
+        file_path = self.getCurrentViewerFilePath()
+        if file_path is None:
+            return False
+        self.log.warning(f"{classification}: {file_path}")
+        return True
+
+    def isSixteenColorsQueueItem(self, item):
+        return isinstance(item, tuple) and len(item) == 3 and item[0] == "16colo.rs"
+
     def handlePlayOnlyModeInput(self, c):
         mouseState = False
         if c == curses.KEY_MOUSE: # to support mouse wheel scrolling
@@ -1622,7 +1739,7 @@ class UserInterface():  # Separate view (curses) from this controller
             realmaxY,realmaxX = self.realstdscr.getmaxyx()
 
             if mouseState == curses.BUTTON1_CLICKED:
-                pass
+                self.requestViewerFileChange(1)
                 #self.showFileInformation()
 
             elif mouseState == curses.BUTTON1_DOUBLE_CLICKED:
@@ -1668,6 +1785,14 @@ class UserInterface():  # Separate view (curses) from this controller
             self.scroll_viewer_left()
         elif c in [curses.KEY_RIGHT, ord('l')]:      # right - scroll right
             self.scroll_viewer_right()
+        elif c in [ord('n')]:
+            self.requestViewerFileChange(1)
+        elif c in [ord('p')]:
+            self.requestViewerFileChange(-1)
+        elif c in [ord('1')]:
+            self.logViewerFileClassification("good")
+        elif c in [ord('0')]:
+            self.logViewerFileClassification("flagged")
         elif c in [ord('v')]:      # v - enable VGA colors
             self.enableTrueVGAColors()
         #elif c in [ord('H')]:  # H = scroll all the way left (like home in editor)
@@ -1751,12 +1876,12 @@ class UserInterface():  # Separate view (curses) from this controller
             #self.statusBar.colorPicker_bg_16.hide()
             self.appState.sideBarShowing = False
             self.statusBar.hide()
-            self.cursorOff()
             self.setWindowTitle(self.appState.curOpenFileName)
         self.playing = True
         self.metaKey = 0
         if self.appState.playOnlyMode: 
             self.appState.drawBorders = False
+            self.cursorOff()
         if not self.appState.playOnlyMode:
             # mode, show extra stuff.
             self.drawStatusBar()
@@ -1819,11 +1944,6 @@ class UserInterface():  # Separate view (curses) from this controller
                 # In other words, un-stick the mouse button in case it's stuck:
             if self.metaKey == 1 and not self.appState.playOnlyMode and c != curses.ERR:   # esc
                 self.pressingButton = False
-                #if cursorMode != "Draw" and cursorMode != "Paint":
-                #    print('\033[?1003l') # disable mouse reporting
-                #    self.hardRefresh()
-                #    curses.mousemask(1)
-                #    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 if self.pushingToClip:
                     self.pushingToClip = False
                 if c == 91: c = self.stdscr.getch() # alt-arrow does this in this mrxvt 5.x build
@@ -1833,14 +1953,14 @@ class UserInterface():  # Separate view (curses) from this controller
                 elif c in [45]: # esc-- (alt minus) - fps down
                     self.decreaseFPS()
                     self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
-                elif c in [98, curses.KEY_LEFT]:      # alt-left - prev bg color (in 16)
+                elif c in [curses.KEY_LEFT]:      # alt-left - prev bg color (in 16)
                     if self.appState.colorMode == "16":
                         self.prevBgColor()
                     elif self.appState.colorMode == "256":
                         self.prevFgColor()
                         #self.statusBar.colorPicker.handler.move_down_256()
                     c = None 
-                elif c in [102, curses.KEY_RIGHT]:     # alt-right - next bg color
+                elif c in [curses.KEY_RIGHT]:     # alt-right - next bg color
                     if self.appState.colorMode == "16":
                         self.nextBgColor()
                     elif self.appState.colorMode == "256":
@@ -1876,21 +1996,31 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.delLine(frange=self.appState.playbackRange)
                 elif c == 105:      # alt-i - File/Canvas Information
                     self.clickedInfoButton()
-                elif c == 109 or c == 102:    # alt-m or alt-f - load menu
-                    #self.statusBar.menuButton.on_click() 
+                #elif c == 109 or c == 102:    # alt-m or alt-f - load menu
+                elif c == ord('f'):    # alt-f - open file menu
                     self.commandMode = False
+                    self.playing = False
                     self.openMenu("File")
+                elif c == ord('e'):    # alt-f - open edit menu
+                    self.commandMode = False
+                    self.playing = False
+                    self.openMenu("Edit")
+                elif c == ord('a'):    # alt-a - Animation menu
+                    self.commandMode = False
+                    self.playing = False
+                    self.openMenu("Anim")
+                elif c == ord('m'):    # alt-m - Mouse Menu
+                    self.commandMode = False
+                    self.playing = False
+                    self.openMenu("Mouse Tools")
                 elif c == 99:     # alt-c - color picker
                     self.commandMode = False
-                    #if self.appState.colorMode == "256":
-                    #    self.statusBar.colorPickerButton.on_click()
-                    #self.statusBar.colorPickerButton.on_click()
                     self.selectColorPicker()
                 elif c == ord(' '):     # alt-space - insert drawing character
                     drawChar = self.appState.drawChar
                     x_param = self.xy[1]
                     y_param = self.xy[0]
-                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True, frange=self.appState.playbackRange)
+                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True, frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                 elif c == 122:  # alt-z = undo
                     self.clickedUndo()
                 elif c == 114:  # alt-r = redo
@@ -1916,52 +2046,52 @@ class UserInterface():  # Separate view (curses) from this controller
                         c = None
                 elif c in [ord('1')]:    # esc-1 copy of F1 - insert extended character
                     self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('2')]:    # esc-2 copy of F2 - insert extended character
                     self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('3')]:    # F3 - insert extended character
                     self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('4')]:    # F4 - insert extended character
                     self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('5')]:    # F5 - insert extended character
                     self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('6')]:    # F6 - insert extended character
                     self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('7')]:    # F7 - insert extended character
                     self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('8')]:    # F8 - insert extended character
                     self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('9')]:    # F9 - insert extended character
                     self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 elif c in [ord('0')]:    # F10 - insert extended character
                     self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg,
-                            frange=self.appState.playbackRange)
+                            frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                     c = None
                     self.hardRefresh()
                 else:
@@ -1971,6 +2101,8 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.metaKey = 0
                 c = None 
             elif c != -1:   # -1 means no keys are pressed.
+                #if self.appState.cursorMode in ["Draw", "Paint", "ABrush"]:
+                #    self.enableMouseReporting()
                 # up or down to change framerate, otherwise stop playing
                 #if self.appState.durview_running:   # Extra UI for DurView
                 #    if c in [ord('e')]:     # e - open file in editor
@@ -1985,17 +2117,18 @@ class UserInterface():  # Separate view (curses) from this controller
                         except:
                             pass
                         realmaxY,realmaxX = self.realstdscr.getmaxyx()
-                        # enable mouse tracking only when the button is pressed
-                        if mouseState == curses.BUTTON1_CLICKED:
-                            if self.pressingButton:
-                                self.pressingButton = False
-                                if cursorMode != "Draw" and cursorMode != "Paint":
-                                    print('\033[?1003l') # disable mouse reporting
-                                    self.hardRefresh()
-                                    curses.mousemask(1)
-                                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                                if self.pushingToClip:
-                                    self.pushingToClip = False
+
+                        if mouseY == self.appState.ui_zones["fpsBar"][0] and \
+                                mouseX in range(self.appState.ui_zones["fpsBar"][1], self.appState.ui_zones["fpsBar"][1] + 7):
+                            if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                                self.increaseFPS()
+                                # calculate new delta
+                                self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
+                            elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                                self.decreaseFPS()
+                                self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
+
+
 
                         if not self.appState.hasMouseScroll:
                             curses.BUTTON5_PRESSED = 0
@@ -2008,39 +2141,30 @@ class UserInterface():  # Separate view (curses) from this controller
                             curses.BUTTON4_PRESSED
                         except:
                             curses.BUTTON4_PRESSED = 0
-                        if mouseState & curses.BUTTON4_PRESSED:   # wheel up
-                            self.move_cursor_up()
-                        elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
-                            self.move_cursor_down()
-                            
-                        if mouseState & curses.BUTTON1_PRESSED:
-                            #if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX: # in edit area
-                            if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
-                                and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
-                                if not self.pressingButton:
-                                    self.pressingButton = True
-                                    print('\033[?1003h') # enable mouse tracking with the XTERM APIP
-                                    self.hardRefresh()
+                        # did mouse stuff in the canvas.
+                        if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
+                            if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                                self.move_cursor_up()
+                            elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                                self.move_cursor_down()
+                                
+                            if mouseState & curses.BUTTON1_PRESSED:
+                                self.stdscr.nodelay(0) # block input when calling getch
+                                self.enableMouseReporting()
+                                self.pressingButton = True
                             else:
-                                self.pressingButton = False
-                                if cursorMode != "Draw" and cursorMode != "Paint":
-                                    print('\033[?1003l') # disable mouse reporting
+                                if self.pressingButton:
+                                    self.stdscr.nodelay(1) # do not block input when calling getch
+                                    self.disableMouseReporting()
+                                    self.pressingButton = False
+                                    if self.pushingToClip:
+                                        self.pushingToClip = False
+                                    #if self.appState.cursorMode != "Draw":
+                                    self.disableMouseReporting()
                                     self.hardRefresh()
                                     curses.mousemask(1)
                                     curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                                if self.pushingToClip:
-                                    self.pushingToClip = False
-                        else:
-                            if self.pressingButton:
-                                self.pressingButton = False
-                                if self.pushingToClip:
-                                    self.pushingToClip = False
-                                #if self.appState.cursorMode != "Draw":
-                                print('\033[?1003l') # disable mouse reporting
-                                self.hardRefresh()
-                                curses.mousemask(1)
-                                curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                        if self.pressingButton or mouseState == curses.BUTTON1_CLICKED:    # self.playing == True
+                        if self.pressingButton or mouseState == curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_PRESSED:    # self.playing == True
                             self.gui.got_click("Click", mouseX, mouseY)
                             if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                                 and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
@@ -2049,18 +2173,18 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.xy[0] = mouseY + self.appState.topLine
                             elif mouseX < realmaxX and mouseY in [self.statusBarLineNum, self.statusBarLineNum+1]:   # we clicked on the status bar while playing.
                                 if mouseY == self.statusBarLineNum: # clicked upper bar
-                                    offset = 6  # making room for the menu bar
-                                    tOffset = realmaxX - (realmaxX - self.transportOffset) + 6
+                                    offset = self.line_1_offset # line 1 of the status bar 
+                                    tOffset = self.transportOffset
                                     if not self.appState.narrowWindow:
-                                        if mouseX in [tOffset, tOffset + 1]:  # clicked pause button
-                                            self.clickHighlight(tOffset, "||")
+                                        if mouseX in [tOffset+2, tOffset+3]:  # clicked pause button
+                                            self.clickHighlight(tOffset+2, "||")
                                             self.stopPlaying()
-                                        elif mouseX == 12 + offset:    # clicked FPS down
-                                            self.clickHighlight(12 + offset, "<")
+                                        elif mouseX == 22 + offset:    # clicked FPS down
+                                            self.clickHighlight(22 + offset, "<")
                                             self.decreaseFPS()
                                             self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
-                                        elif mouseX == 16 + offset:    # clicked FPS up
-                                            self.clickHighlight(16 + offset, ">")
+                                        elif mouseX == 26 + offset:    # clicked FPS up
+                                            self.clickHighlight(26 + offset, ">")
                                             self.increaseFPS()
                                             self.appState.sleep_time = (1000.0 / self.opts.framerate) / 1000.0
                                 elif mouseY == self.statusBarLineNum+1:    # clicked bottom bar
@@ -2098,6 +2222,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.xy[1] = 1
                     elif c in [338, curses.KEY_END]:   # 338 = end
                         self.xy[1] = self.mov.sizeX
+                    elif c in [331, curses.KEY_IC]:    # 331 = Insert
+                        self.toggleInsertMode()
                     elif c in [10, 13, curses.KEY_ENTER]:               # enter (10 if we
                         self.move_cursor_enter()
                         # don't do curses.nonl())
@@ -2118,46 +2244,46 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.xy[1] = self.mov.sizeX
                     elif c in [curses.KEY_F1]:    # F1 - insert extended character
                         self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F2]:    # F2 - insert extended character
                         self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F3]:    # F3 - insert extended character
                         self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F4]:    # F4 - insert extended character
                         self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F5]:    # F5 - insert extended character
                         self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F6]:    # F6 - insert extended character
                         self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F7]:    # F7 - insert extended character
                         self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F8]:    # F8 - insert extended character
                         self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F9]:    # F9 - insert extended character
                         self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c in [curses.KEY_F10]:    # F10 - insert extended character
                         self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg,
-                                frange=self.appState.playbackRange)
+                                frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
                         c = None
                     elif c != None and c <= 128 and c >= 32:      # normal printable character
-                        self.insertChar(c, fg=self.colorfg, bg=self.colorbg, frange=self.appState.playbackRange)
+                        self.insertChar(c, fg=self.colorfg, bg=self.colorbg, frange=self.appState.playbackRange, insertMode=self.appState.insertMode)
 
             shouldDraw = False
             while True:
@@ -2217,7 +2343,8 @@ class UserInterface():  # Separate view (curses) from this controller
         self.playing = False
         self.statusBar.toolButton.show()
         self.statusBar.animButton.show()
-        if self.appState.cursorMode == "Draw" or self.appState.cursorMode == "Paint":
+        if self.appState.cursorMode == "Draw" or self.appState.cursorMode == "Paint" \
+                or self.appState.cursorMode == "ABrush":
             self.statusBar.drawCharPickerButton.show()
             self.enableMouseReporting()
 
@@ -2386,6 +2513,11 @@ class UserInterface():  # Separate view (curses) from this controller
         if self.xy[0] < self.appState.topLine:   # if cursor is off screen
             self.xy[0] = self.appState.topLine   # put it back on
 
+    def drawOpenTabs(self, line=None, column=0):
+        real_max_line, real_max_col = self.realstdscr.getmaxyx()
+        if not line:
+            line = realmax
+
     def drawStatusBar(self):
         if self.statusBar.hidden:
             return False
@@ -2394,6 +2526,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.appState.narrowWindow = False
             # show menu buttons
             self.statusBar.menuButton.show()
+            self.statusBar.editButton.show()
             self.statusBar.toolButton.show()
             self.statusBar.animButton.show()
             self.statusBar.drawCharPickerButton.show()
@@ -2401,6 +2534,7 @@ class UserInterface():  # Separate view (curses) from this controller
             self.appState.narrowWindow = True
             # hide menu buttons
             self.statusBar.menuButton.hide()
+            self.statusBar.editButton.hide()
             self.statusBar.toolButton.hide()
             self.statusBar.animButton.hide()
             self.statusBar.drawCharPickerButton.hide()
@@ -2509,6 +2643,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.statusBarLineNum = statusBarLineNum
         # resize window, tell the statusbar buttons
         self.statusBar.menuButton.update_real_xy(x = statusBarLineNum)
+        self.statusBar.editButton.update_real_xy(x = statusBarLineNum)
         self.statusBar.toolButton.update_real_xy(x = statusBarLineNum)
         self.statusBar.animButton.update_real_xy(x = statusBarLineNum)
         self.statusBar.colorPickerButton.update_real_xy(x = statusBarLineNum + 1)
@@ -2531,11 +2666,13 @@ class UserInterface():  # Separate view (curses) from this controller
 
         # Ugly hardcoded locations. These should be handled in the GUI
         # framework instead.
-        frameBar_offset = 2 + line_1_offset
-        fpsBar_offset = 13 + line_1_offset
+        frameBar_offset = 12 + line_1_offset
+        fpsBar_offset = 22 + line_1_offset
         fpsBar_minus_offset = fpsBar_offset + 4
-        delayBar_offset = 23 + line_1_offset
-        rangeBar_offset = 31 + line_1_offset
+        #delayBar_offset = 23 + line_1_offset
+        delayBar_offset = 31 + line_1_offset
+        #rangeBar_offset = 31 + line_1_offset
+        rangeBar_offset = 39 + line_1_offset
         #chMap_offset = 35    # how far in to show the character map
         if self.appState.narrowWindow:
             if self.appState.colorMode == "16":
@@ -2563,6 +2700,9 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
         self.addstr(statusBarLineNum, delayBar_offset, delayBar, curses.color_pair(mainColor))
         self.addstr(statusBarLineNum, rangeBar_offset, rangeBar, curses.color_pair(mainColor))
+        # update elements in UI zones
+        self.appState.ui_zones["frameBar"] = (statusBarLineNum, frameBar_offset)
+        self.appState.ui_zones["fpsBar"] = (statusBarLineNum, fpsBar_offset)
         #if not self.appState.narrowWindow:    # Wide big window
         #    self.addstr(statusBarLineNum, frameBar_offset, frameBar, curses.color_pair(mainColor))
         #    self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
@@ -2681,6 +2821,44 @@ class UserInterface():  # Separate view (curses) from this controller
         locationString = "(%i,%i)" % (self.xy[1]-1, self.xy[0])
         locationStringOffset = realmaxX - len(locationString) - 1
         self.addstr(statusBarLineNum+1, locationStringOffset, locationString, curses.color_pair(mainColor))
+        # Draw mouse mode
+        mouseModeString = self.appState.cursorMode
+        if self.appState.cursorMode == "ABrush":
+            mouseModeString = "ABrush"
+        mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
+        self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
+
+        # Draw Animation Brush frame number
+        if self.appState.cursorMode == "ABrush":
+            if self.appState.animBrush.is_set():
+                abrushFrameString = ''
+                if self.appState.insertMode:
+                    abrushFrameStringOffset = 4
+                else:
+                    abrushFrameStringOffset = 0
+                abrushFrameNumber = self.appState.animBrush.frameNumber + 1
+                abrushTotalFrames = len(self.appState.animBrush.mov.frames)
+                abrushFrameString = f"ABrush: {abrushFrameNumber} / {abrushTotalFrames}"
+
+                if self.appState.animBrush.mode == "loop":
+                    abrushFrameString += " Loop"
+                elif self.appState.animBrush.mode == "clone":
+                    abrushFrameString += " Clone"
+
+                self.addstr(statusBarLineNum-1, abrushFrameStringOffset, abrushFrameString, curses.color_pair(mainColor))
+
+
+
+
+        # Draw Insert mode indicator 
+        insertModeStringOffset = self.chMap_offset - 15
+        if self.appState.insertMode:
+            insertModeString = "Ins"
+            self.addstr(statusBarLineNum+1, insertModeStringOffset, insertModeString, curses.color_pair(mainColor))
+        else:
+            insertModeString = ""
+
+
         # Draw button indicator
         if self.pressingButton:
             self.addstr(statusBarLineNum + 1, locationStringOffset - 1, "*", curses.color_pair(3) | curses.A_BOLD)
@@ -2688,18 +2866,18 @@ class UserInterface():  # Separate view (curses) from this controller
             self.addstr(statusBarLineNum + 1, locationStringOffset - 1, " ", curses.color_pair(3) | curses.A_BOLD)
         if self.realmaxX >= self.appState.full_ui_width:
             # Draw Range, FPS and Delay buttons
-            self.addstr(statusBarLineNum, 13 + line_1_offset, "<", curses.color_pair(clickColor) | curses.A_BOLD)  # FPS buttons
-            self.addstr(statusBarLineNum, 17 + line_1_offset, ">", curses.color_pair(clickColor) | curses.A_BOLD)
+            self.addstr(statusBarLineNum, fpsBar_offset, "<", curses.color_pair(clickColor) | curses.A_BOLD)  # FPS buttons
+            self.addstr(statusBarLineNum, fpsBar_offset + 4, ">", curses.color_pair(clickColor) | curses.A_BOLD)
             if self.appState.modified:
                 self.addstr(statusBarLineNum + 1, realmaxX - 1, "*", curses.color_pair(4) | curses.A_BOLD)
             else:
                 self.addstr(statusBarLineNum + 1, realmaxX - 1, " ", curses.color_pair(4) | curses.A_BOLD)
             if not self.playing:
-                self.addstr(statusBarLineNum, 2 + line_1_offset, "F", curses.color_pair(clickColor) | curses.A_BOLD)  # Frame button
-                self.addstr(statusBarLineNum, 31 + line_1_offset, "R", curses.color_pair(clickColor) | curses.A_BOLD)  # Range button
-                self.addstr(statusBarLineNum, 23 + line_1_offset, "D", curses.color_pair(clickColor) | curses.A_BOLD)  # Delay button
+                self.addstr(statusBarLineNum, frameBar_offset, "F", curses.color_pair(clickColor) | curses.A_BOLD)  # Frame button
+                self.addstr(statusBarLineNum, rangeBar_offset, "R", curses.color_pair(clickColor) | curses.A_BOLD)  # Range button
+                self.addstr(statusBarLineNum, delayBar_offset, "D", curses.color_pair(clickColor) | curses.A_BOLD)  # Delay button
         # draw transport
-        transportString = "|< << |> >> >|" 
+        transportString = "< |> >" 
         transportOffset = realmaxX - len(transportString) - 9 
         self.transportOffset = transportOffset
         if self.appState.narrowWindow:  # small window, only show |>
@@ -2712,11 +2890,11 @@ class UserInterface():  # Separate view (curses) from this controller
 
         else:   # wide window, show full transport
             if self.playing:
-                transportString = "|< << || >> >|" 
+                transportString = "< || >" 
                 self.addstr(statusBarLineNum, transportOffset, transportString, curses.color_pair(mainColor))
-                self.addstr(statusBarLineNum, transportOffset+6, "||", curses.color_pair(clickColor) | curses.A_BOLD)
+                self.addstr(statusBarLineNum, transportOffset+2, "||", curses.color_pair(clickColor) | curses.A_BOLD)
             else:
-                transportString = "|< << |> >> >|" 
+                transportString = "< |> >" 
             self.addstr(statusBarLineNum, transportOffset, transportString, curses.color_pair(clickColor) | curses.A_BOLD)
         # Draw the new status bar
         if self.commandMode:
@@ -2728,9 +2906,9 @@ class UserInterface():  # Separate view (curses) from this controller
             self.addstr(statusBarLineNum, realmaxX - 1, " ", curses.color_pair(2) | curses.A_BOLD)
 
         # More offsets for the tooltips - for transport buttons
-        trans_play_offset = transportOffset + 6
-        trans_prev_offset = transportOffset + 3
-        trans_next_offset = transportOffset + 10
+        trans_play_offset = transportOffset + 2
+        trans_prev_offset = transportOffset + 0
+        trans_next_offset = transportOffset + 5
 
         # Update tooltip locations for free floating tooltips
         frameBar_tip = self.statusBar.other_tooltips.get_tip("g")
@@ -2766,10 +2944,10 @@ class UserInterface():  # Separate view (curses) from this controller
             prev_tip.alwaysHidden = False
             next_tip.alwaysHidden = False
 
-        #if self.appState.colorMode == "16":
-        #    colorPicker_tip.hide()
-
+        # Let the widget draw itself
         self.statusBar.draw()
+
+
         # if cursor is outside of canvas, fix it
         bottomLine = self.realmaxY - 3 + self.appState.topLine
         if self.xy[0] > self.mov.sizeY - 1:  # cursor is past bottom of the canvas
@@ -2789,6 +2967,13 @@ class UserInterface():  # Separate view (curses) from this controller
             drawChar_col = self.statusBar.drawCharPickerButton.realY + 1
             self.addstr(drawChar_line, drawChar_col, self.appState.drawChar, curses.color_pair(self.colorpair))
 
+        if self.appState.cursorMode == "ABrush":
+            #pdb.set_trace()
+            if not self.appState.animBrush.is_set():
+                message = "No animation brush set. Use selection tool to make one"
+                self.addstr(statusBarLineNum - 1, 0, message, self.appState.theme['mainColor'])
+                self.refresh()
+                #self.notify(message)
         if resized:
             self.refresh()
             self.showFileInformation()
@@ -2854,27 +3039,24 @@ class UserInterface():  # Separate view (curses) from this controller
 
         curses.noecho()
         while self.appState.editorRunning:    # Real "main loop" - get user input, aka "edit mode"
+            if self.appState.cursorMode in ["Draw", "Paint", "ABrush"]:
+                self.enableMouseReporting()
+
             self.testWindowSize()
             # print statusbar stuff
             self.drawStatusBar()
             self.move(self.xy[0], self.xy[1] - 1)  # move cursor to the right
             # spot for refresh
             curses.panel.update_panels()
+
             self.stdscr.refresh()
             c = self.stdscr.getch() # non-wide characters, for old ncurses
-            #c = ord(self.stdscr.get_wch()) # wide characters, for ncursesw
             self.testWindowSize()
-            #if c in ["\x1b\x1b\x5b\x42"]: self.notify("alt-down")
             
             if self.metaKey == 1:
                 self.pressingButton = False
                 if self.pushingToClip:
                     self.pushingToClip = False
-                if cursorMode != "Draw" and cursorMode != "Paint":
-                    print('\033[?1003l') # disable mouse reporting
-                    self.hardRefresh()
-                    curses.mousemask(1)
-                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 if c == 111:                # alt-o - open
                     self.openFromMenu()     # as if we clicked menu->open
                 elif c == 115:                 # alt-s - save
@@ -2884,20 +3066,17 @@ class UserInterface():  # Separate view (curses) from this controller
                     if self.appState.durview_running:
                         self.appState.editorRunning = False
                         c = None
-                        #return
                     else:
                         self.safeQuit()
                 elif c in [104, 63]:                # alt-h - help
                     self.showHelp()
                     c = None
-                #elif c in [98, curses.KEY_LEFT]:      # alt-left - prev bg color
                 elif c in [curses.KEY_LEFT]:      # alt-left - prev bg color (for 16)
                     if self.appState.colorMode == "16":
                         self.prevBgColor()
                     elif self.appState.colorMode == "256":
                         self.prevFgColor()
                     c = None
-                #elif c in [102, curses.KEY_RIGHT]:     # alt-right - next bg color (for 16)
                 elif c in [curses.KEY_RIGHT]:     # alt-right - next fg color
                     if self.appState.colorMode == "16":
                         self.nextBgColor()
@@ -2942,12 +3121,11 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.eyeDrop(self.xy[1] - 1, self.xy[0])    # cursor position
                 elif c == ord('P'):      # alt-P - pick up charcter
                     self.pickUpDrawingChar(self.xy[1] - 1, self.xy[0])
-                    #self.notify(f"Picked up character: {self.appState.drawChar}")
                 elif c == ord(' '):     # alt-space - insert drawing character
                     drawChar = self.appState.drawChar
                     x_param = self.xy[1]
                     y_param = self.xy[0]
-                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True)
+                    self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=True, pushUndo=True, insertMode=self.appState.insertMode)
                 elif c == ord('l'): # alt-l - color under cursor
                     self.insertColor(fg=self.colorfg, bg=self.colorbg, pushUndo=True)
                 elif c == ord('L'): # alt-L - search and replace color
@@ -2956,28 +3134,20 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.showCharInspector()
                 elif c == 105:      # alt-i - File/Canvas Information
                     self.clickedInfoButton()
-                    #if self.appState.sideBarShowing:
-                    #    self.toggleShowFileInformation()
-                    #else:
-                    #    self.showFileInformation(notify=True)
-                elif c == 109 or c == 102:    # alt-m or alt-f - load menu
+                elif c == ord('f'):    # alt-f - open file menu
                     self.commandMode = False
                     self.openMenu("File")
+                elif c == ord('e'):    # alt-f - open file menu
+                    self.commandMode = False
+                    self.openMenu("Edit")
                 elif c == ord('a'):    # alt-a - Animation menu
                     self.commandMode = False
                     self.openMenu("Anim")
-                elif c == 116: # or c =- 84:    # alt-t or alt-T - mouse tools menu
+                elif c == ord('m'):    # alt-m - Mouse Menu
                     self.commandMode = False
                     self.openMenu("Mouse Tools")
-                    #self.statusBar.toolButton.on_click()
                 elif c == 99:     # alt-c - color picker
                     self.commandMode = False
-                    #if self.appState.colorMode == "256":
-                    #if self.appState.sideBarShowing:
-                    #    self.statusBar.colorPicker.switchTo()
-                    #else:
-                    #    self.statusBar.colorPickerButton.on_click()
-                    #self.selectColorPicker()
                     self.statusBar.colorPickerButton.on_click()
                 # Animation Keystrokes
                 elif c == 68:     #alt-D - set delay for current frame
@@ -3014,7 +3184,6 @@ class UserInterface():  # Separate view (curses) from this controller
                     # Paste from the clipboard
                     if self.clipBoard:  # If there is something in the clipboard
                         self.askHowToPaste()
-                        #self.pasteFromClipboard()
                 elif c == ord('V'):   # alt-V, View mode
                     self.enterViewMode()
                 elif c == 82:   # alt-R = set playback range
@@ -3027,59 +3196,58 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.increaseFPS()
                 elif c in [45]: # esc-- (alt minus) - fps down
                     self.decreaseFPS()
-                elif c in [75]: # alt-K = start marking selection
-                    startPoint=(self.xy[0] + self.appState.topLine, self.xy[1] + self.appState.firstCol)
-                    self.startSelecting(firstkey=c)  # start selecting text
+                elif c in [ord('J')]: # alt-J = previous animation brush frame
+                    if self.appState.cursorMode == "ABrush":
+                        if self.appState.animBrush.is_set():
+                            self.appState.animBrush.prev_frame()
+                            self.drawStatusBar()
+                elif c in [ord('K')]: # alt-K = start marking selection, or next animation brush frame
+                    if self.appState.cursorMode == "ABrush":
+                        if self.appState.animBrush.is_set():
+                            self.appState.animBrush.next_frame()
+                            self.drawStatusBar()
+                    else:
+                        startPoint=(self.xy[0] + self.appState.topLine, self.xy[1] + self.appState.firstCol)
+                        self.startSelecting(firstkey=c)  # start selecting text
                 elif c in [ord('1')]:    # esc-1 copy of F1 - insert extended character
-                    self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg)
+                    self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     #self.hardRefresh()
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('2')]:    # esc-2 copy of F2 - insert extended character
-                    self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
-                    #self.refresh()
-                    #self.refresh(refreshScreen=False)
+                    self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('3')]:    # F3 - insert extended character
-                    self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
+                    self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('4')]:    # F4 - insert extended character
-                    self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg)
-                    #self.refresh()
+                    self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('5')]:    # F5 - insert extended character
-                    self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
+                    self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('6')]:    # F6 - insert extended character
-                    self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
+                    self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('7')]:    # F7 - insert extended character
-                    self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
+                    self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('8')]:    # F8 - insert extended character
-                    self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
+                    self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('9')]:    # F9 - insert extended character
-                    self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
+                    self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c in [ord('0')]:    # F10 - insert extended character
-                    self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg)
-                    #self.hardRefresh()
+                    self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                     self.stdscr.refresh()
                     c = None
                 elif c == 27:   # 2nd esc byte - possibly alt-arrow.
@@ -3114,20 +3282,10 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.prevFgColor()
                             c = None
                     self.pressingButton = False
-                    if cursorMode != "Draw" and cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
-                        self.hardRefresh()
-                        curses.mousemask(1)
-                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                     if self.pushingToClip:
                         self.pushingToClip = False
                 else:
                     self.pressingButton = False
-                    if cursorMode != "Draw" and cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
-                        self.hardRefresh()
-                        curses.mousemask(1)
-                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                     if self.pushingToClip:
                         self.pushingToClip = False
                     if self.appState.debug:
@@ -3135,6 +3293,7 @@ class UserInterface():  # Separate view (curses) from this controller
                             self.set_trace()
                         else:
                             self.notify("keystroke: %d" % c) # alt-unknown
+
                 self.commandMode = False
                 self.metaKey = 0
                 c = None
@@ -3145,11 +3304,6 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.pressingButton = False
                 if self.pushingToClip:
                     self.pushingToClip = False
-                if cursorMode != "Draw" and cursorMode != "Paint":
-                    print('\033[?1003l') # disable mouse reporting
-                    self.hardRefresh()
-                    curses.mousemask(1)
-                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 self.appState.renderMouseCursor = False
                 c = None
             if c == 24: self.safeQuit()     # ctrl-x
@@ -3172,9 +3326,6 @@ class UserInterface():  # Separate view (curses) from this controller
             elif c in [383]:              # shift-delete - delete from opposite direction
                 self.reverseDelete()
             elif c in [9, 353]:     # 9 = tab, 353 = shift-tab
-                #if self.appState.colorMode == "256":
-                    #self.statusBar.colorPickerButton.on_click()
-                    #self.selectColorPicker()
                 self.selectColorPicker()
                 self.cursorOn()
             elif c in [339, curses.KEY_PPAGE]:  # page up
@@ -3186,34 +3337,34 @@ class UserInterface():  # Separate view (curses) from this controller
             elif c in [5, curses.KEY_END]:      # ctrl-e or end
                 self.move_cursor_end()
             elif c in [curses.KEY_F1]:    # F1 - insert extended character
-                self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f1'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F2]:    # F2 - insert extended character
-                self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f2'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F3]:    # F3 - insert extended character
-                self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f3'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F4]:    # F4 - insert extended character
-                self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f4'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F5]:    # F5 - insert extended character
-                self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f5'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F6]:    # F6 - insert extended character
-                self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f6'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F7]:    # F7 - insert extended character
-                self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f7'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F8]:    # F8 - insert extended character
-                self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f8'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F9]:    # F9 - insert extended character
-                self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f9'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c in [curses.KEY_F10]:    # F10 - insert extended character
-                self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(self.chMap['f10'], fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
                 c = None
             elif c == curses.KEY_LEFT:      # left - move cursor right a character
                 self.move_cursor_left()
@@ -3227,16 +3378,13 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.move_cursor_home()
             elif c in [338, curses.KEY_END]:   # 338 = end
                 self.move_cursor_end()
+            elif c in [331, curses.KEY_IC]:    # 331 = Insert
+                self.toggleInsertMode()
             elif c != curses.KEY_MOUSE and self.pressingButton:
                 self.pressingButton = False
                 if self.pushingToClip:
                     self.pushingToClip = False
                 cursorMode = self.appState.cursorMode
-                if cursorMode != "Draw" and cursorMode != "Paint":
-                    print('\033[?1003l') # disable mouse reporting
-                    self.hardRefresh()
-                    curses.mousemask(1)
-                    curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
             elif c == curses.KEY_MOUSE: # We are not playing
                 try:
                     _, mouseX, mouseY, _, mouseState = curses.getmouse()
@@ -3251,24 +3399,19 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.appState.renderMouseCursor = True
                 if mouseState > 2:  # probably click-dragging. We want an instant response, so...
                     pass
-                    #self.pressingButton = True
-                    #print('\033[?1003h') # enable mouse tracking with the XTERM API
-                    #print('\033[?1003l') # disable mouse reporting
-                    #curses.mousemask(1)
-                    #curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                 if mouseState == 1:
                     self.pressingButton = False
                     if self.pushingToClip:
                         self.pushingToClip = False
                     cursorMode = self.appState.cursorMode
-                    if cursorMode != "Draw" and cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
+                    if cursorMode != "Draw" and cursorMode != "Paint" \
+                            and cursorMode != "ABrush":
+                        self.disableMouseReporting()
                         self.hardRefresh()
                         curses.mousemask(1)
                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                         if self.pushingToClip:
                             self.pushingToClip = False
-                    #self.notify("Released from drag, hopefully.")
                 if self.appState.debug:
                     # clear mouse state lines
                     winHeight,winWidth = self.realstdscr.getmaxyx()
@@ -3278,22 +3421,60 @@ class UserInterface():  # Separate view (curses) from this controller
                     # print mouse state
                     mouseDebugString = f"mX: {mouseX}, mY: {mouseY}, mState: {mouseState}, press:{b1_press} rel:{b1_release} clk:{b1_click} dclk: {b1_dclick}"
                     self.addstr(self.statusBarLineNum-4, 0, mouseDebugString, curses.color_pair(3) | curses.A_BOLD)
-                    #self.addstr(self.statusBarLineNum-5, 0, mouseDebugStates, curses.color_pair(2) | curses.A_BOLD
-                #except:
-                #    pass
-                #if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
-                #    and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
-                if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX:
+
+
+                # did mouse stuff in a status bar element
+                if mouseY == self.appState.ui_zones["frameBar"][0] and \
+                        mouseX in range(self.appState.ui_zones["frameBar"][1], self.appState.ui_zones["frameBar"][1] + 7):
+                    if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                        self.mov.nextFrame()
+                    elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                        self.mov.prevFrame()
+
+                if mouseY == self.appState.ui_zones["fpsBar"][0] and \
+                        mouseX in range(self.appState.ui_zones["fpsBar"][1], self.appState.ui_zones["fpsBar"][1] + 7):
+                    if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                        self.increaseFPS()
+                    elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                        self.decreaseFPS()
+
+                # check if scrolled in F1-F10 character map
+                char_area_start = self.chMap_offset
+                char_area_end = self.chMap_offset+len(self.chMapString)
+                if mouseY == self.statusBarLineNum+1: # clicked bottom bar 
+                    if mouseX in range(char_area_start, char_area_end):
+                        if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                            #self.clickHighlight(self.chMap_offset + len(self.chMapString), ">", bar='bottom')
+                            self.nextCharSet()
+                        elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
+                            #self.clickHighlight(self.chMap_offset - 1, "<", bar='bottom')
+                            self.prevCharSet()
+
+
+                # did mouse stuff in the canvas.
+                if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
                     # we're in the canvas, not playing
 
-                    if mouseState & curses.BUTTON1_PRESSED:
+                    # If we just click, move the currsor instead of selecting.
+                    if self.appState.cursorMode == "Select":
+                        if mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_DOUBLE_CLICKED:
+                            self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
+                            self.xy[0] = mouseY + self.appState.topLine
+                            # Move the cursor instead of selecting
+                        # Otherwise, select
+                        elif mouseState & curses.BUTTON1_PRESSED:
+                            self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
+                            self.xy[0] = mouseY + self.appState.topLine
+                            self.pressingButton = True
+                            self.startSelecting(mouse=True)
+                    elif mouseState & curses.BUTTON1_PRESSED:
                         if not self.pressingButton:
                             self.pressingButton = True
-                            print('\033[?1003h') # enable mouse tracking with the XTERM API
+                            self.enableMouseReporting()
                             self.hardRefresh()
                         if not self.pushingToClip:
                             cmode = self.appState.cursorMode
-                            if cmode == "Draw" or cmode == "Paint" or cmode == "Color" or cmode == "Erase":
+                            if cmode == "Draw" or cmode == "Paint" or cmode == "Color" or cmode == "Erase" or cmode == "ABrush":
                                 self.undo.push()
                                 self.pushingToClip = True
                     elif mouseState & curses.BUTTON1_RELEASED:
@@ -3302,12 +3483,14 @@ class UserInterface():  # Separate view (curses) from this controller
                             if self.pushingToClip:
                                 self.pushingToClip = False
                             cursorMode = self.appState.cursorMode
-                            if cursorMode != "Draw" and cursorMode != "Paint":
-                                print('\033[?1003l') # disable mouse reporting
+                            if cursorMode != "Draw" and cursorMode != "Paint" \
+                                    and cursorMode != "ABrush":
+                                self.disableMouseReporting()
                                 self.hardRefresh()
                                 curses.mousemask(1)
                                 curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                            if cursorMode == "Draw" and cursorMode == "Paint":
+                            if cursorMode == "Draw" or cursorMode == "Paint" \
+                                    or cursorMode == "ABrush":
                                 self.enableMouseReporting()
                             if self.pushingToClip:
                                 self.pushingToClip = False
@@ -3327,6 +3510,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     except:
                         curses.BUTTON4_PRESSED = 0
                     if mouseState & curses.BUTTON4_PRESSED:   # wheel up
+                        #pdb.set_trace()
                         if self.appState.scrollColors:
                             self.nextFgColor()
                         else:
@@ -3344,11 +3528,6 @@ class UserInterface():  # Separate view (curses) from this controller
                         if self.pressingButton:
                             if self.appState.debug:
                                 self.addstr(self.statusBarLineNum-2, 20, "Draw triggered.", curses.color_pair(6) | curses.A_BOLD)
-                                #self.notify("Draw triggered.")
-                            # also set cursor position - not anymore.
-                            #self.xy[1] = mouseX + 1 # set cursor position
-                            #self.xy[0] = mouseY + self.appState.topLine
-                            # Insert the selected character.
                             drawChar = self.appState.drawChar
                             try:
                                 x_param = mouseX + 1 + self.appState.firstCol
@@ -3362,11 +3541,12 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.addstr(self.statusBarLineNum-2, 20, "Draw untriggered.", curses.color_pair(5) | curses.A_BOLD)
 
                     elif self.appState.cursorMode == "Paint":   # Draw Brush under cursor
+                        half_brush_height = int(self.appState.brush.sizeX  / 2)
+                        half_brush_width = int(self.appState.brush.sizeY  / 2)
                         if self.pressingButton:
                             if self.appState.debug:
                                 self.addstr(self.statusBarLineNum-2, 20, "Paint triggered.", curses.color_pair(6) | curses.A_BOLD)
                             # Paint brush onto canvas
-                            #drawChar = self.appState.drawChar
                             painting = True
                             if not self.appState.brush: # if no brush is set...
                                 painting = False    # don't paint.
@@ -3376,14 +3556,48 @@ class UserInterface():  # Separate view (curses) from this controller
                                 try:
                                     x_param = mouseX + 1 + self.appState.firstCol
                                     y_param = mouseY + self.appState.topLine
-                                    #self.insertChar(ord(drawChar), fg=self.colorfg, bg=self.colorbg, x=x_param, y=y_param, moveCursor=False, pushUndo=False)
-                                    self.pasteFromClipboard(startPoint = [y_param, x_param], clipBuffer=self.appState.brush, transparent=True, pushUndo=False)
+                                    self.pasteFromClipboard(startPoint = [y_param - half_brush_height, x_param - half_brush_width], clipBuffer=self.appState.brush, transparent=True, pushUndo=False)
                                 except IndexError:
                                     self.notify(f"Error, debug info: x={x_param}, y={y_param}, topLine={self.appState.topLine}, mouseX={mouseX}, mouseY={mouseY}", pause=True)
                                 self.refresh()
                         else:
                             if self.appState.debug:
                                 self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", curses.color_pair(5) | curses.A_BOLD)
+
+
+                    elif self.appState.cursorMode == "ABrush" and self.appState.animBrush.is_set():   # Paint animation brush
+                        half_brush_height = int(self.appState.animBrush.current_frame().sizeX  / 2)
+                        half_brush_width = int(self.appState.animBrush.current_frame().sizeY  / 2)
+                        if self.pressingButton:
+                            if self.appState.debug:
+                                self.addstr(self.statusBarLineNum-2, 20, "AnimBrush triggered.", curses.color_pair(6) | curses.A_BOLD)
+                            painting = False 
+                            if self.appState.animBrush.is_set():
+                                painting = True
+                            if painting:
+                                if self.appState.debug:
+                                    self.addstr(self.statusBarLineNum-2, 20, "Paint painting.", curses.color_pair(6) | curses.A_BOLD)
+                                try:
+                                    x_param = mouseX + 1 + self.appState.firstCol
+                                    y_param = mouseY + self.appState.topLine
+                                    if self.appState.animBrush.mode == "loop":
+                                        self.pasteFromClipboard(startPoint = [y_param - half_brush_height, x_param - half_brush_width], clipBuffer=self.appState.animBrush.current_frame(), transparent=True, pushUndo=False)
+                                        # Animation brush, so advance brush and movie frames.
+                                        self.appState.animBrush.next_frame()
+                                        self.mov.nextFrame()
+                                    elif self.appState.animBrush.mode == "clone":
+                                        self.cloneToNewFrame()
+                                        self.pasteFromClipboard(startPoint = [y_param - half_brush_height, x_param - half_brush_width], clipBuffer=self.appState.animBrush.current_frame(), transparent=True, pushUndo=False)
+                                        # Animation brush, so advance brush and movie frames.
+                                        self.appState.animBrush.next_frame()
+                                        self.mov.nextFrame()
+                                except IndexError:
+                                    self.notify(f"Error, debug info: x={x_param}, y={y_param}, topLine={self.appState.topLine}, mouseX={mouseX}, mouseY={mouseY}", pause=True)
+                                self.refresh()
+                        else:
+                            if self.appState.debug:
+                                self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", curses.color_pair(5) | curses.A_BOLD)
+
 
 
                     elif self.appState.cursorMode == "Color":   # Change the color under the cursor
@@ -3405,10 +3619,6 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.eyeDrop(mouseX + self.appState.firstCol, mouseY + self.appState.topLine)
                         self.statusBar.setCursorModeMove()
                         self.drawStatusBar()
-                    elif self.appState.cursorMode == "Select":   # this does not exist lol
-                        self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
-                        self.xy[0] = mouseY + self.appState.topLine
-                        self.startSelecting(mouse=True)
 
                 # else, not in the canvas
                 elif self.pressingButton:
@@ -3416,11 +3626,10 @@ class UserInterface():  # Separate view (curses) from this controller
                     if self.pushingToClip:
                         self.pushingToClip = False
                     if self.appState.cursorMode != "Draw" and self.appState.cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
+                        self.disableMouseReporting()
                         self.hardRefresh()
                         curses.mousemask(1)
                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
-                    #self.mov.currentFrame.newColorMap[self.xy[0]][self.xy[1] - 1] = [self.colorfg, self.colorbg]
 
                 if not self.appState.hasMouseScroll:
                     curses.BUTTON5_PRESSED = 0
@@ -3433,110 +3642,105 @@ class UserInterface():  # Separate view (curses) from this controller
                     curses.BUTTON4_PRESSED
                 except:
                     curses.BUTTON4_PRESSED = 0
-                if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON4_PRESSED or mouseState & curses.BUTTON5_PRESSED or b1_press > 0 or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
-                    #print('\033[?1003h')
-                    #self.notify("Farfenugen")
-                    realmaxY,realmaxX = self.realstdscr.getmaxyx()
-                    cmode = self.appState.cursorMode
 
-                    #if mouseState & curses.BUTTON1_PRESSED:
-                    #    self.gui.got_click("Click", mouseX, mouseY)
-                    # If we clicked in the status bar:
-                    if mouseX < realmaxX and mouseY in [self.statusBarLineNum, self.statusBarLineNum+1]:   # we clicked on the status bar somewhere..
 
-                        if mouseState & curses.BUTTON1_PRESSED:
-                            #if cmode == "Draw" or cmode == "Paint" or cmode == "Color":
-                            self.disableMouseReporting()
-                            self.gui.got_click("Click", mouseX, mouseY)
-                            if cmode == "Draw" or cmode == "Paint":
-                                self.enableMouseReporting()
 
-                        # Add stuff here to take mouse 'commands' like clicking
-                        # play/next/etc on transport, or clicking "start button"
-                        if mouseY == self.statusBarLineNum: # clicked upper bar 
+
+
+                #if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON4_PRESSED or mouseState & curses.BUTTON5_PRESSED or b1_press > 0 or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
+                realmaxY,realmaxX = self.realstdscr.getmaxyx()
+                cmode = self.appState.cursorMode
+
+                if mouseX < realmaxX and mouseY in [self.statusBarLineNum, self.statusBarLineNum+1]:   # we clicked on the status bar somewhere..
+
+                    if mouseState & curses.BUTTON1_PRESSED:
+                        self.disableMouseReporting()
+                        self.gui.got_click("Click", mouseX, mouseY)
+
+                    # Add stuff here to take mouse 'commands' like clicking
+                    # play/next/etc on transport, or clicking "start button"
+                    if mouseY == self.statusBarLineNum: # clicked upper bar 
+                        if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
                             offset = self.line_1_offset # line 1 of the status bar 
                             tOffset = self.transportOffset
                             if not self.appState.narrowWindow:
-                                if mouseX in [tOffset + 6, tOffset + 7]:  # clicked play button
-                                    self.clickHighlight(tOffset + 6, "|>")
+                                if mouseX in [tOffset + 2, tOffset + 3]:  # clicked play button
+                                    self.clickHighlight(tOffset + 2, "|>")
                                     self.startPlaying()
                                     self.metaKey = 0
-                                elif mouseX in [tOffset + 3, tOffset + 4]: # goto prev frame
-                                    self.clickHighlight(tOffset + 3, "<<")
+                                elif mouseX in [tOffset + 0, tOffset + 1]: # goto prev frame
+                                    self.clickHighlight(tOffset + 0, "<<")
                                     self.mov.prevFrame()
-                                elif mouseX in [tOffset + 9, tOffset + 10]: # goto next frame
-                                    self.clickHighlight(tOffset + 9, ">>")
+                                elif mouseX in [tOffset + 4, tOffset + 5]: # goto next frame
+                                    self.clickHighlight(tOffset + 4, ">>")
                                     self.mov.nextFrame()
-                                elif mouseX in [tOffset, tOffset + 1]: # goto first frame
-                                    self.clickHighlight(tOffset, "|<")
-                                    self.mov.gotoFrame(1)
-                                elif mouseX in [tOffset + 12, tOffset + 13]: # goto last frame
-                                    self.clickHighlight(tOffset + 12, ">|")
-                                    self.mov.nextFrame()
-                                    self.mov.gotoFrame(self.mov.frameCount)
-                                if mouseX == 13 + offset:    # clicked FPS down
+                                if mouseX == 22 + offset:    # clicked FPS down
                                     self.clickHighlight(13 + offset, "<")
                                     self.decreaseFPS()
-                                elif mouseX == 17 + offset:    # clicked FPS up
+                                elif mouseX == 26 + offset:    # clicked FPS up
                                     self.clickHighlight(17 + offset, ">")
                                     self.increaseFPS()
-                                elif mouseX == 23 + offset:  # clicked Delay button
+                                elif mouseX == 31 + offset:  # clicked Delay button
                                     self.clickHighlight(23 + offset, "D")
                                     self.getDelayValue()
-                                elif mouseX == 31 + offset:  # clicked Range button
-                                    self.clickHighlight(31 + offset, "R")
+                                elif mouseX in range(39 + offset, 39 + offset + 5):  # clicked Range button or area
+                                    self.clickHighlight(39 + offset, "R")
                                     self.getPlaybackRange()
-                                elif mouseX == 2 + offset:   # clicked Frame button
+                                elif mouseX == 12 + offset:   # clicked Frame button
                                     self.clickHighlight(2 + offset, "F")
                                     self.gotoFrameGetInput()
 
 
-                        elif mouseY == self.statusBarLineNum+1: # clicked bottom bar 
-                            if self.appState.colorMode == "16" and self.realmaxX >= self.appState.full_ui_width:
-                                if mouseX in range(3,19): # clicked a fg color
-                                    fg = mouseX - 2
-                                    self.setFgColor(fg)
-                                elif mouseX in range(25,33):   # clicked a bg color
-                                    bg = mouseX - 24
-                                    self.setBgColor(bg)
-                            char_area_start = self.chMap_offset
-                            char_area_end = self.chMap_offset+len(self.chMapString)
-                            if mouseX == self.chMap_offset + len(self.chMapString):  # clicked next character set
-                                self.clickHighlight(self.chMap_offset + len(self.chMapString), ">", bar='bottom')
-                                self.nextCharSet()
-                            elif mouseX == self.chMap_offset - 1:  # clicked previous character set
-                                self.clickHighlight(self.chMap_offset - 1, "<", bar='bottom')
-                                self.prevCharSet()
-                            elif mouseX in range(char_area_start, char_area_end):
+                    elif mouseY == self.statusBarLineNum+1: # clicked bottom bar 
+                        if self.appState.colorMode == "16" and self.realmaxX >= self.appState.full_ui_width:
+                            if mouseX in range(3,19): # clicked a fg color
+                                fg = mouseX - 2
+                                self.setFgColor(fg)
+                            elif mouseX in range(25,33):   # clicked a bg color
+                                bg = mouseX - 24
+                                self.setBgColor(bg)
+                        char_area_start = self.chMap_offset
+                        char_area_end = self.chMap_offset+len(self.chMapString)
+                        if mouseX == self.chMap_offset + len(self.chMapString):  # clicked next character set
+                            self.clickHighlight(self.chMap_offset + len(self.chMapString), ">", bar='bottom')
+                            self.nextCharSet()
+                        elif mouseX == self.chMap_offset - 1:  # clicked previous character set
+                            self.clickHighlight(self.chMap_offset - 1, "<", bar='bottom')
+                            self.prevCharSet()
+                        elif mouseX in range(char_area_start, char_area_end):
+                            if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
                                 self.clickedChMap(mouseX, mouseY)
-                            elif self.appState.debug:
-                                self.notify("bottom bar. " + str([mouseX, mouseY]))
-                        else:
-                            if self.appState.debug:
-                                self.notify(str([mouseX, mouseY]))
+                        elif self.appState.debug:
+                            self.notify("bottom bar. " + str([mouseX, mouseY]))
+                    else:
+                        if self.appState.debug:
+                            self.notify(str([mouseX, mouseY]))
+                    if cmode == "Draw" or cmode == "Paint":
+                        self.enableMouseReporting()
+
+
                     # If we clicked in the sidebar area, aka to the right of the canvas
                     # and above the status bar:
                     if self.appState.sideBarEnabled:
                         # If we're in the right toolbar sort of area
-                        if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
-                            #if self.appState.colorMode == "256":
-                                # Tell the color picker to respond if the click is in its area:
-                            #    self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
-                            if mouseState == curses.BUTTON1_DOUBLE_CLICKED:
-                                if self.appState.colorMode == "16": # set BG color
+                        #if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
+                        if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
+                            if self.appState.colorMode == "16": # set BG color
+                                if mouseState == curses.BUTTON1_DOUBLE_CLICKED:
                                     self.statusBar.colorPicker.handler.gotDoubleClick(mouseX, mouseY)
-                            else:
+                            elif mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
                                 self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
-                #elif mouseState & curses.BUTTON1_RELEASED:
-                #    pass
-                    #print('\033[?1003l')
-                    #curses.mousemask(1)
-                    #curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
+                            elif mouseState & curses.BUTTON4_PRESSED: # scroll wheel down
+                                if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
+                                    self.statusBar.colorPicker.handler.prev_color()
+                            elif mouseState & curses.BUTTON5_PRESSED: # scroll wheel up
+                                if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
+                                    self.statusBar.colorPicker.handler.next_color()
 
                 if mouseState == curses.BUTTON1_CLICKED:
                     self.pressingButton = False
                     if cursorMode != "Draw" and cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
+                        self.disableMouseReporting()
                         self.hardRefresh()
                         curses.mousemask(1)
                         curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
@@ -3544,12 +3748,10 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.pushingToClip = False
                     realmaxY,realmaxX = self.realstdscr.getmaxyx()
                     cmode = self.appState.cursorMode
-                    #if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                     if mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum and mouseX + self.appState.firstCol < self.mov.sizeX: # we're in the canvas
                         if cmode == "Draw" or cmode == "Color" or cmode == "Erase" or cmode == "Paint":
                             self.undo.push()
                     else:   # Not in the canvas, so give the GUI a click
-                        #pass
                         if cmode == "Draw" or cmode == "Paint":
                             self.disableMouseReporting()
                         self.gui.got_click("Click", mouseX, mouseY)
@@ -3559,8 +3761,6 @@ class UserInterface():  # Separate view (curses) from this controller
                     # and above the status bar:
                     if self.appState.sideBarEnabled:
                         if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
-                            #if self.appState.colorMode == "256":
-                                # Tell the color picker to respond if the click is in its area:
                             self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
             elif c in [curses.KEY_SLEFT, curses.KEY_SRIGHT, 337, 336, 520, 513]:
                 # 337 and 520 - shift-up, 336 and 513 = shift-down
@@ -3574,7 +3774,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 # via shift-arrow or mouse.
             elif c == None: pass
             elif c <= 128 and c >= 32:      # printable ASCII character
-                self.insertChar(c, fg=self.colorfg, bg=self.colorbg)
+                self.insertChar(c, fg=self.colorfg, bg=self.colorbg, insertMode=self.appState.insertMode)
 
                 sumbitch.append(chr(c)) # cheat codes
                 if len(sumbitch) >= sumbitch_len:
@@ -3584,13 +3784,20 @@ class UserInterface():  # Separate view (curses) from this controller
                         self.activate_heat_code()
 
                 self.appState.renderMouseCursor = False
-            #else:
-            #    self.notify(f"Weird character: {chr(c)} or {c}")
-            #self.drawStatusBar()
             if self.appState.viewModeShowInfo: 
                 self.showFileInformation()
             self.refresh(refreshScreen=False)
-            #self.hardRefresh()
+
+    def toggleInsertMode(self):
+        self.appState.insertMode = not self.appState.insertMode
+
+    def anim_brush_prev_frame(self):
+        if self.appState.animBrush.is_set():
+            self.appState.animBrush.prev_frame()
+
+    def anim_brush_next_frame(self):
+        if self.appState.animBrush.is_set():
+            self.appState.animBrush.next_frame()
 
     def selectColorPicker(self, message=None):
         #if self.appState.colorMode == "256":
@@ -3609,10 +3816,7 @@ class UserInterface():  # Separate view (curses) from this controller
         # Save old (UI) color setting, so we can use the color picker and then set the color back when done
         ui_fg = self.colorfg
         ui_bg = self.colorbg
-        #charColor = [self.colorfg, self.colorbg]
-        #old_color_pair = 
         # Get color pair under cursor
-        #old_fg, new_bg = self.mov.currentFrame.newColorMap[line][col]
         old_fg, old_bg = self.mov.currentFrame.newColorMap[self.xy[0]][self.xy[1]-1]
         oldCharColor = [old_fg, old_bg]
         # Print a message for the user to set the New color
@@ -3621,7 +3825,6 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(self.statusBarLineNum, 0, printMessage, curses.color_pair(self.appState.theme['notificationColor']))
         self.stdscr.refresh()
         # Use color picker to pick new destination color (pair)
-        #self.selectColorPicker(message=printMessage)
         picker_color = self.selectColorPicker()    # picker_color is False if user hits Esc in color picker.
         self.clearStatusLine()
         if picker_color == False:
@@ -3744,6 +3947,7 @@ class UserInterface():  # Separate view (curses) from this controller
     def enterViewMode(self, mov=None, opts=None):
         self.statusBar.hide()
         self.stdscr.clear()
+        self.cursorOff()
         old_xy = self.xy
         old_top_line = self.appState.topLine
         old_first_col = self.appState.firstCol
@@ -3970,6 +4174,7 @@ class UserInterface():  # Separate view (curses) from this controller
         curses.nocbreak()
         self.stdscr.keypad(0)
         curses.echo()
+        self.disableMouse()
         curses.endwin()
         #print("Waiting for threads to die...")
         self.killAllHumans()
@@ -4032,15 +4237,15 @@ class UserInterface():  # Separate view (curses) from this controller
         self.appState.loadThemeList(menu=self.statusBar.userThemesMenu,
                                     path="~/.durdraw/")
 
-        self.statusBar.mainMenu.handler.panel.show()
+        self.statusBar.editMenu.handler.panel.show()
         response = self.statusBar.settingsMenu.showHide()
-        self.statusBar.mainMenu.handler.panel.hide()
+        self.statusBar.editMenu.handler.panel.hide()
 
     def openEditMenu(self):
         """ Show the Edit menu """
-        self.statusBar.mainMenu.handler.panel.show()
+        #self.statusBar.mainMenu.handler.panel.show()
         response = self.statusBar.editMenu.showHide()
-        self.statusBar.mainMenu.handler.panel.hide()
+        #self.statusBar.mainMenu.handler.panel.hide()
 
     def askForCharacter(self):
         self.window.nodelay(0) # wait for input when calling getch
@@ -4104,6 +4309,7 @@ class UserInterface():  # Separate view (curses) from this controller
         return newChar
 
     def openDrawCharPicker(self):
+        self.disableMouseReporting()
         self.stdscr.nodelay(0)
         #if self.appState.debug: self.notify(f"Loading character picker.")
         self.statusBar.drawCharPicker.pickChar()
@@ -4122,6 +4328,30 @@ class UserInterface():  # Separate view (curses) from this controller
     def openMouseToolsMenu(self):
         self.openMenu("Mouse Tools")
 
+    def setCursorModeAnimBrush(self):
+        self.clearStatusLine()
+        if not self.appState.animBrush.is_set():
+            message = "No animation brush set. Use selection tool to make one"
+            self.notify(message)
+            return False
+        self.promptPrint("Animation Brush: (L)oop mode, or (C)lone mode? [L] ")
+        prompting = True
+        while prompting:
+            time.sleep(0.01)
+            c = self.stdscr.getch()
+            if c in [ord('l'), curses.KEY_ENTER]:   # 121 = y
+                self.appState.animBrush.set_mode("loop")
+                prompting = False
+            if c == ord('c'):
+                self.appState.animBrush.set_mode("clone")
+                prompting = False
+            elif c == 27: # 27 == esc, cancel
+                prompting = False
+                return False
+            time.sleep(0.01)
+        self.clearStatusLine()
+        self.statusBar.setCursorModeAnimBrush()
+
     def setCursorModePaint(self):
         if self.appState.brush == None:
             self.notify("No brush set. Please use select tool to make one before using Paint.", pause=True)
@@ -4133,8 +4363,8 @@ class UserInterface():  # Separate view (curses) from this controller
         self.stdscr.nodelay(0) # wait for input when calling getch
 
         cmode = self.appState.cursorMode
-        if cmode == "Draw" or cmode == "Paint":
-            self.disableMouseReporting()
+        #if cmode == "Draw" or cmode == "Paint":
+        self.disableMouseReporting()
 
         if not self.statusBar.toolButton.hidden:
             self.drawStatusBar()
@@ -4142,7 +4372,7 @@ class UserInterface():  # Separate view (curses) from this controller
         if self.playing:
             menus = ["File"]
         else:
-            menus = ["File", "Anim", "Mouse Tools"]
+            menus = ["File", "Edit", "Anim", "Mouse Tools"]
         #fail_count = 0  # debug
         while menu_open:
             if current_menu == "File":
@@ -4150,6 +4380,11 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.statusBar.menuButton.become_selected()
                 response = self.statusBar.mainMenu.showHide()
                 self.statusBar.menuButton.draw()    # redraw as unselected/not-inverse
+            if current_menu == "Edit":
+                #response = self.statusBar.menuButton.on_click()
+                self.statusBar.editButton.become_selected()
+                response = self.statusBar.editMenu.showHide()
+                self.statusBar.editButton.draw()    # redraw as unselected/not-inverse
             elif current_menu == "Mouse Tools":
                 #response = self.statusBar.toolButton.on_click()
                 self.statusBar.toolButton.become_selected()
@@ -4162,9 +4397,9 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.statusBar.animButton.draw()    # redraw as unselected/not-inverse
             if response == "Close":
                 menu_open = False
-                if cmode == "Draw" or cmode == "Paint":
-                    self.enableMouseReporting()
-                self.hardRefresh()
+                #if cmode == "Draw" or cmode == "Paint":
+                #    self.enableMouseReporting()
+                #self.hardRefresh()
             elif response == "Right":
                 # if we're at the rightmost menu
                 if menus.index(current_menu) == len(menus) - 1:
@@ -4183,8 +4418,8 @@ class UserInterface():  # Separate view (curses) from this controller
             #fail_count += 1 # debug
             #if fail_count > 3:
             #    pdb.set_trace()
-        if cmode == "Draw" or cmode == "Paint":
-            self.enableMouseReporting()
+        #if cmode == "Draw" or cmode == "Paint":
+        #    self.enableMouseReporting()
         #self.hardRefresh()
         if self.playing:
             self.stdscr.nodelay(1)
@@ -4194,6 +4429,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def openFromMenu(self, examples=False):
         #self.stdscr.nodelay(0) # wait for input when calling getch
+        self.disableMouseReporting()
         self.clearStatusLine()
         if self.appState.modified:
             self.promptPrint("Changes have not been saved! Are you sure you want to load another file? (Y/N) ")
@@ -4216,39 +4452,7 @@ class UserInterface():  # Separate view (curses) from this controller
         else:
             load_filename, uri_type = self.openFilePicker()
         if uri_type == "remote":   # Remote URL, from 16colo.rs
-            url = load_filename
-            #self.notify(f"url: {url}")
-            file_data = b"There was an error downloading the file."
-            # Download remote file
-            try:
-                with urllib.request.urlopen(url) as response:
-                    file_data = response.read()
-                    #f = open(filename, 'r', encoding='cp437')
-            except urllib.request.HTTPError as E:
-                self.notify(f"There was an error downloading the file: {E.code}")
-            # save it to a temporary file
-            #with tempfile.NamedTemporaryFile() as fp:
-            with tempfile.TemporaryDirectory() as temp_path:
-                # write file to temp directory, but with original name
-                filename = pathlib.Path(url).name
-                load_filename = temp_path + '/' + filename
-                #self.notify(f"Full load path: {load_filename}")
-                with open(load_filename, mode='wb') as fp:
-                    fp.write(file_data)
-
-                #fp.write(file_data)
-                #self.notify(f"Length: {len(file_data)}")
-                # Clear the canvas and Open it 
-                load_filename = fp.name
-                self.clearCanvas(prompting=False)
-                #if not self.loadFromFile(load_filename, 'dur'):
-                self.loadFromFile(load_filename, 'dur')
-                self.appState.curOpenFileName = pathlib.Path(url).name
-                self.move_cursor_topleft()
-                self.stdscr.clear()
-                self.hardRefresh()
-                self.appState.fileShortPath = url
-                fp.close()
+            self.loadRemoteFile(load_filename)
                 
 
         elif uri_type == "local" and load_filename != False:   # if not False lol
@@ -4260,6 +4464,45 @@ class UserInterface():  # Separate view (curses) from this controller
 
         elif load_filename == False:    # User hit Esc out of the file picker
             return False
+
+    def getTempDirectoryOptions(self):
+        prefix = os.environ.get("PREFIX")
+        if prefix:
+            termux_tmp = os.path.join(prefix, "tmp")
+            if os.path.isdir(termux_tmp):
+                return {"dir": termux_tmp}
+        return {}
+
+    def loadRemoteFile(self, url):
+        #self.notify(f"url: {url}")
+        if not url:
+            self.notify("There was an error downloading the file: no URL found")
+            return False
+        try:
+            with urllib.request.urlopen(url) as response:
+                file_data = response.read()
+        except urllib.request.HTTPError as E:
+            self.notify(f"There was an error downloading the file: {E.code}")
+            return False
+        except urllib.error.URLError as E:
+            self.notify(f"There was an error downloading the file: {E.reason}")
+            return False
+
+        with tempfile.TemporaryDirectory(**self.getTempDirectoryOptions()) as temp_path:
+            url_path = urllib.parse.unquote(urllib.parse.urlparse(url).path)
+            filename = pathlib.Path(url_path).name or "download.ans"
+            load_filename = os.path.join(temp_path, filename)
+            with open(load_filename, mode='wb') as fp:
+                fp.write(file_data)
+
+            self.clearCanvas(prompting=False)
+            self.loadFromFile(load_filename, 'dur')
+            self.appState.curOpenFileName = filename
+            self.move_cursor_topleft()
+            self.stdscr.clear()
+            self.hardRefresh()
+            self.appState.fileShortPath = url
+        return True
 
     def toggleColorScrolling(self):
         self.appState.scrollColors = not self.appState.scrollColors
@@ -4508,15 +4751,10 @@ class UserInterface():  # Separate view (curses) from this controller
                     _, mouseCol, mouseLine, _, mouseState = curses.getmouse()
                 except:
                     pass
-                if mouseState == curses.BUTTON1_CLICKED or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
+                if mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
                     self.pressingButton = False
                     if self.pushingToClip:
                         self.pushingToClip = False
-                    if self.appState.cursorMode != "Draw" and self.appState.cursorMode != "Paint":
-                        print('\033[?1003l') # disable mouse reporting
-                        self.hardRefresh()
-                        curses.mousemask(1)
-                        curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
                     if mouseLine < realmaxY - 4:     # above the 'status bar,' in the file list
                         if mouseLine < len(block_list) - top_line:   # clicked item line
                             if mouseCol < len(block_list[top_line+mouseLine]): # clicked within item width
@@ -4699,24 +4937,116 @@ class UserInterface():  # Separate view (curses) from this controller
             #for r in res:
             #    print(r.status_code)
 
-    def findLocalFiles(self, current_directory, folders, masks):
-        # update file list
-        self.log.debug('finding local files!!!', {'current_directory': current_directory, 'folders': folders, 'masks': masks})
-        file_list, matched_files = [], []
-        if self.appState.sixteenc_browsing:
-            search_files_list = []
+    def localFileSortKey(self, current_directory, name):
+        clean_name = name.rstrip(os.path.sep)
+        sort_by = "name"
+        if getattr(self.appState, "usingDirMode", False):
+            sort_by = getattr(self.appState, "dirSort", "name")
+        if sort_by == "size":
+            try:
+                return (-os.path.getsize(os.path.join(current_directory, clean_name)), clean_name.lower())
+            except OSError:
+                return (0, clean_name.lower())
+        if sort_by == "mtime":
+            try:
+                return (-os.path.getmtime(os.path.join(current_directory, clean_name)), clean_name.lower())
+            except OSError:
+                return (0, clean_name.lower())
+        return (clean_name.lower(),)
+
+    def sortLocalNames(self, current_directory, names):
+        return sorted(names, key=lambda name: self.localFileSortKey(current_directory, name))
+
+    def getLocalFolders(self, current_directory, include_hidden=False):
+        patterns = [".*/", "*/"] if include_hidden else ["*/"]
+        folders = []
+        for pattern in patterns:
+            folders += filter(os.path.isdir, glob.glob(os.path.join(current_directory, pattern)))
+        folder_names = []
+        for path_string in folders:
+            folder_names.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
+        return ["../"] + self.sortLocalNames(current_directory, folder_names)
+
+    def localFileMatchesMasks(self, name, masks):
+        for mask in masks:
+            if fnmatch.fnmatch(name.lower(), mask.lower()):
+                return True
+        return False
+
+    def getLocalFileNames(self, current_directory, masks, include_hidden=False):
+        matched_files = []
+        if getattr(self.appState, "flattenDirs", False):
+            for root, dirs, files in os.walk(current_directory):
+                if not include_hidden:
+                    dirs[:] = [dirname for dirname in dirs if not dirname.startswith(".")]
+                for filename in files:
+                    if self.localFileMatchesMasks(filename, masks):
+                        full_path = os.path.join(root, filename)
+                        matched_files.append(os.path.relpath(full_path, current_directory))
         else:
-            search_files_list = os.listdir(current_directory)
-        for file in search_files_list:
+            for filename in os.listdir(current_directory):
+                full_path = os.path.join(current_directory, filename)
+                if self.localFileMatchesMasks(filename, masks) and os.path.isfile(full_path):
+                    matched_files.append(filename)
+        return self.sortLocalNames(current_directory, matched_files)
+
+    def getLocalFileList(self, current_directory, masks, include_hidden=False):
+        folders = []
+        if not getattr(self.appState, "flattenDirs", False):
+            folders = self.getLocalFolders(current_directory, include_hidden=True)
+        return folders + self.getLocalFileNames(current_directory, masks, include_hidden=include_hidden), folders
+
+    def setLocalPlayQueue(self, current_directory, file_list, folders, selected_name):
+        selected_path = os.path.join(current_directory, selected_name)
+        play_queue = []
+        for name in file_list:
+            if name in folders:
+                continue
+            full_path = os.path.join(current_directory, name)
+            if os.path.isfile(full_path):
+                play_queue.append(full_path)
+        self.appState.play_queue = play_queue
+        self.appState.play_queue_auto_advance = False
+        self.appState.play_queue_direction = 0
+        try:
+            self.appState.play_queue_position = play_queue.index(selected_path)
+        except ValueError:
+            self.appState.play_queue_position = None
+
+    def setSixteenColorsPlayQueue(self, pack, file_list, folders, selected_name):
+        selected_item = ("16colo.rs", pack, selected_name)
+        play_queue = []
+        for name in file_list:
+            if name in folders:
+                continue
+            play_queue.append(("16colo.rs", pack, name))
+        self.appState.play_queue = play_queue
+        self.appState.play_queue_auto_advance = False
+        self.appState.play_queue_direction = 0
+        try:
+            self.appState.play_queue_position = play_queue.index(selected_item)
+        except ValueError:
+            self.appState.play_queue_position = None
+
+    def filterFileNames(self, names, masks):
+        matched_files = []
+        for file in names:
             for mask in masks:
                 if fnmatch.fnmatch(file.lower(), mask.lower()):
-                    if os.path.isfile(os.path.join(current_directory, file)):
-                    #if os.access(pathlib.Path(file), os.R_OK):
-                        matched_files.append(file)
-                        break
-        for dirname in folders:
-            file_list.append(dirname)
-        file_list += sorted(matched_files)
+                    matched_files.append(file)
+                    break
+        return matched_files
+
+    def buildSixteenColorsFileList(self, folders, names, masks):
+        return list(folders) + sorted(self.filterFileNames(names, masks))
+
+    def findLocalFiles(self, current_directory, folders, masks, include_hidden=False):
+        # update file list
+        self.log.debug('finding local files!!!', {'current_directory': current_directory, 'folders': folders, 'masks': masks})
+        if self.appState.sixteenc_browsing:
+            return list(folders)
+        else:
+            file_list = list(folders) + self.getLocalFileNames(current_directory, masks, include_hidden=include_hidden)
         self.log.debug('repopulated file list', {'file_list': file_list})
         return file_list
 
@@ -4724,9 +5054,10 @@ class UserInterface():  # Separate view (curses) from this controller
         """ Draw UI for selecting a file to load, return the filename """
         # get file list
         self.stdscr.nodelay(0) # wait for input when calling getch
+        self.disableMouseReporting()
         self.cursorOff()
         folders =  ["../"]
-        default_masks = ['*.dur', '*.durf', '*.asc', '*.ans', '*.txt', '*.diz', '*.nfo', '*.ice', '*.ansi']
+        default_masks = DEFAULT_LOAD_FILE_MASKS
         masks = default_masks
         matched_files = []
         file_list = []
@@ -4762,24 +5093,10 @@ class UserInterface():  # Separate view (curses) from this controller
                 current_directory = os.getcwd()
 
         if not self.appState.sixteenc_browsing:
-            file_list = []
-            #folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-            if current_directory == examples_path:
-                folders = []
-            else:
-                folders = ['../']
-            folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
-            # remove leading paths
-            new_folders = []
-            for path_string in folders:
-                new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-            folders = new_folders
-
-            for file in os.listdir(current_directory):
-                for mask in masks:
-                    if fnmatch.fnmatch(file.lower(), mask.lower()):
-                        matched_files.append(file)
-                        break
+            file_list, folders = self.getLocalFileList(current_directory, masks)
+            if examples:
+                folders = [folder for folder in folders if folder != "../"]
+                file_list = [name for name in file_list if name != "../"]
         elif self.appState.sixteenc_browsing:
             self.sixteenc_api = SixteenColorsAPI()
             if self.sixteenc_years == None:
@@ -4806,19 +5123,17 @@ class UserInterface():  # Separate view (curses) from this controller
             elif self.sixteenc_levels[self.sixteenc_level] == "pack":
                 sixteenc_files = self.sixteenc_api.list_files_for_pack(self.appState.sixteenc_pack)
                 folders = ['../']
-                #file_list = folders
-                file_list = folders + sixteenc_files
+                file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
                 full_file_list = file_list
                 search_files_list = file_list
-                #file_list = sorted(file_list)
 
 
 
-        if not self.appState.sixteenc_browsing:
+        if not self.appState.sixteenc_browsing and file_list == []:
             for dirname in folders:
                 file_list.append(dirname)
 
-        file_list += sorted(matched_files)
+        file_list += self.sortLocalNames(current_directory, matched_files)
 
         # stash away file list so we can use it for search, and pop it back
         # in when user hits esc
@@ -4925,18 +5240,17 @@ class UserInterface():  # Separate view (curses) from this controller
                             self.addstr(current_line_number - top_line, file_column_number, file_list[current_line_number], curses.color_pair(self.appState.theme['promptColor']))
                 current_line_number += 1
 
-            if self.appState.sixteenc_browsing == False:
-                if mask_all:
-                    if sections[current_section] == "showall":
-                        self.addstr(realmaxY - 4, showall_column, f"[X]", curses.A_REVERSE)
-                    else:
-                        self.addstr(realmaxY - 4, showall_column, f"[X]", curses.color_pair(self.appState.theme['clickColor']))
+            if mask_all:
+                if sections[current_section] == "showall":
+                    self.addstr(realmaxY - 4, showall_column, f"[X]", curses.A_REVERSE)
                 else:
-                    if sections[current_section] == "showall":
-                        self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.A_REVERSE)
-                    else:
-                        self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.color_pair(self.appState.theme['clickColor']))
-                self.addstr(realmaxY - 4, showall_column + 4, f"Show All Files", curses.color_pair(self.appState.theme['menuItemColor']))
+                    self.addstr(realmaxY - 4, showall_column, f"[X]", curses.color_pair(self.appState.theme['clickColor']))
+            else:
+                if sections[current_section] == "showall":
+                    self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.A_REVERSE)
+                else:
+                    self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.color_pair(self.appState.theme['clickColor']))
+            self.addstr(realmaxY - 4, showall_column + 4, f"Show All Files", curses.color_pair(self.appState.theme['menuItemColor']))
 
             if self.appState.sixteenc_available:
                 if self.appState.sixteenc_browsing:
@@ -5055,9 +5369,11 @@ class UserInterface():  # Separate view (curses) from this controller
             if c == curses.KEY_MOUSE:
                 try:
                     _, mouseCol, mouseLine, _, mouseState = curses.getmouse()
+                    #self.notify(f"Got mouse event state. {mouseState}")
+                    #self.notify(f"curses BUTTON1_PRESSED. {curses.BUTTON1_PRESSED}")
                 except:
                     pass
-                if mouseState == curses.BUTTON1_CLICKED or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
+                if mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
                     if mouseLine < realmaxY - 4:     # above the 'status bar,' in the file list
                         current_section = 0 # switch to "main" section
                         if mouseLine < len(file_list) - top_line:   # clicked item line
@@ -5079,32 +5395,11 @@ class UserInterface():  # Separate view (curses) from this controller
                                                 current_directory = f"{current_directory}/{file_list[self.selected_item_number]}"
                                                 if current_directory[-1] == "/":
                                                     current_directory = current_directory[:-1]
-                                            # get file list
-                                            folders =  ["../"]
-                                            #folders += glob.glob("*/", root_dir=current_directory)
-                                            if not self.appState.sixteenc_browsing: 
-                                                folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/")))) 
-                                                folders += sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/"))))
-                                                # remove leading paths
-                                                new_folders = []
-                                                for path_string in folders:
-                                                    new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                                                folders = new_folders
-
                                             if mask_all:
-                                                masks = ['*']
+                                                masks = ALL_FILE_MASKS
                                             else:
                                                 masks = default_masks
-                                            matched_files = []
-                                            file_list = []
-                                            for file in os.listdir(current_directory):
-                                                for mask in masks:
-                                                    if fnmatch.fnmatch(file.lower(), mask.lower()):
-                                                        matched_files.append(file)
-                                                        break
-                                            for dirname in folders:
-                                                file_list.append(dirname)
-                                            file_list += sorted(matched_files)
+                                            file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
                                             # reset ui
                                             self.selected_item_number = 0
                                             search_string = ""
@@ -5156,13 +5451,9 @@ class UserInterface():  # Separate view (curses) from this controller
                                                         pdb.set_trace()
                                                     self.selected_item_number = 0
                                                     folders = ['../']
-                                                    file_list = folders
-                                                    file_list += sixteenc_files
+                                                    file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
                                                     full_file_list = file_list
                                                     search_files_list = file_list
-                                                    #for dirname in folders:
-                                                    #    file_list.append(dirname)
-                                                    file_list = sorted(file_list)
                                                     self.sixteenc_level += 1    # from "year" to "pack"
                                                     top_line = 0
                                                     search_string = ""
@@ -5172,6 +5463,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                                 self.promptPrint("Loading...")
                                                 self.refresh()
                                                 filename = file_list[self.selected_item_number]
+                                                self.setSixteenColorsPlayQueue(self.appState.sixteenc_pack, full_file_list, folders, filename)
                                                 url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                                 self.cursorOn()
                                                 return url, "remote"
@@ -5182,39 +5474,53 @@ class UserInterface():  # Separate view (curses) from this controller
                                             self.promptPrint("Loading...")
                                             self.refresh()
                                             filename = file_list[self.selected_item_number]
+                                            self.setSixteenColorsPlayQueue(self.appState.sixteenc_pack, full_file_list, folders, filename)
                                             url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                             self.cursorOn()
                                             return url, "remote"
                                         else:
                                             full_path = f"{current_directory}/{file_list[self.selected_item_number]}"
+                                            if not examples:
+                                                self.appState.workingLoadDirectory = current_directory
+                                                self.setLocalPlayQueue(current_directory, full_file_list, folders, file_list[self.selected_item_number])
+                                            else:
+                                                self.selected_item_number = 0
                                             self.cursorOn()
                                             return full_path, "local"
                     if mouseLine == realmaxY - 4:    # on the button bar
                         if mouseCol in range(showall_column,showall_column+3):  # clicked [X] All
-                            if self.appState.sixteenc_browsing == False:
-                                if mask_all:
-                                    mask_all = False
-                                    masks = default_masks
+
+                            # Check or uncheck Show All Files
+                            mask_all = not mask_all
+                            if mask_all:
+                                masks = ALL_FILE_MASKS
+                            else:
+                                masks = default_masks
+                            # update file list
+                            matched_files = []
+                            file_list = []
+                            full_file_list = []
+                            if self.appState.sixteenc_browsing:
+                                if self.sixteenc_levels[self.sixteenc_level] == "pack":
+                                    file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
                                 else:
-                                    mask_all = True
-                                    masks = ['*']
+                                    file_list = list(folders)
+                            else:
+                                file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
+                            # reset ui
+                            self.selected_item_number = 0
+                            search_string = ""
+                            full_file_list = file_list
+
                         elif self.appState.sixteenc_available and mouseCol in range(sixteen_column,sixteen_column+3):  # clicked [X] 16c
                             self.appState.sixteenc_browsing = not self.appState.sixteenc_browsing
-                            folders =  ["../"]
-                            #folders += glob.glob("*/", root_dir=current_directory)
-                            if not self.appState.sixteenc_browsing: 
-                                folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
-                                    sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                                # remove leading paths
-                                new_folders = []
-                                for path_string in folders:
-                                    new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                                folders = new_folders
-
-
-                        matched_files = []
-                        file_list = []
-                        file_list = self.findLocalFiles(current_directory, folders, masks)
+                            if not self.appState.sixteenc_browsing:
+                                file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
+                            else:
+                                if self.sixteenc_levels[self.sixteenc_level] == "pack":
+                                    file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
+                                else:
+                                    file_list = list(folders)
                         # reset ui
                         self.selected_item_number = 0
                         search_string = ""
@@ -5262,31 +5568,20 @@ class UserInterface():  # Separate view (curses) from this controller
                     # Check or uncheck Show All Files
                     mask_all = not mask_all
                     if mask_all:
-                        masks = ['*']
+                        masks = ALL_FILE_MASKS
                     else:
                         masks = default_masks
-
-
-
                     # update file list
                     matched_files = []
                     file_list = []
                     full_file_list = []
-                    search_files_list = []
-                    if self.appState.sixteenc_browsing: 
+                    if self.appState.sixteenc_browsing:
                         if self.sixteenc_levels[self.sixteenc_level] == "pack":
-                            search_files_list = sixteenc_files
+                            file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
+                        else:
+                            file_list = list(folders)
                     else:
-                        search_files_list = os.listdir(current_directory)
-                    for file in search_files_list:
-                        for mask in masks:
-                            if fnmatch.fnmatch(file.lower(), mask.lower()):
-                                if os.path.isfile(os.path.join(current_directory, file)):
-                                    matched_files.append(file)
-                                    break
-                    for dirname in folders:
-                        file_list.append(dirname)
-                    file_list += sorted(matched_files)
+                        file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
                     # reset ui
                     self.selected_item_number = 0
                     search_string = ""
@@ -5358,18 +5653,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         file_list = []
                         full_file_list = []
 
-                        folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
-                                sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                        
-                        # remove leading paths
-                        new_folders = []
-                        for path_string in folders:
-                            new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                        folders = new_folders
-
-                        matched_files = self.findLocalFiles(current_directory, folders, masks)
-                        self.log.debug('found', {'matched_files': matched_files, 'folders': folders, 'current_directory': current_directory, 'masks': masks})
-                        file_list += matched_files
+                        file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
+                        self.log.debug('found', {'file_list': file_list, 'folders': folders, 'current_directory': current_directory, 'masks': masks})
                         # reset ui
                         self.selected_item_number = 0
                         search_string = ""
@@ -5392,9 +5677,6 @@ class UserInterface():  # Separate view (curses) from this controller
                     pass
                 elif c in [9]:  # 9 == tab key
                     current_section += 1
-                    if self.appState.sixteenc_browsing: # skip hidden Show All button in 16c mode
-                        if sections[current_section] == "showall":
-                            current_section += 1
                     if current_section > len(sections) - 1: # If we've tabbed through all sections,
                         current_section = 0     # circle back to 0 (main file selector)
 
@@ -5495,13 +5777,9 @@ class UserInterface():  # Separate view (curses) from this controller
                                     pdb.set_trace()
                                 self.selected_item_number = 0
                                 folders = ['../']
-                                file_list = folders
-                                file_list += sixteenc_files
+                                file_list = self.buildSixteenColorsFileList(folders, sixteenc_files, masks)
                                 full_file_list = file_list
                                 search_files_list = file_list
-                                #for dirname in folders:
-                                #    file_list.append(dirname)
-                                file_list = sorted(file_list)
                                 self.sixteenc_level += 1    # from "year" to "pack"
                                 top_line = 0
                                 search_string = ""
@@ -5527,6 +5805,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.refresh()
                                 filename = file_list[self.selected_item_number]
                                 #pdb.set_trace()
+                                self.setSixteenColorsPlayQueue(self.appState.sixteenc_pack, full_file_list, folders, filename)
                                 url = self.sixteenc_api.get_url_for_file(self.appState.sixteenc_pack, filename)
                                 self.cursorOn()
                                 return url, "remote"
@@ -5547,44 +5826,30 @@ class UserInterface():  # Separate view (curses) from this controller
                                 current_directory = f"{current_directory}/{file_list[self.selected_item_number]}"
                                 if current_directory[-1] == "/":
                                     current_directory = current_directory[:-1]
-                        # get file list
-                        folders =  ["../"]
-                        #folders += sorted(glob.glob("*/", root_dir=current_directory))
-                        if self.appState.sixteenc_browsing:
-                            pass
-                        else:
-                            folders = ['../'] + sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, ".*/")))) + \
-                                    sorted(filter(os.path.isdir, glob.glob(os.path.join(current_directory, "*/"))))
-                            # remove leading paths
-                        if not self.appState.sixteenc_browsing:
-                            new_folders = []
-                            for path_string in folders:
-                                new_folders.append(os.path.sep.join(path_string.split(os.path.sep)[-2:]))
-                            folders = new_folders
-
                         if mask_all:
-                            masks = ['*.*']
+                            masks = ALL_FILE_MASKS
                         else:
                             masks = default_masks
                         matched_files = []
                         file_list = []
                         if self.appState.sixteenc_browsing:
+                            folders = ["../"]
                             if self.appState.sixteenc_pack:
                                 search_files_list = sixteenc_files
                             elif self.appState.sixteenc_year:
                                 search_files_list = sixteenc_packs
                             else:
                                 search_files_list = self.sixteenc_years
+                            for file in search_files_list:
+                                for mask in masks:
+                                    if fnmatch.fnmatch(file.lower(), mask.lower()):
+                                        matched_files.append(file)
+                                        break
+                            for dirname in folders:
+                                file_list.append(dirname)
+                            file_list += self.sortLocalNames(current_directory, matched_files)
                         else:
-                            search_files_list = os.listdir(current_directory)
-                        for file in search_files_list:
-                            for mask in masks:
-                                if fnmatch.fnmatch(file.lower(), mask.lower()):
-                                    matched_files.append(file)
-                                    break
-                        for dirname in folders:
-                            file_list.append(dirname)
-                        file_list += sorted(matched_files)
+                            file_list, folders = self.getLocalFileList(current_directory, masks, include_hidden=mask_all)
                         # reset ui
                         top_line = 0
                         self.selected_item_number = 0
@@ -5598,7 +5863,8 @@ class UserInterface():  # Separate view (curses) from this controller
                         full_path = f"{current_directory}/{file_list[self.selected_item_number]}"
                         if not examples:
                             self.appState.workingLoadDirectory = current_directory
-                        if examples:
+                            self.setLocalPlayQueue(current_directory, full_file_list, folders, file_list[self.selected_item_number])
+                        else:
                             self.selected_item_number = 0
                         self.cursorOn()
                         return full_path, "local"
@@ -5993,12 +6259,15 @@ class UserInterface():  # Separate view (curses) from this controller
 
 
     
-    def save(self):
-        self.clearStatusLine()
-        self.move(self.mov.sizeY, 0)
-        self.promptPrint("File format? [D]UR, [A]NSI, A[N]SIMATION, ASCI[I], [M]IRC, [J]SON, [H]TML, [P]NG, [G]IF: ")
-        self.stdscr.nodelay(0) # do not wait for input when calling getch
-        prompting = True
+    def save(self, saveFormat = ""):
+        if saveFormat == "":
+            self.clearStatusLine()
+            self.move(self.mov.sizeY, 0)
+            self.promptPrint("File format? [D]UR, [A]NSI, A[N]SIMATION, ASCI[I], [M]IRC, [J]SON, [H]TML, [P]NG, [G]IF: ")
+            self.stdscr.nodelay(0) # do not wait for input when calling getch
+            prompting = True
+        else:
+            prompting = False
         saved = False
         while prompting:
             c = self.stdscr.getch()
@@ -6198,10 +6467,13 @@ class UserInterface():  # Separate view (curses) from this controller
         if saveFormat == 'gif':  # gif = requires PIL
             saved = self.saveGifFile(filename, font=saveFont)
         if saved:
-            self.notify("*Saved* (Press any key to continue)", pause=True)
-            self.appState.curOpenFileName = os.path.basename(filename)
-            self.appState.modified = False
-            self.undo.modifications = 0
+            if saveFormat == 'dur':
+                self.notify("*Saved* (Press any key to continue)", pause=True)
+                self.appState.curOpenFileName = os.path.basename(filename)
+                self.appState.modified = False
+                self.undo.modifications = 0
+            else:
+                self.notify("*Exported* (Press any key to continue)", pause=True)
             #self.setWindowTitle(self.appState.curOpenFileName)
         elif not saved:
             self.notify("Save failed.")
@@ -6662,6 +6934,8 @@ class UserInterface():  # Separate view (curses) from this controller
                duration=sleeptime * 1000, loop=0)
 
     def showHelp(self):
+        self.stopPlaying()
+        self.disableMouseReporting()
         self.stdscr.clear()
         if self.appState.hasHelpFile:
             #self.showAnimatedHelpScreen()
@@ -6696,8 +6970,8 @@ class UserInterface():  # Separate view (curses) from this controller
       alt-R - set playback/edit Range     alt-pgdn - next character set
       alt-g - Go to frame #               alt-pgup - prev character set
 
-Help file could not be found. You might want to reinstsall Durdraw...
-Can use ESC or META instead of ALT
+Help file could not be found or hasn't loaded yet.
+If this persists, You might want to reinstsall Durdraw...
 ''' % self.appState.durVer 
         # remove the blank first line from helpScreenText..
         # it's easier to edit here with the blank first line.
@@ -6795,21 +7069,27 @@ Can use ESC or META instead of ALT
         screenLineNum = 0
         firstCol = self.appState.firstCol
         lastCol = min(mov.sizeX, self.appState.realmaxX + firstCol)
+        #if not self.appState.playOnlyMode:
+        #    self.cursorOff()
         # Draw each character
         for linenum in range(topLine, lastLineToDraw):
             line = mov.currentFrame.content[linenum]
             for colnum in range(firstCol, lastCol):
                 charColor = mov.currentFrame.newColorMap[linenum][colnum]
                 charContent = str(line[colnum])
+
                 if self.appState.cursorMode == "Paint" and not self.playing and not self.appState.playingHelpScreen:
                     if self.appState.brush != None:
                         # draw brush preview
                         # If we're drawing within the brush area:
-                        if linenum in range(self.appState.mouse_line + topLine, self.appState.mouse_line + self.appState.brush.sizeX + topLine):
-                            if colnum in range(self.appState.mouse_col + self.appState.firstCol, self.appState.mouse_col + self.appState.brush.sizeY + self.appState.firstCol):
-                                #brush_line = linenum - self.appState.mouse_line
-                                brush_line = linenum - self.appState.mouse_line - topLine
-                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol
+                        new_sizeX = self.appState.brush.sizeX 
+                        half_brush_height = int(new_sizeX  / 2) 
+                        new_sizeY = self.appState.brush.sizeY 
+                        half_brush_width = int(new_sizeY  / 2) 
+                        if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.brush.sizeX + topLine - half_brush_height):
+                            if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.brush.sizeY + self.appState.firstCol - half_brush_width):
+                                brush_line = linenum - self.appState.mouse_line - topLine + half_brush_height 
+                                brush_col = colnum - self.appState.mouse_col - self.appState.firstCol + half_brush_width
                                 try:
                                     brushChar = self.appState.brush.content[brush_col][brush_line]
                                 except IndexError:
@@ -6824,6 +7104,31 @@ Can use ESC or META instead of ALT
                                     if self.appState.renderMouseCursor:
                                         charContent = brushChar
                                         charColor = self.appState.brush.newColorMap[brush_col][brush_line]
+
+                elif self.appState.cursorMode == "ABrush" and not self.playing and not self.appState.playingHelpScreen:
+                    if self.appState.animBrush.is_set():
+                        # draw animation brush preview
+                        # If we're drawing within the brush area:
+                        half_brush_height = int(self.appState.animBrush.current_frame().sizeX  / 2)
+                        half_brush_width = int(self.appState.animBrush.current_frame().sizeY  / 2)
+                        if linenum in range(self.appState.mouse_line + topLine - half_brush_height, self.appState.mouse_line + self.appState.animBrush.current_frame().sizeX + topLine - half_brush_height):
+                            if colnum in range(self.appState.mouse_col + self.appState.firstCol - half_brush_width, self.appState.mouse_col + self.appState.animBrush.current_frame().sizeY + self.appState.firstCol - half_brush_width):
+                                brush_line = linenum - self.appState.mouse_line - topLine + half_brush_height 
+                                brush_col = colnum - self.appState.mouse_col - firstCol + half_brush_width 
+                                try:
+                                    brushChar = self.appState.animBrush.current_frame().content[brush_col][brush_line]
+                                except IndexError:
+                                    # This should really never happen now.
+                                    #self.notify(f"Index error: bcol: {brush_col}, bline: {brush_line}, col: {colnum}, line: {linenum}, mcol: {self.appState.mouse_col}, {self.appState.mouse_line}", pause=False)
+                                    brushChar = ' '
+                                # invisible background for brushes
+                                if brushChar == ' ':
+                                    pass
+                                else:
+                                    charContent = brushChar
+                                    charColor = self.appState.animBrush.current_frame().newColorMap[brush_col][brush_line]
+
+
                 if linenum == self.appState.mouse_line + topLine and colnum == self.appState.mouse_col + self.appState.firstCol:
                     if self.appState.cursorMode == "Draw" and not self.playing and not self.appState.playingHelpScreen:  # Drawing preview instead
                         if self.appState.renderMouseCursor:
@@ -6912,6 +7217,8 @@ Can use ESC or META instead of ALT
             curses.panel.update_panels()
         if self.appState.playingHelpScreen:
             self.addstr(self.statusBarLineNum + 1, 0, "Up/Down, Pgup/Pgdown, Home/End or Mouse Wheel to scroll. Enter or Esc to exit.", curses.color_pair(self.appState.theme['promptColor']))
+        #if not self.appState.playOnlyMode:
+        #    self.cursorOn()
         if refreshScreen:
             self.stdscr.refresh()
 
@@ -7057,17 +7364,26 @@ Can use ESC or META instead of ALT
         # any other key returns (cancels)
         # print message: "Select mode - Enter to select, Esc to cancel"
         self.undo.push()
+        #if mouse:
+        #    _, mouseX, mouseY, _, mouseState = curses.getmouse()
+        #    startPoint = [mouseY, mouseX]
+        #else:
+        #    startPoint =  [self.xy[0],  self.xy[1]]   # set to wherever the cursor is
         startPoint =  [self.xy[0],  self.xy[1]]   # set to wherever the cursor is
         endPoint = startPoint
         selecting = True
         self.stdscr.nodelay(0)  # wait for getch input
         c = firstkey
-        self.clearStatusBar()
-        #self.addstr(self.statusBarLineNum, 0, f"Use arrow keys to make selection, enter when done.")
+        if mouse:
+            self.pressingButton = True
+            self.enableMouseReporting()
+        else:
+            self.clearStatusBar()
         while selecting:
             endPoint =  [self.xy[0],  self.xy[1]]   # set to wherever the cursor is
             self.refresh()
-            self.addstr(self.statusBarLineNum + 1, 0, f"Use arrow keys to make selection, enter when done.")
+            if not mouse:
+                self.addstr(self.statusBarLineNum + 1, 0, f"Use arrow keys to make selection, enter when done.")
             # draw block area on top of drawing area
             mov = self.mov
             if endPoint[0] >= startPoint[0]:    # if we're moving right of start point
@@ -7123,172 +7439,10 @@ Can use ESC or META instead of ALT
             elif c in [338, curses.KEY_END]:   # 338 = end
                 self.xy[1] = self.mov.sizeX - 1
             elif c in [13, curses.KEY_ENTER]:
-                # Ask user what operation they want, and then do it on the selected area
-                # copy, cut, fill, or copy into all frames :)
-                prompting = True
-                self.clearStatusBar()
-                self.promptPrint("[C]opy, Cu[t], [D]elete, [F]ill, Co[l]or, Flip [X/Y], Make [B]rush, Copy Ani[m]ation, copy to [A]ll Frames in range? " )
-                while prompting:
-                    prompt_ch = self.stdscr.getch()
-                    if chr(prompt_ch) in ['c', 'C']:    # Copy
-                        self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                        prompting = False
-                    if chr(prompt_ch) in ['m', 'M']:    # Copy Animation
-                        self.copyAnimToClipboard([firstLineNum, firstColNum], height, width)
-                        prompting = False
-                    if chr(prompt_ch) in ['b', 'B']:    # Make Brush
-                        self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
-                        prompting = False
-                    #if chr(prompt_ch) in ['m', 'M']:    # move
-                    #    prompting = False
-                    elif chr(prompt_ch) in ['x', 'X']:    # flip horizontally
-                        self.flipSegmentHorizontal([firstLineNum, firstColNum], height, width)
-                        #prompting = False
-                        self.refresh()
-                    elif chr(prompt_ch) in ['y', 'Y']:    # flip vertically 
-                        self.flipSegmentVertical([firstLineNum, firstColNum], height, width)
-                        #prompting = False
-                        self.refresh()
-                    #    self.undo.push()
-                    #    self.mov.currentFrame.flip_horizontal()
-                    if chr(prompt_ch) in ['t', 'T']:    # Cut to clipboard
-                        self.clearStatusBar()
-                        if self.mov.hasMultipleFrames():
-                            self.promptPrint("Cut across all frames in playback range (Y/N)? ")
-                            askingAboutRange = True
-                        else:
-                            self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                            self.undo.push()
-                            self.deleteSegment([firstLineNum, firstColNum], height, width)
-                            askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # No, only one frame
-                                self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['d', 'D']:    # delete/clear
-                        self.clearStatusBar()
-                        if self.mov.hasMultipleFrames():
-                            self.promptPrint("Delete across all frames in playback range (Y/N)? ")
-                            askingAboutRange = True
-                        else:
-                            self.undo.push()
-                            self.deleteSegment([firstLineNum, firstColNum], height, width)
-                            askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # yes, all range
-                                self.undo.push()
-                                self.deleteSegment([firstLineNum, firstColNum], height, width)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['l', 'L']:    # color
-                        self.clearStatusBar()
-                        if self.mov.hasMultipleFrames():
-                            self.promptPrint("Color across all frames in playback range (Y/N)? ")
-                            askingAboutRange = True
-                        else:
-                            self.undo.push()
-                            self.colorSegment([firstLineNum, firstColNum], height, width)
-                            askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.undo.push()
-                                self.colorSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # yes, all range
-                                self.undo.push()
-                                self.colorSegment([firstLineNum, firstColNum], height, width)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['f', 'F']:    # fill
-                        self.clearStatusBar()
-                        self.promptPrint(f"Enter fill character, or press enter for {self.appState.drawChar}: ")
-                        askingAboutChar = True
-                        canceled = False
-                        drawChar = 'X'
-                        prompt_ch = self.stdscr.getch()
-                        if prompt_ch == 27:     # esc, cancel
-                            canceled = True
-                        elif prompt_ch in [13, curses.KEY_ENTER]:
-                            drawChar = self.appState.drawChar
-                        elif prompt_ch in [curses.KEY_F1]:
-                            drawChar = chr(self.chMap['f1'])
-                        elif prompt_ch in [curses.KEY_F2]:
-                            drawChar = chr(self.chMap['f2'])
-                        elif prompt_ch in [curses.KEY_F3]:
-                            drawChar = chr(self.chMap['f3'])
-                        elif prompt_ch in [curses.KEY_F4]:
-                            drawChar = chr(self.chMap['f4'])
-                        elif prompt_ch in [curses.KEY_F5]:
-                            drawChar = chr(self.chMap['f5'])
-                        elif prompt_ch in [curses.KEY_F6]:
-                            drawChar = chr(self.chMap['f6'])
-                        elif prompt_ch in [curses.KEY_F7]:
-                            drawChar = chr(self.chMap['f7'])
-                        elif prompt_ch in [curses.KEY_F8]:
-                            drawChar = chr(self.chMap['f8'])
-                        elif prompt_ch in [curses.KEY_F9]:
-                            drawChar = chr(self.chMap['f9'])
-                        elif prompt_ch in [curses.KEY_F10]:
-                            drawChar = chr(self.chMap['f10'])
-                        else:
-                            drawChar = chr(prompt_ch)
-                        if canceled:
-                            askingAboutRange = False
-                            prompting = False
-                        else:
-                            self.clearStatusBar()
-                            if self.mov.hasMultipleFrames():
-                                self.promptPrint("Fill across all frames in playback range (Y/N)? ")
-                                askingAboutRange = True
-                            else:   # Just one frame, so don't worry about the range.
-                                self.undo.push()
-                                self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
-                                askingAboutRange = False
-                        while askingAboutRange:
-                            prompt_ch = self.stdscr.getch()
-                            if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
-                                self.undo.push()
-                                self.fillSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange, fillChar=drawChar)
-                                askingAboutRange = False
-                            if chr(prompt_ch) in ['n', 'N']:    # yes, all range
-                                self.undo.push()
-                                self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
-                                askingAboutRange = False
-                            elif prompt_ch == 27:  # esc, cancel
-                                askingAboutRange = False
-                        prompting = False
-                    elif chr(prompt_ch) in ['a', 'A']:    # copy to all frames
-                        self.copySegmentToAllFrames([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
-                        prompting = False
-                    elif prompt_ch == 27:  # esc, cancel
-                        self.undo.undo()
-                        prompting = False
-                    elif prompt_ch in [13, curses.KEY_ENTER]: # enter
-                        # Confirm. Don't pop the clipboard like esc does.
-                        prompting = False
+                self.disableMouseReporting()
+                self.selectedPrompt([firstLineNum, firstColNum], height, width)
                 selecting = False
-            elif c == curses.KEY_MOUSE: 
+            elif c == curses.KEY_MOUSE:
                 try:
                     _, mouseX, mouseY, _, mouseState = curses.getmouse()
                 except:
@@ -7316,11 +7470,40 @@ Can use ESC or META instead of ALT
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
                         # We're in in edit/canvas area
                         self.move_cursor_down()
-                if mouseState == curses.BUTTON1_CLICKED or mouseState & curses.BUTTON_SHIFT:
+                if mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_DOUBLE_CLICKED:
+                    self.pressingButton = False
+                    selecting = False
+                    break
+                elif mouseState & curses.BUTTON1_PRESSED:
+                    if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
+                        and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
+                        if not self.pressingButton:
+                            newPointCol = mouseX + self.appState.firstCol # set cursor position
+                            newPointLine = mouseY + self.appState.topLine
+                            startPoint =  [newPointLine,  newPointCol]   # set to wherever the cursor is
+                        # We're in in edit/canvas area
+                        self.enableMouseReporting()
+                        #self.pressingButton = True
+                elif mouseState & curses.BUTTON1_RELEASED:
+                    self.pressingButton = False
+                    self.disableMouseReporting()
+                    prompt_result = self.selectedPrompt([firstLineNum, firstColNum], height, width)
+                    if prompt_result:
+                        mouseX, mouseY = prompt_result
+                        newPointCol = mouseX + self.appState.firstCol # set cursor position
+                        newPointLine = mouseY + self.appState.topLine
+                        startPoint =  [newPointLine,  newPointCol]   # set to wherever the cursor is
+                        self.enableMouseReporting()
+                        self.pressingButton = True
+                        # If selectedPrompt returns True, user clicked the mouse to redo selection.
+                    else:
+                        # Otherwise, assume prompt completed or canceled.
+                        selecting = False
+                if self.pressingButton:
                     if mouseY < self.mov.sizeY and mouseX < self.mov.sizeX \
                         and mouseY + self.appState.topLine < self.appState.topLine + self.statusBarLineNum:
                         # We're in in edit/canvas area
-                        self.xy[1] = mouseX + 1 + self.appState.firstCol # set cursor position
+                        self.xy[1] = mouseX + self.appState.firstCol # set cursor position
                         self.xy[0] = mouseY + self.appState.topLine
                             
 
@@ -7331,9 +7514,260 @@ Can use ESC or META instead of ALT
         else:
             self.stdscr.nodelay(0)
 
+    def selectedPrompt(self, origin, height, width):
+        # Ask user what operation they want, and then do it on the selected area
+        # copy, cut, fill, or copy into all frames :)
+        #pdb.set_trace()
+        prompting = True
+        firstLineNum = origin[0]
+        firstColNum = origin[1]
+        self.clearStatusBar()
+        self.promptPrint("[C]opy, Cu[t], [D]elete, [F]ill, Co[l]or, Flip [X/Y], Make [B]rush, Copy Ani[m]ation, copy to [A]ll Frames in range? " )
+
+        firstLineNum = origin[0]
+        firstColNum = origin[1]
+        lastLineNum = firstLineNum + height
+        lastColNum = firstColNum + width 
+        # draw selected area inverse
+        for linenum in range(firstLineNum, lastLineNum):
+            for colnum in range(firstColNum - 1, lastColNum - 1):
+                #if colnum == self.mov.sizeX - 1:   # prevent overflow on last line
+                #    colnum -= 1
+                try:
+                    charColor = self.mov.currentFrame.newColorMap[linenum][colnum]
+                except Exception as E:
+                    self.notify(f"Exception E: {E}")
+                    linenum = linenum - 1
+                    charColor = self.mov.currentFrame.newColorMap[linenum][colnum]
+                    #pdb.set_trace()
+                try: # set ncurss color pair
+                    cursesColorPair = self.ansi.colorPairMap[tuple(charColor)] 
+                except: # Or if we can't, fail to the terminal's default color
+                    cursesColorPair = 0
+                self.addstr(linenum - self.appState.topLine, colnum - self.appState.firstCol, self.mov.currentFrame.content[linenum][colnum], curses.color_pair(cursesColorPair) | curses.A_REVERSE)
+
+
+        while prompting:
+            prompt_ch = self.stdscr.getch()
+            if prompt_ch == curses.KEY_MOUSE:
+                _, mouseX, mouseY, _, mouseState = curses.getmouse()
+                # Button clicked...
+                if mouseState & curses.BUTTON1_CLICKED or mouseState & curses.BUTTON1_DOUBLE_CLICKED or mouseState:
+                    # clicked, so set position and cancel.
+                    self.xy[1] = mouseX + self.appState.firstCol # set cursor position
+                    self.xy[0] = mouseY + self.appState.topLine
+                    prompting = False
+                    self.pressingButton = False
+                elif mouseState & curses.BUTTON1_PRESSED:
+                    # dragged, so return to selecting
+                    if mouseY + self.appState.topLine < self.mov.sizeY and mouseX + self.appState.firstCol < self.mov.sizeX and mouseY < self.statusBarLineNum:
+                        return mouseX, mouseY
+                    # otherwise, cancel.
+                    else:
+                        prompting = False
+            if chr(prompt_ch) in ['c', 'C']:    # Copy
+                self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                prompting = False
+            if chr(prompt_ch) in ['m', 'M']:    # Copy Animation
+                self.copyAnimToClipboard([firstLineNum, firstColNum], height, width)
+                prompting = False
+            if chr(prompt_ch) in ['b', 'B']:    # Make Brush
+                self.clearStatusBar()
+                self.promptPrint("Normal [B]rush, or [A]nimation brush? " )
+                while prompting:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['b', 'B']:    # Normal Brush
+                        self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
+                        prompting = False
+                    elif chr(prompt_ch) in ['a', 'A']:    # Animation Brush
+                        #self.copySegmentToBrush([firstLineNum, firstColNum], height, width)
+                        self.copyAnimToBrush([firstLineNum, firstColNum], height, width)
+                        prompting = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        prompting = False
+                    prompting = False
+                break   # to prevent triggering "a" copy to all frames
+            #if chr(prompt_ch) in ['m', 'M']:    # move
+            #    prompting = False
+            elif chr(prompt_ch) in ['x', 'X']:    # flip horizontally
+                self.flipSegmentHorizontal([firstLineNum, firstColNum], height, width)
+                #prompting = False
+                self.refresh()
+            elif chr(prompt_ch) in ['y', 'Y']:    # flip vertically 
+                self.flipSegmentVertical([firstLineNum, firstColNum], height, width)
+                #prompting = False
+                self.refresh()
+            #    self.undo.push()
+            #    self.mov.currentFrame.flip_horizontal()
+            if chr(prompt_ch) in ['t', 'T']:    # Cut to clipboard
+                self.clearStatusBar()
+                if self.mov.hasMultipleFrames():
+                    self.promptPrint("Cut across all frames in playback range (Y/N)? ")
+                    askingAboutRange = True
+                else:
+                    self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                    self.undo.push()
+                    self.deleteSegment([firstLineNum, firstColNum], height, width)
+                    askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # No, only one frame
+                        self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['d', 'D']:    # delete/clear
+                self.clearStatusBar()
+                if self.mov.hasMultipleFrames():
+                    self.promptPrint("Delete across all frames in playback range (Y/N)? ")
+                    askingAboutRange = True
+                else:
+                    self.undo.push()
+                    self.deleteSegment([firstLineNum, firstColNum], height, width)
+                    askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # yes, all range
+                        self.undo.push()
+                        self.deleteSegment([firstLineNum, firstColNum], height, width)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['l', 'L']:    # color
+                self.clearStatusBar()
+                if self.mov.hasMultipleFrames():
+                    self.promptPrint("Color across all frames in playback range (Y/N)? ")
+                    askingAboutRange = True
+                else:
+                    self.undo.push()
+                    self.colorSegment([firstLineNum, firstColNum], height, width)
+                    askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.undo.push()
+                        self.colorSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # yes, all range
+                        self.undo.push()
+                        self.colorSegment([firstLineNum, firstColNum], height, width)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['f', 'F']:    # fill
+                self.clearStatusBar()
+                self.promptPrint(f"Enter fill character, or press enter for {self.appState.drawChar}: ")
+                askingAboutChar = True
+                canceled = False
+                drawChar = 'X'
+                prompt_ch = self.stdscr.getch()
+                if prompt_ch == 27:     # esc, cancel
+                    canceled = True
+                elif prompt_ch in [13, curses.KEY_ENTER]:
+                    drawChar = self.appState.drawChar
+                elif prompt_ch in [curses.KEY_F1]:
+                    drawChar = chr(self.chMap['f1'])
+                elif prompt_ch in [curses.KEY_F2]:
+                    drawChar = chr(self.chMap['f2'])
+                elif prompt_ch in [curses.KEY_F3]:
+                    drawChar = chr(self.chMap['f3'])
+                elif prompt_ch in [curses.KEY_F4]:
+                    drawChar = chr(self.chMap['f4'])
+                elif prompt_ch in [curses.KEY_F5]:
+                    drawChar = chr(self.chMap['f5'])
+                elif prompt_ch in [curses.KEY_F6]:
+                    drawChar = chr(self.chMap['f6'])
+                elif prompt_ch in [curses.KEY_F7]:
+                    drawChar = chr(self.chMap['f7'])
+                elif prompt_ch in [curses.KEY_F8]:
+                    drawChar = chr(self.chMap['f8'])
+                elif prompt_ch in [curses.KEY_F9]:
+                    drawChar = chr(self.chMap['f9'])
+                elif prompt_ch in [curses.KEY_F10]:
+                    drawChar = chr(self.chMap['f10'])
+                else:
+                    drawChar = chr(prompt_ch)
+                if canceled:
+                    askingAboutRange = False
+                    prompting = False
+                else:
+                    self.clearStatusBar()
+                    if self.mov.hasMultipleFrames():
+                        self.promptPrint("Fill across all frames in playback range (Y/N)? ")
+                        askingAboutRange = True
+                    else:   # Just one frame, so don't worry about the range.
+                        self.undo.push()
+                        self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
+                        askingAboutRange = False
+                while askingAboutRange:
+                    prompt_ch = self.stdscr.getch()
+                    if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                        self.undo.push()
+                        self.fillSegment([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange, fillChar=drawChar)
+                        askingAboutRange = False
+                    if chr(prompt_ch) in ['n', 'N']:    # yes, all range
+                        self.undo.push()
+                        self.fillSegment([firstLineNum, firstColNum], height, width, fillChar=drawChar)
+                        askingAboutRange = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        askingAboutRange = False
+                prompting = False
+            elif chr(prompt_ch) in ['a', 'A']:    # copy to all frames
+                self.copySegmentToAllFrames([firstLineNum, firstColNum], height, width, frange=self.appState.playbackRange)
+                prompting = False
+            elif prompt_ch == 27:  # esc, cancel
+                self.undo.undo()
+                prompting = False
+            elif prompt_ch in [13, curses.KEY_ENTER]: # enter
+                # Confirm. Don't pop the clipboard like esc does.
+                prompting = False
+
     def pasteFromMenu(self):
         if self.clipBoard:  # If there is something in the clipboard
             self.askHowToPaste()
+
+    def pasteColorsFromMenu(self):
+        self.askHowToPasteColors()
+
+    def askHowToPasteColors(self):
+        if self.clipBoard and isinstance(self.clipBoard, durmovie.Frame):
+            frange=None
+            if self.mov.hasMultipleFrames():
+                self.promptPrint("Paste across all frames in playback range (Y/N)? ")
+                askingAboutRange = True
+                self.stdscr.nodelay(0) # wait for input when calling getch
+            else:   # only one frame
+                askingAboutRange = False
+            while askingAboutRange:
+                prompt_ch = self.stdscr.getch()
+                if chr(prompt_ch) in ['y', 'Y']:    # yes, all range
+                    frange=self.appState.playbackRange
+                    ranged = True
+                    askingAboutRange = False
+                if chr(prompt_ch) in ['n', 'N']:    # no, single frame only
+                    self.undo.push()
+                    askingAboutRange = False
+                elif prompt_ch == 27:  # esc, cancel
+                    askingAboutRange = False
+                    return False
+            self.undo.push()
+            self.pasteFromClipboard(frange=frange, colors_only=True)
+        else:
+            self.notify("To paste colors, first copy something to the clipboard.")
 
     def askHowToPaste(self):
         self.clearStatusBar()
@@ -7347,7 +7781,6 @@ Can use ESC or META instead of ALT
                 prompt_ch = self.stdscr.getch()
                 try:
                     if chr(prompt_ch) in ['y', 'Y']:
-                        frange=self.appState.playbackRange
                         prompting = False
                     if chr(prompt_ch) in ['n', 'N']:
                         transparent = False
@@ -7357,7 +7790,26 @@ Can use ESC or META instead of ALT
                 except ValueError:
                     pass    # dgaf crash prevention on weird inputs
 
-            self.pasteMovFromClipboard(transparent=transparent)
+            self.clearStatusBar()
+            self.promptPrint("Stop on last frame, or Loop back around (S/L)? ")
+            prompting = True
+            is_looping = True
+            while prompting:
+                prompt_ch = self.stdscr.getch()
+                try:
+                    if chr(prompt_ch) in ['s', 'S']:
+                        is_looping = False
+                        prompting = False
+                    if chr(prompt_ch) in ['l', 'L']:
+                        is_looping = True
+                        prompting = False
+                    elif prompt_ch == 27:  # esc, cancel
+                        return False
+                except ValueError:
+                    pass    # dgaf crash prevention on weird inputs
+            self.clearStatusBar()
+
+            self.pasteMovFromClipboard(transparent=transparent, looping=is_looping)
         elif isinstance(self.clipBoard, durmovie.Frame):
             transparent = False
             frange=None
@@ -7400,7 +7852,7 @@ Can use ESC or META instead of ALT
             self.undo.push()
             self.pasteFromClipboard(frange=frange, transparent=transparent)
 
-    def pasteMovFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
+    def pasteMovFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True, looping=False):
         # Reject if clipboard is empty or not a movie
         if not clipBuffer:
             clipBuffer = self.clipBoard
@@ -7415,12 +7867,19 @@ Can use ESC or META instead of ALT
         # For each frame in the clipboard,
         # paste it into the next frame of self.mov
         origFrame = self.mov.currentFrameNumber
+        pasting = True
         for frame in clipBuffer.frames:
-            self.pasteFromClipboard(clipBuffer=frame, transparent=transparent, pushUndo=False)
-            self.mov.nextFrame()
+            if not pasting:
+                break
+            else:
+                self.pasteFromClipboard(clipBuffer=frame, transparent=transparent, pushUndo=False)
+            if not looping and self.mov.currentFrameNumber == len(self.mov.frames): # stop pasting on last frame
+                pasting = False
+            else:
+                self.mov.nextFrame()
         #self.mov.gotoFrame(origFrame)   
     
-    def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True):
+    def pasteFromClipboard(self, startPoint=None, clipBuffer=None, frange=None, transparent=False, pushUndo=True, colors_only=False):
         """ Pastes a frame object into the canvas """
         # Reject if clipboard is empty or not a frame
         if not clipBuffer:
@@ -7454,7 +7913,10 @@ Can use ESC or META instead of ALT
                             else:
                                 self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
                         else:
-                            self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
+                            if colors_only:
+                                self.insertColor(fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
+                            else:
+                                self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False)
                     else:
                         if transparent:
                             if chr(character) == ' ' and charBg == 0:
@@ -7462,7 +7924,10 @@ Can use ESC or META instead of ALT
                             else:
                                 self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
                         else:
-                            self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
+                            if colors_only:
+                                self.insertColor(fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
+                            else:
+                                self.insertChar(character, fg=charFg, bg=charBg, x=charColumn, y=charLine, pushUndo=False, frange=frange)
 
     def copySegmentToClipboard(self, startPoint, height, width):
         """ startPoint is [line, column] """
@@ -7484,6 +7949,12 @@ Can use ESC or META instead of ALT
         """ startPoint is [line, column] """
         animClipBoard = self.copyAnimToBuffer(startPoint, height, width)
         self.clipBoard = animClipBoard 
+
+    def copyAnimToBrush(self, startPoint, height, width):
+        """ startPoint is [line, column] """
+        copied_mov = self.copyAnimToBuffer(startPoint, height, width)
+        self.appState.animBrush.set_mov(copied_mov)
+
 
     def copyAnimToBuffer(self, startPoint, height, width):
         """ Copies the selected area from all frames in the current playback range into a movie object """
@@ -7616,13 +8087,13 @@ Can use ESC or META instead of ALT
 
 
     def clearStatusBarNoRefresh(self):
-        self.addstr(self.statusBarLineNum, 0, " " * self.mov.sizeX) # clear lower status bar
-        self.addstr(self.statusBarLineNum + 1, 0, " " * self.mov.sizeX) # clear upper status bar
+        self.addstr(self.statusBarLineNum, 0, " " * self.appState.realmaxX) # clear lower status bar
+        self.addstr(self.statusBarLineNum + 1, 0, " " * self.appState.realmaxX) # clear upper status bar
 
    
     def clearStatusBar(self):
-        self.addstr(self.statusBarLineNum, 0, " " * self.mov.sizeX) # clear lower status bar
-        self.addstr(self.statusBarLineNum + 1, 0, " " * self.mov.sizeX) # clear upper status bar
+        self.addstr(self.statusBarLineNum, 0, " " * self.appState.realmaxX) # clear lower status bar
+        self.addstr(self.statusBarLineNum + 1, 0, " " * self.appState.realmaxX) # clear upper status bar
         self.refresh()
  
     def parseArgs(self):
@@ -7651,24 +8122,60 @@ Can use ESC or META instead of ALT
         self.statusBar.hide()
         self.appState.drawBorders = True
 
+    def loadPlayQueuePosition(self):
+        if self.appState.play_queue_position is None:
+            return False
+        if self.appState.play_queue_position < 0:
+            return False
+        if self.appState.play_queue_position >= len(self.appState.play_queue):
+            return False
+        queue_item = self.appState.play_queue[self.appState.play_queue_position]
+        if self.isSixteenColorsQueueItem(queue_item):
+            _, pack, filename = queue_item
+            if getattr(self, "sixteenc_api", None) is None:
+                self.sixteenc_api = SixteenColorsAPI()
+            self.appState.sixteenc_pack = pack
+            url = self.sixteenc_api.get_url_for_file(pack, filename)
+            return self.loadRemoteFile(url)
+        self.clearCanvas(prompting=False)
+        self.loadFromFile(queue_item, 'dur')
+        self.move_cursor_topleft()
+        self.stdscr.clear()
+        self.hardRefresh()
+        return True
+
+    def runPlayQueue(self, load_current=True):
+        if not self.appState.play_queue:
+            return
+        if self.appState.play_queue_position is None:
+            self.appState.play_queue_position = 0
+        while self.appState.durview_running:
+            if load_current:
+                if not self.loadPlayQueuePosition():
+                    return
+            self.enterViewMode()
+            direction = self.appState.play_queue_direction
+            self.appState.play_queue_direction = 0
+            load_current = True
+            if direction == 0:
+                if not self.appState.play_queue_auto_advance:
+                    return
+                direction = 1
+            next_position = self.appState.play_queue_position + direction
+            if next_position < 0 or next_position >= len(self.appState.play_queue):
+                return
+            self.appState.play_queue_position = next_position
+
     def runDurView(self):
         """ Launch the UI for the DurView app """
-        # While there are files to read from the openFilePicker(), put them into view mode
-        #
-        #if self.appState.curOpenFileName != "":
-        #    # We already opened a file from the command-line, so play it.
-        #    self.enterViewMode()
-        for movie in self.appState.play_queue:
-            self.loadFromFile(movie, 'dur') # this loads ansi files, too. win
-            self.enterViewMode()
+        self.runPlayQueue()
         while self.appState.durview_running:
             #file = self.openFilePicker()
             opened = self.openFromMenu()
             if opened == False:
                 # User exited file picker with esc, so exit DurView
                 self.appState.durview_running = False
+            elif self.appState.play_queue and self.appState.play_queue_position is not None:
+                self.runPlayQueue(load_current=False)
             else:
                 self.enterViewMode()
-
-
-

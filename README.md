@@ -5,7 +5,7 @@ Durdraw
                 _|  |__ __ _____ __|  |_____ _____ __ __ __
                / _  |  |  |   __|  _  |   __|  _  |  |  |  |\
               /_____|_____|__|__|_____|__|___\____|________| | 
-              \_____________________________________________\|  v 0.30.1
+              \_____________________________________________\|  v 0.31.0
 
 ![durdraw-0 28-demo](https://github.com/user-attachments/assets/3bdb0c46-7f21-4514-9b48-ac00ca62e68e)
 
@@ -27,7 +27,13 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 - [Gallery](#gallery)
 - [Usage](#usage)
   - [Command Line](#command-line)
-  - [Interactive Usage/Editing](#interactive-usageediting)
+  - [Interactive Usage/Editing](#interactive-usage-and-editing)
+  - [User Interface](#user-interface)
+  - [Mouse](#mouse)
+  - [Animation](#animation)
+  - [Brushes](#brushes)
+  - [Animation Brushes](#animation-brushes)
+  - [Keyboard Shortcuts](#keyboard-shortcuts)
   - [Configuration](#configuration)
   - [Themes](#themes)
 - [Durfetch](#durfetch)
@@ -47,7 +53,7 @@ Windows, such as TheDraw, Aciddraw and Pablodraw, but with a modern Unix twist.
 
 1. `ansilove`
 
-    For PNG and animated GIF export, please install `ansilove` (https://ansilove.org/) and make sure it is is in your path.   
+    For PNG and animated GIF export, please install `ansilove` (https://ansilove.org/) and make sure it is in your path.   
     _PNG and GIF export only works in 16-color mode for now, and only with CP437 compatible characters._
 
 2. `fastfetch` or `neofetch`
@@ -250,11 +256,90 @@ options:
   -V, --version         Show version number and exit
 ```
 
-### Interactive Usage/Editing
+### Interactive Usage and Editing
 
-- Use the arrow keys (or mouse) and other keys to edit, much like a text editor.
-- You can click highlighted areas of the screen.
-- You can use the "Esc" (or "Meta") key to access keyboard shortcuts and commands:
+#### User Interface
+
+Durdraw works like a text editor. Use the arrow keys to move the cursor,
+and use the keyboard to type letters, numbers, and punctuation to draw
+your ASCII art.
+
+Pressing Tab switches between the canvas and color picker.
+
+Special (Unicode) characters (displayed on the bottom line of the screen)
+can be entered using F1, F2, F3, etc. Alternatively you can use esc-1,
+esc-2, etc.
+
+To change character sets, type esc-S, or click Menu (esc-m), then Edit,
+then Character Sets. Then use the arrow keys (or type to search) and
+enter to pick a Unicode Block or a Durdraw character set. Use esc-[ and
+esc-] to cycle through the groups of characters in the set.
+
+#### Mouse
+
+The mouse can be used to click menus and menu items, click on colors in
+the color picker, scroll wheel through menus and colors, and for other
+functions, like drawing, brush painting, coloring, erasing, etc.
+
+When you first launch Durdraw, clicking on the canvas moves the cursor.
+The Mouse Tools menu (esc-t) shows the currently set mouse tool, which
+is "Move." To change the mouse function (eg: to Draw), click the Mouse
+Tools menu (esc-t) and select the desired function.
+
+The following mouse tools are available:
+
+```
+Move - Moves the cursor
+Draw - Draws using selected Draw/Fill character.
+Paint - Paints using a brush (see BRUSHES below)
+Color - Change character color without changing the character
+Erase - Erase character
+Eyedrop - Picks up color from character
+Animation Brush - Paint using animation (see ANIMATION BRUSHES below)
+```
+
+#### Animation
+
+Use the Animation Menu [Anim] or keyboard commands to insert (esc-n),
+delete (esc-d), move (esc-M) and edit frames. Use esc-k and esc-j to
+flip to the next and previous frames. The "Play" button (|> or esc-p)
+starts or stops playback.
+
+When the animation is playing, all changes made affect all frames
+within the current playback/edit Range (R: or esc-R). Change playback
+speed (<FPS> or Frames Per Second) with esc-+ (or esc-=) and esc--.
+F: shows the current frame number, and you can go to a specific frame
+with esc-g.
+
+#### Brushes
+
+To make a brush, use shift-arrow or esc-K to make a selection, then
+press b. To use the brush, click the Mouse Tools menu (esc-t) and select
+Paint (P). You can now use the mouse to paint with your custom brush.
+
+#### Animation Brushes
+
+To make an animation brush, use shift-arrow or esc-K to make a selection,
+then press b for "Make Brush" and a for "Animation Brush."
+
+To use the brush, click the Mouse menu (esc-t) and select Animation
+Brush (A). You can now use the mouse to "paint" animation frames.
+
+In loop mode, when you click or drag in the canvas, the current frame of
+the Animation Brush gets painted to the canvas, then the animation brush
+and canvas both advance to their next frames.
+
+In clone mode, when you click or drag in the canvas, the current frame
+of the canvas is cloned to the next frame, then the current frame of
+the Animation Brush is painted to the canvas, and the animation brush
+and canvas both advance to the next frame.
+
+In both modes, esc-K advances to the next brush frame, and esc-J
+goes to the previous brush frame.
+
+#### Keyboard Shortcuts
+
+You can use the "Esc" (or "Alt" or "Meta") key to access keyboard shortcuts and commands:
 
 ```
    ____________.       _________   __________ _________  _____          _______
@@ -270,7 +355,7 @@ options:
   .. Art Editing .....................   .. Animation .......................
   : F1-F10 - insert character        :   : esc-k - next frame               :
   : esc-1 to esc-0 - same as F1-F10  :   : esc-j - previous frame           :
-  : esc-space - insert draw char     :   : esc-p - start/stop payback       :
+  : esc-space - insert draw char     :   : esc-p - start/stop playback      :
   : esc-c/tab - color picker         :   : esc-n - clone frame              :
   : esc-left - next fg color         :   : esc-N - append empty frame       :
   : esc-right - prev fg color        :   : esc-d - delete frame             :
@@ -305,6 +390,10 @@ options:
   : esc-< - delete column            :
   :..................................:
 
+             In some terminals, you can use alt instead of esc.
+
+    Click highlighted areas of the screen, or use keyboard shortcuts:
+
                                                           esc-j  esc-k
                                                           Prev   Next  Canvas
 esc-f  esc-g   esc--                                      Frame  Frame   Size
@@ -321,26 +410,8 @@ esc-m  Go to   esc-+      esc-D   esc-R      esc-t        | esc-p|         |
  Color             Group   Block         Characters     Char Group  Position
   |                  |        |             |                     \       |
 FG:██              (1/21)  [Dur..] <F1░F2▒F3▓F4█F5▀F6▄F7▌F8▐F9■F10·>  (12,10)
-
- ANIMATION:
-
-    Use the Animation Menu [Anim] or keyboard commands to insert (esc-n),
-    delete (esc-d), move (esc-M) and edit frames. Use esc-k and esc-j to
-    flip to the next and previous frames. The "Play" button (|> or esc-p)
-    starts or stops playback.
-
-    When the animation is playing, all changes made effect all frames
-    within the current playback/edit Range (R: or esc-R). Change playback
-    speed (<FPS> or Frames Per Second) with esc-+ (or esc-=) and esc--.
-    F: shows the current frame number, and you can go to a specific frame
-    with esc-g.
-
- BRUSHES:
-
-    To make a brush, use shift-arrow or esc-K to make a selection, then
-    press b. To use the brush, click the Mouse Tools menu (esc-t) and select
-    Paint (P). You can now use the mouse to paint with your custom brush.
 ```
+
 
 ### Configuration
 
@@ -381,7 +452,7 @@ Here is an example `durdraw.ini` file, showing the available options:
 ;theme-256: ~/.durdraw/themes/mutedform-256.dtheme.ini
 
 [Logging]
-; filepath is the path to the log file. Default is ./durdraw.log
+; filepath sets the log filename. Logs are stored in ~/.config/durdraw/
 ;filepath: ./durdraw.log
 
 ; level sets the logging level. Available options: DEBUG, INFO, WARNING, ERROR, CRITICAL. Default is WARNING
@@ -482,7 +553,7 @@ menuBorderColor: 24
 
 #### Custom Character Sets
 
-You can create custom character set files and place them in the ~/.durdraw/charsets folder. Character set files must have the file nme extension .ini. Durdraw will automatically scan for these files and include them in the list of character sets (esc-S).
+You can create custom character set files and place them in the ~/.durdraw/charsets folder. Character set files must have the file name extension .ini. Durdraw will automatically scan for these files and include them in the list of character sets (esc-S).
 
 An example character set file is provided in example-charset.ini:
 
@@ -593,7 +664,7 @@ Durdraw uses a .dur file format to support color, Unicode and animation, which i
 
 ### Development Branch
 
-New development should always be done in the Devleopment branch. This is also where users can beta test new features.
+New development should always be done in the Development branch. This is also where users can beta test new features.
 
 https://github.com/durdraw/durdraw/tree/dev
 

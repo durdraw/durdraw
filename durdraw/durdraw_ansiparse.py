@@ -17,7 +17,6 @@
 
 import sys
 import struct
-from itertools import count
 import pdb
 import durdraw.durdraw_movie as durmovie
 import durdraw.durdraw_color_curses as dur_ansilib
@@ -73,72 +72,77 @@ color_name_to_durcolor_table = {
     'White': 00
 }
 
-def find_next_alpha(text, i):
-    for j in count(i):
-        if text[j].isalpha():
+def find_next_csi_final(text, i):
+    for j in range(i, len(text)):
+        if 0x40 <= ord(text[j]) <= 0x7e:
             return j
     return None
+
+
+def csi_count(escape_sequence):
+    if not escape_sequence:
+        return 1
+    try:
+        return max(1, int(escape_sequence))
+    except ValueError:
+        return 1
+
+
+def csi_cursor_position(escape_sequence):
+    escape_codes = escape_sequence.split(';')
+    row = 1
+    col = 1
+    if len(escape_codes) > 0 and escape_codes[0].isnumeric():
+        row = int(escape_codes[0])
+    if len(escape_codes) > 1 and escape_codes[1].isnumeric():
+        col = int(escape_codes[1])
+    return max(0, row - 1), max(0, col - 1)
 
 
 def get_width_and_height_of_ansi_blob(text, width=80):
     i = 0   # index into the file blob
     col_num = 0
     line_num = 0
+    saved_col_num = 0
+    saved_line_num = 0
     max_col = 0
     while i < len(text):
         if i % 10_000 == 0 or i+1 == len(text):
             LOGGER.debug('scanning', {'i': i+1, 'total': len(text), 'pct': round((i+1)/len(text)*100, 2)})
         # If there's an escape code, extract data from it
         if text[i:i + 2] == '\x1B[':    # Match ^[
-            match = find_next_alpha(text, i+1)
-            if not match:
+            match = find_next_csi_final(text, i+2)
+            if match is None:
                 i += 1 # move on to next byte
                 continue
             end_index = match   # where the code ends
             if text[end_index] == 'A':      # Move the cursor up X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
-                line_num = line_num - move_by_amount
+                move_by_amount = csi_count(escape_sequence)
+                line_num = max(0, line_num - move_by_amount)
                 i = end_index + 1
                 continue    # jump the while
             elif text[end_index] == 'B':      # Move the cursor down X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
+                move_by_amount = csi_count(escape_sequence)
                 line_num += move_by_amount
                 i = end_index + 1
                 continue    # jump the while
             elif text[end_index] == 'C':      # Move the cursor forward X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
+                move_by_amount = csi_count(escape_sequence)
                 col_num += move_by_amount
                 i = end_index + 1
                 continue    # jump the while
             elif text[end_index] == 'D':      # Move the cursor back X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
-                col_num = col_num - move_by_amount
+                move_by_amount = csi_count(escape_sequence)
+                col_num = max(0, col_num - move_by_amount)
                 i = end_index + 1
                 continue    # jump the while
-            elif text[end_index] == 'H':      # Move the cursor to row/column
+            elif text[end_index] in ['H', 'f']:      # Move the cursor to row/column
                 escape_sequence = text[i + 2:end_index]
-                escape_codes = escape_sequence.split(';')
-                if len(escape_codes) > 1:   # row ; column
-                    if escape_codes[0].isnumeric():
-                        line_num = int(escape_codes[0])
-                    if escape_codes[1].isnumeric():
-                        col_num = int(escape_codes[1])
-                elif len(escape_codes) == 1:   # row, column=1
-                    #line_num = 1
-                    if escape_codes[0].isnumeric():
-                        col_num = int(escape_codes[0])
+                line_num, col_num = csi_cursor_position(escape_sequence)
                 i = end_index + 1
                 continue    # jump the while
             elif text[end_index] == 'J':      # Clear screen
@@ -245,8 +249,8 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
             LOGGER.debug('parsing', {'i': i+1, 'total': len(text), 'pct': round((i+1)/len(text)*100, 2)})
         # If there's an escape code, extract data from it
         if text[i:i + 2] == '\x1B[':    # Match ^[[
-            match = find_next_alpha(text, i+1)
-            if not match:
+            match = find_next_csi_final(text, i+2)
+            if match is None:
                 i += 1 # move on to next byte
                 continue
             end_index = match   # where the code ends
@@ -329,25 +333,19 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
                 continue    # jump the while
             elif text[end_index] == 'A':      # Move the cursor up X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
-                line_num = line_num - move_by_amount
+                move_by_amount = csi_count(escape_sequence)
+                line_num = max(0, line_num - move_by_amount)
                 i = end_index + 1
                 continue    # jump the while
             elif text[end_index] == 'B':      # Move the cursor down X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
+                move_by_amount = csi_count(escape_sequence)
                 line_num += move_by_amount
                 i = end_index + 1
                 continue    # jump the while
             elif text[end_index] == 'C':      # Move the cursor forward X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
+                move_by_amount = csi_count(escape_sequence)
                 if col_num >= maxWidth:
                     col_num = 0
                     line_num += 1
@@ -356,24 +354,13 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
                 continue    # jump the while
             elif text[end_index] == 'D':      # Move the cursor back X spaces
                 escape_sequence = text[i + 2:end_index]
-                if len(escape_sequence) == 0:
-                    escape_sequence = 1
-                move_by_amount = int(escape_sequence)
-                col_num = col_num - move_by_amount
+                move_by_amount = csi_count(escape_sequence)
+                col_num = max(0, col_num - move_by_amount)
                 i = end_index + 1
                 continue    # jump the while
-            elif text[end_index] == 'H':      # Move the cursor to row/column
+            elif text[end_index] in ['H', 'f']:      # Move the cursor to row/column
                 escape_sequence = text[i + 2:end_index]
-                escape_codes = escape_sequence.split(';')
-                if len(escape_codes) > 1:   # row ; column
-                    if escape_codes[0].isnumeric():
-                        line_num = int(escape_codes[0])
-                    if escape_codes[1].isnumeric():
-                        col_num = int(escape_codes[1])
-                elif len(escape_codes) == 1:   # row, column=1
-                    #line_num = 1
-                    if escape_codes[0].isnumeric():
-                        col_num = int(escape_codes[0])
+                line_num, col_num = csi_cursor_position(escape_sequence)
                 i = end_index + 1
                 continue    # jump the while
             elif text[end_index] == 'J':      # Clear screen
@@ -391,9 +378,14 @@ def parse_ansi_escape_codes(text, filename = None, appState=None, caller=None, c
                 i = end_index + 1   # move on to next byte
                 continue
             elif text[end_index] == 's':    # save current position/state
+                saved_col_num = col_num
+                saved_line_num = line_num
                 i = end_index + 1   # move on to next byte
                 continue
             elif text[end_index] == 'u':    # restore saved position/state
+                col_num = saved_col_num
+                line_num = saved_line_num
+                #i = saved_byte_location
                 i = end_index + 1   # move on to next byte
                 continue
             else:   # Some other escape code, who cares for now
@@ -475,5 +467,3 @@ if __name__ == "__main__":
         print(str(newFrame.newColorMap))
         print(str(newFrame.content))
         print(str(newFrame))
-
-

@@ -270,7 +270,7 @@ class MenuHandler:
                     current_option = max(0, current_option - 1)
                 elif mouseState & curses.BUTTON5_PRESSED:   # wheel down
                     current_option = min(len(options) - 1, current_option + 1)
-                else:   # assume a click
+                elif mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:   # assume a click
                     # Did the user click in the menu area?
                     if mouseY > self.menuOriginLine and mouseY < self.menuOriginLine + len(self.menu.items):  # on a menu line?
                         if mouseX < self.x and mouseX > self.x - self.width:    # in a menu column
@@ -340,6 +340,8 @@ class DrawCharPickerHandler:
         self.window = window
 
     def pickChar(self):
+        curses.flushinp()
+        self.caller.appState.ui.disableMouseReporting()
         self.window.nodelay(0) # wait for input when calling getch
         maxLines, maxCol = self.window.getmaxyx()
         #pdb.set_trace()
@@ -382,6 +384,8 @@ class DrawCharPickerHandler:
                 prompting = False
             elif c in [27, 13, curses.KEY_ENTER]:   # 27 = esc, 13 = enter, cancel
                 prompting = False
+            elif c in [curses.KEY_MOUSE]:
+                pass
             elif type(c) == str:    # Is a printable/unicode character
                 if c.isprintable():
                     self.caller.appState.drawChar = c
@@ -874,6 +878,39 @@ class ColorPickerHandler:
         #curses.mousemask(curses.REPORT_MOUSE_POSITION | curses.ALL_MOUSE_EVENTS)
         #print('\033[?1003h') # enable mouse tracking
         return color
+
+    def prev_color(self):
+        color = self.colorPicker.caller.colorfg
+        color += 1
+        if color > self.appState.totalFgColors:
+            if self.appState.colorMode == "16":
+                color = 1
+            elif self.appState.colorMode == "256":
+                color = 0
+        self.colorPicker.caller.setFgColor(color)
+        self.updateFgPicker()
+        self.colorPicker.caller.drawStatusBar()
+
+    def next_color(self):
+        color = self.colorPicker.caller.colorfg
+        color -= 1
+        if self.appState.colorMode == "16":
+            if color <= 0:
+                color = self.appState.totalFgColors 
+        elif self.appState.colorMode == "256":
+            if color < 0:
+                color = self.appState.totalFgColors 
+        self.colorPicker.caller.setFgColor(color)
+        self.updateFgPicker()
+        self.colorPicker.caller.drawStatusBar()
+
+
+    def in_area(self, mouseX, mouseY):
+        # If clicked on a color, set an FG color
+        if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < self.x + len(self.colorGrid[0])-2 and mouseX >= self.x:   # cpicked in the color picker
+            return True
+        else:
+            return False
 
     def gotClick(self, mouseX, mouseY):
         # If clicked on a color, set an FG color

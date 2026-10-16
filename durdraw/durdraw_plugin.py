@@ -61,8 +61,8 @@ class DurPlugin:
                                     plugins[module_name]["meta"]["internal"] = False
                                     
             else:
-                print(f"Could not read path: {directory}")
-                print(f"isdir: {os.path.isdir(directory)},  access: {os.access(directory, os.R_OK)}")
+                # directory in list not found
+                pass
         return plugins
 
     def run_plugin(self, plugin_name, mov, ui=None):

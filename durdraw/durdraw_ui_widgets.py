@@ -400,7 +400,8 @@ class StatusBar():
             colorPicker_tooltip.alwaysHidden = True
 
         # Settings menu
-        settingsMenuColumn = 22 # Try to place to the right of the main menu
+        #settingsMenuColumn = 22 # Try to place to the right of the main menu
+        settingsMenuColumn = 34 # Try to place to the right of the main menu
         settingsMenu = Menu(self.window, x = self.x - 2, y = settingsMenuColumn, caller=self, appState=self.appState, statusBar=self, name="Settings")
         self.menus["Settings"] = settingsMenu
         settingsMenu.set_title("Settings:")
@@ -473,28 +474,43 @@ class StatusBar():
         self.exportPluginsMenu = exportPluginsMenu
 
         # Make the Edit menu
-        editMenuColumn = 22 # Try to place to the right of the main menu
+        editButton_offset = 7 # Try to place to the right of the main menu
         editMenu = Menu(self.window, x = self.x - 1, y = self.y, caller=self, appState=self.appState, statusBar=self, name="Edit")
         self.menus["Edit"] = editMenu
         editMenu.add_item("Undo", caller.clickedUndo, "u", shortcut="esc-z")
         editMenu.add_item("Redo", caller.clickedRedo, "r", shortcut="esc-r")
+        editMenu.add_item("Color Picker", caller.selectColorPicker, "l", shortcut="tab")
         editMenu.add_item("Mark/Select", caller.startSelecting, "k", shortcut="esc-K")
         editMenu.add_item("Paste", caller.pasteFromMenu, "p", shortcut="esc-v")
+        editMenu.add_item("Paste Colors", caller.pasteColorsFromMenu, "", shortcut="")
         editMenu.add_item("Find /", caller.searchForStringPrompt, "/", shortcut="esc-F")
         editMenu.add_item("Insert Line", caller.addLine, "i", shortcut="esc-'")
         editMenu.add_item("Delete Line", caller.delLine, "d", shortcut="esc-;")
         editMenu.add_item("Character Sets", caller.showCharSetPicker, "c", shortcut="esc-S")
         editMenu.add_item("Replace Color", caller.replaceColorUnderCursor, "e", shortcut="esc-L")
         editMenu.add_item("Replace Character", caller.replaceCharUnderCursor, "h", shortcut="")
-        editMenu.is_submenu = True
+        editMenu.add_item("Insert Mode", caller.toggleInsertMode, "n", shortcut="ins")
+        editMenu.add_item("Settings", caller.openSettingsMenu, "s", has_submenu=True)
+        #editMenu.is_submenu = True
         editMenu.set_x(self.x - 1)
-        editMenu.set_y(editMenuColumn)
         self.editMenu = editMenu
+
+
+        editButton = Button("Edit", 0, editButton_offset, caller.openEditMenu, self.window, appState=self.appState)
+        editButton.set_tooltip_command('e')
+        self.editButton = editButton
+        editButton.realX = self.x + editButton.x
+        editButton.realY = self.y + editButton.y
+        editButton.show()
+        self.editButton = editButton
+        editMenu.set_x(editButton.realX - 1)
+        editMenu.set_y(editButton.realY)
+
 
         # main menu items 
         self.menuButton = None
         # Create a menu list item, add menu items to it
-        mainMenu = Menu(self.window, x = self.x - 1, y = self.y, caller=self, appState=self.appState, statusBar=self, name="Menu")
+        mainMenu = Menu(self.window, x = self.x - 1, y = self.y, caller=self, appState=self.appState, statusBar=self, name="File")
         self.menus["Menu"] = mainMenu
         mainMenu.add_item("New/Clear", caller.clearCanvasPrompt, "n", shortcut="esc-C")
         mainMenu.add_item("Open", caller.openFromMenu, "o", shortcut="esc-o")
@@ -502,13 +518,11 @@ class StatusBar():
         mainMenu.add_item("Save", caller.save, "s", shortcut="esc-s")
         mainMenu.add_item("Export", caller.openExportMenu, "x", has_submenu=True)
         mainMenu.add_item("Info/Sauce", caller.clickedInfoButton, "i", shortcut="esc-i")
-        mainMenu.add_item("Color Picker", caller.selectColorPicker, "l", shortcut="tab")
         mainMenu.add_item("Viewer Mode", caller.enterViewMode, "v", shortcut="esc-V")
-        mainMenu.add_item("Edit", caller.openEditMenu, "e", has_submenu=True)
-        mainMenu.add_item("Settings", caller.openSettingsMenu, "t", has_submenu=True)
+        #mainMenu.add_item("Edit", caller.openEditMenu, "e", has_submenu=True)
         # Help and Quit are added after plugins are loaded.
-        menuButton = Button("Menu", 0, 0, caller.openMainMenu, self.window, appState=self.appState)
-        menuButton.set_tooltip_command('m')
+        menuButton = Button("File", 0, 0, caller.openMainMenu, self.window, appState=self.appState)
+        menuButton.set_tooltip_command('f')
         self.menuButton = menuButton
         menuButton.realX = self.x + menuButton.x
         menuButton.realY = self.y + menuButton.y
@@ -521,7 +535,7 @@ class StatusBar():
 
         # Animation menu
         self.animButton = None
-        animButton_offset = 7
+        animButton_offset = 14
         # Create a menu list item, add menu items to it
         animMenu = Menu(self.window, x = animButton_offset, y = self.y, caller=self, appState=self.appState, statusBar=self, name="Anim")
         self.menus["Anim"] = animMenu
@@ -535,6 +549,8 @@ class StatusBar():
         animMenu.add_item("Move Frame", caller.moveCurrentFrame, "m", shortcut="esc-M")
         animMenu.add_item("Shift Frames Right", caller.shiftMovieRight, "}", shortcut="esc-}")
         animMenu.add_item("Shift Frames Left", caller.shiftMovieLeft, "{", shortcut="esc-{")
+        animMenu.add_item("Animation Brush Prev Frame", caller.anim_brush_prev_frame, "", shortcut="esc-J")
+        animMenu.add_item("Animation Brush Next Frame", caller.anim_brush_prev_frame, "", shortcut="esc-K")
         animMenu.add_item("Effects", caller.openTransformMenu, "f", has_submenu=True)
         animButton = Button("Anim", 0, animButton_offset, caller.openAnimMenu, self.window, appState=self.appState)
         animButton.set_tooltip_command('a')
@@ -549,24 +565,27 @@ class StatusBar():
 
 
         # Mouse tools menu
-        toolMenu = Menu(self.window, x=45, y=self.y, caller=self, appState=self.appState, statusBar=self, name="Menu")
+        toolMenu = Menu(self.window, x=45, y=self.y, caller=self, appState=self.appState, statusBar=self, name="Mouse")
         self.menus["Mouse"] = toolMenu
         toolMenu.set_title("Mouse Tools:")
+        toolMenu.add_item("Select", self.setCursorModeSelect, "s")
         toolMenu.add_item("Move", self.setCursorModeMove, "m")
         toolMenu.add_item("Draw", self.setCursorModeDraw, "d")
         toolMenu.add_item("Paint", caller.setCursorModePaint, "p")
         toolMenu.add_item("Color", self.setCursorModeCol, "c")
         toolMenu.add_item("Erase", self.setCursorModeErase, "e")
         toolMenu.add_item("Eyedrop", self.setCursorModeEyedrop, "y")
-        toolMenu.add_item("Draw/Fill Char", caller.openDrawCharPicker, "h")
+        toolMenu.add_item("Animation Brush", caller.setCursorModeAnimBrush, "a")
+        toolMenu.add_item("Set Draw/Fill Char", caller.openDrawCharPicker, "h")
         self.toolMenu = toolMenu
 
         # Make cursor tool selector button
         # offset is how far right to put the button in the statusbar:
-        toolButton_offset = 14
-        toolButton = Button("Tool", 0, toolButton_offset, caller.openMouseToolsMenu, self.window, appState=self.appState)
-        toolButton.set_label(self.caller.appState.cursorMode)
-        toolButton.set_tooltip_command('t')
+        #toolButton_offset = 14
+        toolButton_offset = 21
+        toolButton = Button("Mouse", 0, toolButton_offset, caller.openMouseToolsMenu, self.window, appState=self.appState)
+        #toolButton.set_label(self.caller.appState.cursorMode)
+        toolButton.set_tooltip_command('m')
         toolButton.picker = True
         toolButton.realX = self.x + toolButton.x    # toolbar shit
         toolButton.realY = self.y + toolButton.y
@@ -591,7 +610,7 @@ class StatusBar():
             self.charSetButton = charSetButton
             charSetButton.hide()
 
-        # Brush picker - make me a real brush someday.
+        # Brush picker - make me a real brush someday. (done)
         drawCharPicker_offset = toolButton_offset + 6   # to the right of Draw menu
         drawCharPicker_offset += 4  # accomodate for eyedrop for now. yes, this is dumb
         
@@ -630,6 +649,7 @@ class StatusBar():
         newX = len(str(self.items))
         newY = self.y
         self.items.append(menuButton)
+        self.items.append(editButton)
         self.items.append(toolButton)
         self.items.append(drawCharPickerButton)
         self.items.append(animButton)
@@ -637,6 +657,7 @@ class StatusBar():
             if self.caller.appState.showCharSetButton:
                 self.items.append(charSetButton)
         self.buttons.append(menuButton)
+        self.buttons.append(editButton)
         self.buttons.append(toolButton)
         self.buttons.append(drawCharPickerButton)
         self.buttons.append(animButton)
@@ -646,7 +667,7 @@ class StatusBar():
 
     def initThemesMenu(self):
         # system themes
-        themesMenuColumn = 45
+        themesMenuColumn = 47
         themesMenu = Menu(self.window, x = self.x - 2, y = themesMenuColumn, caller=self, appState=self.appState, statusBar=self, name="Themes")
         themesMenu.set_title("Themes:")
         themesMenu.is_submenu = True
@@ -654,7 +675,7 @@ class StatusBar():
         themesMenu.set_y(themesMenuColumn)
         self.themesMenu = themesMenu
         # user themes
-        userThemesMenuColumn = 45
+        userThemesMenuColumn = 47
         userThemesMenu = Menu(self.window, x = self.x - 2, y = userThemesMenuColumn, caller=self, appState=self.appState, statusBar=self, name="User Themes")
         userThemesMenu.set_title("User Themes:")
         userThemesMenu.is_submenu = True
@@ -697,38 +718,44 @@ class StatusBar():
 
     def setCursorModeMove(self):
         self.caller.appState.setCursorModeMove()
-        self.caller.disableMouseReporting()
-        self.toolButton.set_label(self.caller.appState.cursorMode)
+        self.caller.disableMouseReporting(hard=True)
+        #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeSelect(self):
         self.caller.appState.setCursorModeSelect()
         self.caller.disableMouseReporting()
-        self.toolButton.set_label(self.caller.appState.cursorMode)
+        #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeDraw(self):
         self.caller.appState.setCursorModeDraw()
         self.caller.enableMouseReporting()
-        self.toolButton.set_label(self.caller.appState.cursorMode)
+        #self.toolButton.set_label(self.caller.appState.cursorMode)
+
+
+    def setCursorModeAnimBrush(self):
+        self.caller.appState.setCursorModeAnimBrush()
+        self.caller.enableMouseReporting()
+        #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModePaint(self):
         self.caller.appState.setCursorModePaint()
         self.caller.enableMouseReporting()
-        self.toolButton.set_label(self.caller.appState.cursorMode)
+        #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeCol(self):
         self.caller.appState.setCursorModeCol()
-        self.caller.disableMouseReporting()
-        self.toolButton.set_label(self.caller.appState.cursorMode)
+        self.caller.disableMouseReporting(hard=True)
+        #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeErase(self):
         self.caller.appState.setCursorModeErase()
-        self.caller.disableMouseReporting()
-        self.toolButton.set_label(self.caller.appState.cursorMode)
+        self.caller.disableMouseReporting(hard=True)
+        #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeEyedrop(self):
         self.caller.appState.setCursorModeEyedrop()
-        self.caller.disableMouseReporting()
-        self.toolButton.set_label("Eye")
+        self.caller.disableMouseReporting(hard=True)
+        #self.toolButton.set_label("Eye")
 
     def updateLocation(self, x, y):
         self.x = x
