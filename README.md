@@ -778,6 +778,8 @@ Durdraw is what it is thanks to the following people:
 - Frederick Cambus - Documentation update
 - eyooooo - Filename conventions, useful feedback
 - HK - Beta testing, useful feedback
+- Mike Clark - Durview improvements
+- tahuffman1s - Durfetch Fastfetch fixes
 - ANSI and ASCII artists: `cmang`, `H7`, `LDA`, `HK`, `LnLcFlx`
 
 ### Legal
