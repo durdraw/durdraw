@@ -5,7 +5,6 @@
 import math
 from copy import deepcopy
 from durdraw.durdraw_movie import Frame  # Adjust import path as needed
-import pdb
 
 # Durdraw plugin format version
 durdraw_plugin_version = 1
@@ -38,26 +37,32 @@ def transform_movie(mov, appState=None, opts=opts):
     frame_num = low_frame   # start low
 
     color_mode = appState.colorMode if appState else "16"  # Default to 16-color
-    max_color = opts['max color'] if color_mode == "256" else 15  # Color range
     min_color = opts['min color']
-    #min_color = 1
+    max_color = opts['max color'] if color_mode == "256" else min(opts['max color'], 15)
+    
+    # Ensure min_color doesn't exceed max_color
+    if min_color > max_color:
+        min_color, max_color = max_color, min_color
+
+    color_range = max_color - min_color
     
     for step in range(steps):
-        #frame = Frame(mov.sizeX, mov.sizeY)  # Fresh frame
         frame = mov.frames[frame_num]
         time = step / steps * 2 * math.pi  # Animation phase
         
         for y in range(mov.sizeY):
             for x in range(mov.sizeX):
-                # Plasma effect: combine sine waves
+                # Plasma effect: combine sine waves (value ranges from -1.0 to 1.0)
                 value = (
                     math.sin(x * 0.1 + time) +              # Horizontal wave
                     math.sin(y * 0.1 + time * 1.5) +       # Vertical wave
                     math.sin((x + y) * 0.05 + time * 0.5)  # Diagonal wave
                 ) / 3.0  # Average for smooth gradient
                 
-                # Map to color range (1 to max_color)
-                fg_color = int(min_color + (value + 1) * (max_color - 1) / 2)
+                # Correct mapping to color range [min_color, max_color]
+                fg_color = int(min_color + (value + 1.0) * color_range / 2.0)
+                fg_color = max(min_color, min(max_color, fg_color))  # Clamp within range
+
                 if opts['overwrite characters']:
                     frame.content[y][x] = opts['fill character'][0]  # Static char—color does the work
                     frame.newColorMap[y][x] = [fg_color, 0]  # Black bg
@@ -67,5 +72,3 @@ def transform_movie(mov, appState=None, opts=opts):
                         frame.newColorMap[y][x] = [fg_color, 0]  # Black bg
         frame_num += 1
     return mov
-
-
