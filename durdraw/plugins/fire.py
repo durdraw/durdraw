@@ -4,111 +4,109 @@
 
 import random
 from copy import deepcopy
-from durdraw.durdraw_movie import Frame
 
 # Durdraw plugin format version
-durdraw_plugin_version = 1
+durdraw_plugin_version = 2
 
 # Plugin information
 durdraw_plugin = {
     "name": "Fire",
-    "author": "Grok (inspired by Asciimatics & Sam Foster)",
-    "version": 1,
+    "author": "",
+    "version": 2,
     "provides": ["transform_movie"],
     "type": ["effect"],
-    "desc": "Renders steady fire effects over non-space chars"
+    "desc": "Renders steady fire effects over non-space chars across existing frames."
 }
-
 
 opts = {
-    # Animation settings
-    "steps": 10,    # number of frames to generate
-    "intensity": 0.6,  # More frequent for bonfire
-    "spot heat": 16,   # Higher heat for taller flames
+    "intensity": 0.6,  # Heat re-seeding probability
+    "spot heat": 16,   # Thermal heat intensity for flame height
 }
-
 
 # Color palette (256-mode, reds to yellow)
 _COLOURS_256 = [235, 52, 88, 124, 160, 196, 202, 208, 214, 220, 226]
 
-def transform_movie(mov, appState=None, opts=opts):
-    """Renders steady fire effects under/around non-space chars, replacing frame for looping."""
-    current_idx = mov.currentFrameNumber - 1  # 1-based UI to 0-based index
-    orig_frame = deepcopy(mov.frames[current_idx])  # Frame to base fire on
-    new_frames = []  # Frames to insert
-   
-    # Animation settings
-    steps = opts["steps"]
-    intensity = opts["intensity"]
-    spot_heat = opts["spot heat"]
 
-    colour_mode = appState.colorMode if appState else "16"
-    colours = _COLOURS_256 if colour_mode == "256" else [0, 1, 9]
-    
-    # Heat buffer
-    buffer = [[0 for _ in range(mov.sizeX)] for _ in range(mov.sizeY + 2)]
-    
-    # Initial heat under/around objects
-    for y in range(mov.sizeY):
-        for x in range(mov.sizeX):
-            if orig_frame.content[y][x] != ' ':
-                if y < mov.sizeY - 1:
+def transform_movie(dur, opts, mov):
+    """Renders steady fire effects under/around non-space chars on existing movie frames."""
+    if not mov or not hasattr(mov, 'frames') or len(mov.frames) == 0:
+        return mov
+
+    # Options & settings
+    intensity = opts.get("intensity", 0.6)
+    spot_heat = opts.get("spot heat", 16)
+
+    # Use Durdraw API method for color mode
+    color_mode = dur.color_mode()
+    colours = _COLOURS_256 if color_mode == "256" else [0, 1, 9]
+
+    # Dimensions using Movie API methods
+    width = mov.width
+    height = mov.height
+
+    # Persistent Heat Buffer initialized once across the entire movie sequence
+    buffer = [[0 for _ in range(width)] for _ in range(height + 2)]
+
+    # Initial heat seeding based on Frame 1 source content
+    first_frame = mov.frames[0]
+    for y in range(height):
+        for x in range(width):
+            if first_frame.content[y][x] != ' ':
+                if y < height - 1:
                     buffer[y + 1][x] = spot_heat
                 if x > 0:
                     buffer[y][x - 1] = spot_heat // 2
-                if x < mov.sizeX - 1:
+                if x < width - 1:
                     buffer[y][x + 1] = spot_heat // 2
-    
-    for step in range(steps):
-        frame = Frame(mov.sizeX, mov.sizeY)
-        for y in range(mov.sizeY):
-            for x in range(mov.sizeX):
+
+    # Process each existing frame sequentially
+    for frame_idx in range(len(mov.frames)):
+        orig_frame = deepcopy(mov.frames[frame_idx])
+        frame = mov.frames[frame_idx]
+
+        # 1. Clear current frame content using Frame properties/methods
+        for y in range(frame.height()):
+            for x in range(frame.width()):
                 frame.content[y][x] = ' '
-                frame.newColorMap[y][x] = [0, 0]
-        
-        # Reseed heat steadily (no rising)
-        for y in range(mov.sizeY):
-            for x in range(mov.sizeX):
+                frame.colorMap[y][x] = [0, 0]
+
+        # 2. Reseed heat steadily from current frame non-space content
+        for y in range(height):
+            for x in range(width):
                 if orig_frame.content[y][x] != ' ' and random.random() < intensity:
-                    if y < mov.sizeY - 1:
+                    if y < height - 1:
                         buffer[y + 1][x] = random.randint(spot_heat // 2, spot_heat)
                     if x > 0:
                         buffer[y][x - 1] = random.randint(0, spot_heat // 2)
-                    if x < mov.sizeX - 1:
+                    if x < width - 1:
                         buffer[y][x + 1] = random.randint(0, spot_heat // 2)
-        
-        # Cooling (no convection)
-        for y in range(mov.sizeY):
+
+        # 3. Cooling step (heat dissipation & averaging)
+        for y in range(height):
             new_row = buffer[y].copy()
-            for x in range(mov.sizeX):
+            for x in range(width):
                 new_val = buffer[y][x]
                 count = 1
-                if y < mov.sizeY - 1:
+                if y < height - 1:
                     new_val += buffer[y + 1][x]
                     count += 1
                 if x > 0:
                     new_val += buffer[y][x - 1]
                     count += 1
-                if x < mov.sizeX - 1:
+                if x < width - 1:
                     new_val += buffer[y][x + 1]
                     count += 1
                 new_row[x] = max(0, new_val // count)
             buffer[y] = new_row
-        
-        # Render flames (no original chars)
+
+        # 4. Render flames onto current frame
         max_heat = max(max(row) for row in buffer) or 1
-        for y in range(mov.sizeY):
-            for x in range(mov.sizeX):
+        for y in range(height):
+            for x in range(width):
                 heat = buffer[y][x]
                 if heat > 0:
                     colour_idx = min(len(colours) - 1, (heat * len(colours)) // max_heat)
                     frame.content[y][x] = '█'
-                    frame.newColorMap[y][x] = [colours[colour_idx], 0]
-        
-        new_frames.append(frame)
-    
-    # Replace current frame with fire frames for smooth loop
-    mov.frames = mov.frames[:current_idx] + new_frames + mov.frames[current_idx + 1:]
-    mov.frameCount = len(mov.frames)
-    
+                    frame.colorMap[y][x] = [colours[colour_idx], 0]
+
     return mov
