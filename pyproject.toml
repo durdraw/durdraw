@@ -9,7 +9,7 @@ description = "Versatile ASCII and ANSI Art terminal text editor"
 readme = "README.md"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
-version = "0.31.0"
+version = "0.31.1"
 classifiers = [
         'Environment :: Console :: Curses',
         'Topic :: Artistic Software',
