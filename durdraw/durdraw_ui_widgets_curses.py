@@ -69,6 +69,7 @@ class MenuHandler:
         self.height = None
         self.title = menu.title # show the title if one is set
         self.menuOriginLine = 0
+        self.narrow = False
         #self.rebuild()
         #self.panel = curses.panel.new_panel(self.curses_win)
 
@@ -77,7 +78,10 @@ class MenuHandler:
         if self.title:
             height += 1
         # find widest item in list, go a few characters larger 
-        width = len(max(self.menu.items, key = len)) + 4  + 7 # 4 for padding and side borders, more for shortcuts
+        if self.narrow:
+            width = len(max(self.menu.items, key = len)) + 4 # 4 for padding and side borders, more for shortcuts
+        else:
+            width = len(max(self.menu.items, key = len)) + 4  + 7 # 4 for padding and side borders, more for shortcuts
         if self.menu.title:
             titleWidth = len(self.menu.title) + 4 
             if titleWidth> width:
