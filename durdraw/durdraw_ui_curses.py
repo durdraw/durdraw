@@ -3626,7 +3626,7 @@ class UserInterface():  # Separate view (curses) from this controller
                             self.insertChar(ord(' '), fg=color_fg, bg=color_bg, x=self.xy[1], y=self.xy[0], pushUndo=False)
                     elif self.appState.cursorMode == "Eyedrop":   # Change the color under the cursor
                         self.eyeDrop(mouseX + self.appState.firstCol, mouseY + self.appState.topLine)
-                        self.statusBar.setCursorModeMove()
+                        self.statusBar.setCursorModeSelect()
                         self.drawStatusBar()
 
                 # else, not in the canvas
