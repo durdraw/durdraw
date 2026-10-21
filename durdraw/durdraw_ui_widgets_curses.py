@@ -688,6 +688,7 @@ class ColorPickerHandler:
     def showColorPicker(self, type="fg", message=None):
         #self.colorPicker.caller.notify(f"showColorPicker")
         """ Shows picker, has UI loop for letting user pick color with keyboard or mouse """
+        self.appState.ui.disableMouseReporting()
         if type == "fg":
             self.updateFgPicker()
         elif type == "bg":
