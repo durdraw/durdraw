@@ -164,6 +164,8 @@ class UserInterface():  # Separate view (curses) from this controller
             self.statusBar.hide()
         else:
             for button in self.statusBar.buttons:
+                if button in self.gui.buttons:
+                    self.gui.buttons.remove(button)
                 self.gui.add_button(button)
         #self.setWindowTitle("Durdraw")
 
@@ -3657,7 +3659,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
                 if mouseX < realmaxX and mouseY in [self.statusBarLineNum, self.statusBarLineNum+1]:   # we clicked on the status bar somewhere..
 
-                    if mouseState & curses.BUTTON1_PRESSED:
+                    if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
                         self.disableMouseReporting()
                         self.gui.got_click("Click", mouseX, mouseY)
 
