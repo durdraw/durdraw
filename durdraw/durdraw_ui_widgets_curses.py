@@ -68,10 +68,8 @@ class MenuHandler:
         self.width = None
         self.height = None
         self.title = menu.title # show the title if one is set
-        self.menuOriginLine = 0
+        self.originLine = 0     # Top line where menu begins rendering
         self.narrow = False
-        #self.rebuild()
-        #self.panel = curses.panel.new_panel(self.curses_win)
 
     def rebuild(self):
         height = len(self.menu.items) + 2  # 2 for top and bottom border lines
@@ -95,12 +93,16 @@ class MenuHandler:
         if self.title:
             line += 1
         textColor = curses.color_pair(self.appState.theme['mainColor']) | curses.A_BOLD
+        clickColor = curses.color_pair(self.appState.theme['clickColor']) | curses.A_BOLD
         buttonColor = curses.color_pair(self.appState.theme['clickColor'])
         shortcutColor = curses.color_pair(self.appState.theme['menuBorderColor'])
         borderColor = curses.color_pair(self.appState.theme['menuBorderColor'])
         menuTitleColor = curses.color_pair(self.appState.theme['menuTitleColor']) | curses.A_BOLD | curses.A_UNDERLINE
         maxX, maxY = self.parentWindow.getmaxyx()
-        self.menuOriginLine = maxX - 2 - height
+        if self.menu.pinned_to_statusbar:
+            self.originLine = maxX - 2 - height
+        else:
+            self.originLine = self.x
         # Draw a pretty border
         curses_addstr(self.curses_win, 0, 0, ".", borderColor)
         curses_addstr(self.curses_win, 0, 1, ("." * (self.width - 2)), borderColor)
@@ -113,15 +115,22 @@ class MenuHandler:
             shortcut = self.menu.items[item]["shortcut"]
             has_submenu = self.menu.items[item]["has_submenu"]
 
-            curses_addstr(self.curses_win, line, 0, ':', borderColor)
-            curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
-            curses_addstr(self.curses_win, line, 2, item, textColor)    # Menu item
+            if self.menu.items[item]["highlight"]:
+                curses_addstr(self.curses_win, line, 0, ':', clickColor)
+                curses_addstr(self.curses_win, line, width - 1, ':', clickColor)
+                #curses_addstr(self.curses_win, line, 2, item, menuTitleColor ^ curses.A_UNDERLINE)    # Menu item
+                curses_addstr(self.curses_win, line, 2, item, textColor)    # Menu item
+            else:
+                curses_addstr(self.curses_win, line, 0, ':', borderColor)
+                curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
+                curses_addstr(self.curses_win, line, 2, item, textColor)    # Menu item
+
             if shortcut:
                 curses_addstr(self.curses_win, line, width - 7, shortcut, shortcutColor)
             if has_submenu:
                 curses_addstr(self.curses_win, line, width - 2, ">", shortcutColor)
             top_of_menu = self.menu.caller.y - len(self.menu.buttons)
-            button.update_real_xy(x=self.menuOriginLine + line, y=self.menu.y) # working for putting menu on first line
+            button.update_real_xy(x=self.originLine + line, y=self.menu.y) # working for putting menu on first line
             button.window = self.window
             line += 1
         curses_addstr(self.curses_win, line, 0, ':', borderColor)
@@ -133,14 +142,11 @@ class MenuHandler:
         except:
             pass
 
-    def show(self):
+    def show(self, selected=True):
         try:
             self.rebuild()
             self.panel.top()
-            #self.panel.move(0,0)
-            #self.panel.move(self.menuOriginLine, 0)
-            #self.panel.move(self.menuOriginLine, self.menu.x)
-            self.panel.move(self.menuOriginLine, self.menu.y)
+            self.panel.move(self.originLine, self.menu.y)
             self.panel.show()
         except Exception as E: # The window was probably too short, so panel.move() returns ERR.
             print(f"Exception: {E}")
@@ -154,6 +160,10 @@ class MenuHandler:
         curses.panel.update_panels()
         curses.doupdate()
         self.curses_win.refresh()
+
+        if not selected:
+            return None
+
         # Input loop
         self.window.nodelay(1)
         #self.curses_win.nodelay(0)
@@ -276,15 +286,12 @@ class MenuHandler:
                     current_option = min(len(options) - 1, current_option + 1)
                 elif mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:   # assume a click
                     # Did the user click in the menu area?
-                    if mouseY > self.menuOriginLine and mouseY < self.menuOriginLine + len(self.menu.items):  # on a menu line?
+                    if mouseY > self.originLine and mouseY < self.originLine + len(self.menu.items):  # on a menu line?
                         if mouseX < self.x and mouseX > self.x - self.width:    # in a menu column
                             # Un-highlight selected item
                             curses_addstr(self.curses_win, current_option + 1, 2, options[current_option], menuItemColor)
                             # Highlight the one we're clicking on
-                            current_option = mouseY - self.menuOriginLine - 1
-                            #item = self.menu.items[options[current_option]]
-                            #curses_notify(self.window, f"current_option: {current_option}")
-                            #self.rebuild()
+                            current_option = mouseY - self.originLine - 1
                             textColor = menuItemColor | curses.A_REVERSE
                             curses_addstr(self.curses_win, current_option + 1, 2, options[current_option], textColor)
 
@@ -295,19 +302,15 @@ class MenuHandler:
                             else:
                                 self.hide()
                                 prompting = False
-                                #self.menu.items[options[current_option]]["on_click"]() 
                                 if not self.menu.caller.caller.playing:    # caller.caller is the main UI thing
                                     self.window.nodelay(0)
                                 self.menu.gui.got_click("Click", mouseX, mouseY)
                         else:
-                            #curses_notify(self.window, f"Debug: mouseX: {mouseX}, mouseY: {mouseY}, self.x: {self.x}, self.menuOriginLine: {self.menuOriginLine}")
                             prompting = False
                             self.hide()
                             self.menu.gui.got_click("Click", mouseX, mouseY)
-                            #curses_notify(self.window, f"This should never happen. mouseX: {mouseX}, mouseY: {mouseY}, self.x: {self.x}, self.menuOriginLine: {self.menuOriginLine}")
                                 
                     else:
-                        #curses_notify(self.window, f"Debug: mouseX: {mouseX}, mouseY: {mouseY}, self.x: {self.x}, self.menuOriginLine: {self.menuOriginLine}")
                         prompting = False
                         self.hide()
                         self.menu.gui.got_click("Click", mouseX, mouseY)

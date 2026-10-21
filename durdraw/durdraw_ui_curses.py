@@ -2630,6 +2630,13 @@ class UserInterface():  # Separate view (curses) from this controller
         new_colorPicker_x = realmaxX - self.statusBar.colorPicker.handler.width
         self.statusBar.colorPicker.handler.move(new_colorPicker_x, new_colorPicker_y)
 
+        #new_mouseBar_y = new_colorPicker_x - 2
+        new_mouseBar_y = realmaxX - 5
+        #new_mouseBar_x = realmaxX - 18
+        new_mouseBar_x = 3
+        self.statusBar.mouseBar.set_y(new_mouseBar_y)
+        self.statusBar.mouseBar.set_x(new_mouseBar_x)
+        self.statusBar.mouseBar.show_not_selected()
 
         #if self.appState.colorMode == "16":
         #    new_colorPicker_y = realmaxY - self.statusBar.colorPicker_bg_16.handler.height - 2
@@ -3644,9 +3651,6 @@ class UserInterface():  # Separate view (curses) from this controller
                     curses.BUTTON4_PRESSED = 0
 
 
-
-
-
                 #if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON4_PRESSED or mouseState & curses.BUTTON5_PRESSED or b1_press > 0 or mouseState == curses.BUTTON1_DOUBLE_CLICKED:
                 realmaxY,realmaxX = self.realstdscr.getmaxyx()
                 cmode = self.appState.cursorMode
@@ -3752,16 +3756,26 @@ class UserInterface():  # Separate view (curses) from this controller
                         if cmode == "Draw" or cmode == "Color" or cmode == "Erase" or cmode == "Paint":
                             self.undo.push()
                     else:   # Not in the canvas, so give the GUI a click
-                        if cmode == "Draw" or cmode == "Paint":
-                            self.disableMouseReporting()
-                        self.gui.got_click("Click", mouseX, mouseY)
-                        if cmode == "Draw" or cmode == "Paint":
-                            self.enableMouseReporting()
+                        #if cmode == "Draw" or cmode == "Paint":
+                        #    self.disableMouseReporting()
+                        #self.gui.got_click("Click", mouseX, mouseY)
+                        #if cmode == "Draw" or cmode == "Paint":
+                        #    self.enableMouseReporting()
+                        pass
                     # If we clicked in the sidebar area, aka to the right of the canvas
                     # and above the status bar:
                     if self.appState.sideBarEnabled:
                         if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
                             self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
+
+                            # handle any gui shit
+                            #if mouseState & curses.BUTTON1_PRESSED or mouseState & curses.BUTTON1_CLICKED:
+                            #self.disableMouseReporting()
+                            #self.notify(f"Got a click: X {mouseX}, Y {mouseY}")
+                            self.gui.got_click("Click", mouseX, mouseY)
+                            #self.notify("Done with click.")
+
+
             elif c in [curses.KEY_SLEFT, curses.KEY_SRIGHT, 337, 336, 520, 513]:
                 # 337 and 520 - shift-up, 336 and 513 = shift-down
                 # shift-up, shift-down, shift-left and shift-right = start selecting text block
@@ -4354,7 +4368,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def setCursorModePaint(self):
         if self.appState.brush == None:
-            self.notify("No brush set. Please use select tool to make one before using Paint.", pause=True)
+            self.notify("No brush set. Please use select tool to make one before using Paint.")
         else:
             self.statusBar.setCursorModePaint()
 
@@ -4386,9 +4400,9 @@ class UserInterface():  # Separate view (curses) from this controller
                 response = self.statusBar.editMenu.showHide()
                 self.statusBar.editButton.draw()    # redraw as unselected/not-inverse
             elif current_menu == "Mouse Tools":
-                #response = self.statusBar.toolButton.on_click()
                 self.statusBar.toolButton.become_selected()
                 response = self.statusBar.toolMenu.showHide()
+                #response = self.statusBar.mouseBarMenu.showHide()
                 self.statusBar.toolButton.draw()    # redraw as unselected/not-inverse
             elif current_menu == "Anim":
                 #response = self.statusBar.toolButton.on_click()

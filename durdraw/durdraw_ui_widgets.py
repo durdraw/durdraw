@@ -140,6 +140,7 @@ class Menu():
         self.y = y
         self.handler = MenuHandler(self, window, appState=appState)
         self.handler.narrow=narrow
+        self.pinned_to_statusbar = True
         self.gui = Gui(window=self.window)
 
     def set_x(self, x):
@@ -154,8 +155,8 @@ class Menu():
         self.title = title
         self.handler.title = self.title
 
-    def add_item(self, label, on_click, hotkey, shortcut=None, has_submenu=False, plugin=False):
-        props = {"on_click": on_click, "hotkey": hotkey, "shortcut": shortcut, "has_submenu": has_submenu}
+    def add_item(self, label, on_click, hotkey, shortcut=None, has_submenu=False, plugin=False, highlight=False):
+        props = {"on_click": on_click, "hotkey": hotkey, "shortcut": shortcut, "has_submenu": has_submenu, "highlight": highlight}
         item = {label: props}
         self.items.update(item)
         # add button
@@ -166,6 +167,19 @@ class Menu():
         itemButton = Button(long_label, 0, self.x, on_click, self.window, appState=self.appState)
         itemButton.make_invisible()
         self.buttons.append(itemButton)
+
+    def show_not_selected(self):
+        for button in self.buttons:
+            # remove existing buttons to prevent duplicates
+            if button in self.appState.ui.gui.buttons:
+                self.appState.ui.gui.buttons.remove(button)
+            # then add to gui handler
+            self.appState.ui.gui.add_button(button)
+            button.show()
+        self.hidden = False
+        self.handler.show(selected=False)
+        #response = self.handler.show()
+        #return response
 
     def show(self):
         for button in self.buttons:
@@ -580,6 +594,23 @@ class StatusBar():
         toolMenu.add_item("Set Draw/Fill Char", caller.openDrawCharPicker, "h")
         self.toolMenu = toolMenu
 
+        # Mouse toolbar menu
+        mouseBar = Menu(self.window, x=3, y=self.y, caller=self, appState=self.appState, statusBar=self, name="MouseBar", narrow=True)
+        #self.menus["MouseBar"] = mouseBar
+        #mouseBar.set_title("🖱")
+        mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
+        mouseBar.add_item("↖", self.setCursorModeMove, "m")
+        mouseBar.add_item("✎", self.setCursorModeDraw, "d")
+        mouseBar.add_item("🖌", caller.setCursorModePaint, "p")
+        mouseBar.add_item("🎨", self.setCursorModeCol, "c")
+        #mouseBar.add_item("𝓐", caller.setCursorModeAnimBrush, "a") # for future text tool
+        mouseBar.add_item("⌫", self.setCursorModeErase, "e")
+        mouseBar.add_item("💧", self.setCursorModeEyedrop, "y")
+        mouseBar.add_item("🎥", caller.setCursorModeAnimBrush, "a")
+        self.mouseBar = mouseBar
+        self.mouseBar.pinned_to_statusbar = False
+        self.mouseBar.show_not_selected()
+
         # Make cursor tool selector button
         # offset is how far right to put the button in the statusbar:
         #toolButton_offset = 14
@@ -719,7 +750,8 @@ class StatusBar():
 
     def setCursorModeMove(self):
         self.caller.appState.setCursorModeMove()
-        self.caller.disableMouseReporting(hard=True)
+        #self.caller.disableMouseReporting(hard=True)
+        self.caller.disableMouseReporting()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeSelect(self):
@@ -739,23 +771,28 @@ class StatusBar():
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModePaint(self):
+        self.caller.disableMouseReporting()
         self.caller.appState.setCursorModePaint()
-        self.caller.enableMouseReporting()
+        if self.caller.appState.cursorMode == "Paint":
+            self.caller.enableMouseReporting()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeCol(self):
         self.caller.appState.setCursorModeCol()
-        self.caller.disableMouseReporting(hard=True)
+        #self.caller.disableMouseReporting(hard=True)
+        self.caller.disableMouseReporting()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeErase(self):
         self.caller.appState.setCursorModeErase()
-        self.caller.disableMouseReporting(hard=True)
+        #self.caller.disableMouseReporting(hard=True)
+        self.caller.disableMouseReporting()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeEyedrop(self):
         self.caller.appState.setCursorModeEyedrop()
-        self.caller.disableMouseReporting(hard=True)
+        #self.caller.disableMouseReporting(hard=True)
+        self.caller.disableMouseReporting()
         #self.toolButton.set_label("Eye")
 
     def updateLocation(self, x, y):
