@@ -626,6 +626,7 @@ class StatusBar():
         mouseBar.add_item("🎥", caller.setCursorModeAnimBrush, "a")
         self.mouseBar = mouseBar
         self.mouseBar.pinned_to_statusbar = False
+        self.mouseBar.set_highlighted_item('⌶')
         self.mouseBar.show_not_selected()
 
         # Make cursor tool selector button
