@@ -117,9 +117,9 @@ class MenuHandler:
 
             if self.menu.items[item]["highlight"]:
                 curses_addstr(self.curses_win, line, 0, ':', clickColor)
-                curses_addstr(self.curses_win, line, width - 1, ':', clickColor)
+                curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
                 #curses_addstr(self.curses_win, line, 2, item, menuTitleColor ^ curses.A_UNDERLINE)    # Menu item
-                curses_addstr(self.curses_win, line, 2, item, textColor)    # Menu item
+                curses_addstr(self.curses_win, line, 2, item, clickColor)    # Menu item
             else:
                 curses_addstr(self.curses_win, line, 0, ':', borderColor)
                 curses_addstr(self.curses_win, line, width - 1, ':', borderColor)

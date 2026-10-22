@@ -168,6 +168,23 @@ class Menu():
         itemButton.make_invisible()
         self.buttons.append(itemButton)
 
+    def set_highlighted_item(self, item_label):
+        """ make item_label the ONLY highlighted item in menu """
+        # un-highlight any highlighted items...
+        for item in self.items:
+            if self.items[item]['highlight'] == True:
+                self.items[item]['highlight'] = False
+        # and then highlight this one.
+        self.highlight_item(item_label)
+
+    def highlight_item(self, item_label):
+        if item_label in self.items:
+            try:
+                self.items[item_label]['highlight'] = True
+            except Exception as E:
+                print(f"Exception: {E}")
+                pdb.set_trace()
+
     def show_not_selected(self):
         for button in self.buttons:
             # remove existing buttons to prevent duplicates
@@ -752,22 +769,26 @@ class StatusBar():
         self.caller.appState.setCursorModeMove()
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
+        self.mouseBar.set_highlighted_item('↖')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeSelect(self):
         self.caller.appState.setCursorModeSelect()
         self.caller.disableMouseReporting()
+        self.mouseBar.set_highlighted_item('⌶')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeDraw(self):
         self.caller.appState.setCursorModeDraw()
         self.caller.enableMouseReporting()
+        self.mouseBar.set_highlighted_item('✎')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
 
     def setCursorModeAnimBrush(self):
         self.caller.appState.setCursorModeAnimBrush()
         self.caller.enableMouseReporting()
+        self.mouseBar.set_highlighted_item('🎥')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModePaint(self):
@@ -775,24 +796,28 @@ class StatusBar():
         self.caller.appState.setCursorModePaint()
         if self.caller.appState.cursorMode == "Paint":
             self.caller.enableMouseReporting()
+        self.mouseBar.set_highlighted_item('🖌')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeCol(self):
         self.caller.appState.setCursorModeCol()
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
+        self.mouseBar.set_highlighted_item('🎨')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeErase(self):
         self.caller.appState.setCursorModeErase()
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
+        self.mouseBar.set_highlighted_item('⌫')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeEyedrop(self):
         self.caller.appState.setCursorModeEyedrop()
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
+        self.mouseBar.set_highlighted_item('💧')
         #self.toolButton.set_label("Eye")
 
     def updateLocation(self, x, y):
