@@ -619,11 +619,11 @@ class StatusBar():
         mouseBar.add_item("↖", self.setCursorModeMove, "m")
         mouseBar.add_item("✎", self.setCursorModeDraw, "d")
         mouseBar.add_item("🖌", caller.setCursorModePaint, "p")
+        mouseBar.add_item("🎥", caller.setCursorModeAnimBrush, "a")
         mouseBar.add_item("🎨", self.setCursorModeCol, "c")
+        mouseBar.add_item("💧", self.setCursorModeEyedrop, "y")
         #mouseBar.add_item("𝓐", caller.setCursorModeAnimBrush, "a") # for future text tool
         mouseBar.add_item("⌫", self.setCursorModeErase, "e")
-        mouseBar.add_item("💧", self.setCursorModeEyedrop, "y")
-        mouseBar.add_item("🎥", caller.setCursorModeAnimBrush, "a")
         self.mouseBar = mouseBar
         self.mouseBar.pinned_to_statusbar = False
         self.mouseBar.set_highlighted_item('⌶')
