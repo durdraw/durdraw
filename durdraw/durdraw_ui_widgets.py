@@ -627,7 +627,8 @@ class StatusBar():
         self.mouseBar = mouseBar
         self.mouseBar.pinned_to_statusbar = False
         self.mouseBar.set_highlighted_item('⌶')
-        self.mouseBar.show_not_selected()
+        if not self.appState.durview_running:
+            self.mouseBar.show_not_selected()
 
         # Make cursor tool selector button
         # offset is how far right to put the button in the statusbar:

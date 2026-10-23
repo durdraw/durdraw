@@ -2638,7 +2638,8 @@ class UserInterface():  # Separate view (curses) from this controller
         new_mouseBar_x = 3
         self.statusBar.mouseBar.set_y(new_mouseBar_y)
         self.statusBar.mouseBar.set_x(new_mouseBar_x)
-        self.statusBar.mouseBar.show_not_selected()
+        if not self.appState.durview_running:
+            self.statusBar.mouseBar.show_not_selected()
 
         #if self.appState.colorMode == "16":
         #    new_colorPicker_y = realmaxY - self.statusBar.colorPicker_bg_16.handler.height - 2
