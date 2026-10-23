@@ -617,8 +617,7 @@ class StatusBar():
         #mouseBar.set_title("🖱")
         mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
         mouseBar.add_item("↖", self.setCursorModeMove, "m")
-        #mouseBar.add_item("✎", self.setCursorModeDraw, "d")
-        mouseBar.add_item("✏", self.setCursorModeDraw, "d")
+        mouseBar.add_item("✎", self.setCursorModeDraw, "d")
         mouseBar.add_item("🖌", caller.setCursorModePaint, "p")
         mouseBar.add_item("🎥", caller.setCursorModeAnimBrush, "a")
         mouseBar.add_item("🎨", self.setCursorModeCol, "c")
@@ -783,8 +782,7 @@ class StatusBar():
     def setCursorModeDraw(self):
         self.caller.appState.setCursorModeDraw()
         self.caller.enableMouseReporting()
-        #self.mouseBar.set_highlighted_item('✎')
-        self.mouseBar.set_highlighted_item('✏')
+        self.mouseBar.set_highlighted_item('✎')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
 
