@@ -615,7 +615,8 @@ class StatusBar():
         mouseBar = Menu(self.window, x=3, y=self.y, caller=self, appState=self.appState, statusBar=self, name="MouseBar", narrow=True)
         #self.menus["MouseBar"] = mouseBar
         #mouseBar.set_title("🖱")
-        mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
+        #mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
+        mouseBar.add_item("⬚", self.setCursorModeSelect, "s")
         mouseBar.add_item("↖", self.setCursorModeMove, "m")
         mouseBar.add_item("✎", self.setCursorModeDraw, "d")
         mouseBar.add_item("🖌", caller.setCursorModePaint, "p")
@@ -626,7 +627,8 @@ class StatusBar():
         mouseBar.add_item("⌫", self.setCursorModeErase, "e")
         self.mouseBar = mouseBar
         self.mouseBar.pinned_to_statusbar = False
-        self.mouseBar.set_highlighted_item('⌶')
+        #self.mouseBar.set_highlighted_item('⌶')
+        self.mouseBar.set_highlighted_item('⬚')
         if not self.appState.durview_running and not self.appState.fetchMode:
             self.mouseBar.show_not_selected()
 
@@ -772,18 +774,22 @@ class StatusBar():
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('↖')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeSelect(self):
         self.caller.appState.setCursorModeSelect()
         self.caller.disableMouseReporting()
-        self.mouseBar.set_highlighted_item('⌶')
+        #self.mouseBar.set_highlighted_item('⌶')
+        self.mouseBar.set_highlighted_item('⬚')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeDraw(self):
         self.caller.appState.setCursorModeDraw()
         self.caller.enableMouseReporting()
         self.mouseBar.set_highlighted_item('✎')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
 
@@ -791,6 +797,7 @@ class StatusBar():
         self.caller.appState.setCursorModeAnimBrush()
         self.caller.enableMouseReporting()
         self.mouseBar.set_highlighted_item('🎥')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModePaint(self):
@@ -799,6 +806,7 @@ class StatusBar():
         if self.caller.appState.cursorMode == "Paint":
             self.caller.enableMouseReporting()
         self.mouseBar.set_highlighted_item('🖌')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeCol(self):
@@ -806,6 +814,7 @@ class StatusBar():
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('🎨')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeErase(self):
@@ -813,6 +822,7 @@ class StatusBar():
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('⌫')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeEyedrop(self):
@@ -820,6 +830,7 @@ class StatusBar():
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('💧')
+        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label("Eye")
 
     def updateLocation(self, x, y):

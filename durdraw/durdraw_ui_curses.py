@@ -2833,8 +2833,6 @@ class UserInterface():  # Separate view (curses) from this controller
         self.addstr(statusBarLineNum+1, locationStringOffset, locationString, curses.color_pair(mainColor))
         # Draw mouse mode
         mouseModeString = self.appState.cursorMode
-        if self.appState.cursorMode == "ABrush":
-            mouseModeString = "ABrush"
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
         self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
 
@@ -2988,6 +2986,16 @@ class UserInterface():  # Separate view (curses) from this controller
             self.refresh()
             self.showFileInformation()
             self.hardRefresh()
+
+    def highlight_mouse_mode(self):
+        realmaxY,realmaxX = self.realstdscr.getmaxyx()
+        locationString = "(%i,%i)" % (self.xy[1]-1, self.xy[0])
+        locationStringOffset = realmaxX - len(locationString) - 1
+        # Draw mouse mode
+        mouseModeString = self.appState.cursorMode
+        mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
+        self.clickHighlight(mouseModeStringOffset, mouseModeString, bar='bottom')
+        #self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
 
     def window_big_enough_for_colors(self):
         # Returns true if window is either tall enough or wide enough
