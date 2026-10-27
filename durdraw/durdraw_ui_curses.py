@@ -1008,14 +1008,13 @@ class UserInterface():  # Separate view (curses) from this controller
             if self.playing:
                 insert = self.appState.insertMode   # back state up
                 self.appState.insertMode = False
-                self.insertChar(ord(' '), fg=self.appState.defaultFgColor, bg=self.appState.defaultBgColor, frange=self.appState.playbackRange)
+                self.deleteKeyPop(frange=self.appState.playbackRange)
                 self.appState.insertMode = insert
             else:
                 insert = self.appState.insertMode   # back state up
                 self.appState.insertMode = False
-                self.insertChar(ord(' '), fg=self.appState.defaultFgColor, bg=self.appState.defaultFgColor)
+                self.deleteKeyPop()
                 self.appState.insertMode = insert
-            self.xy[1] = self.xy[1] - 1
 
     def deleteKeyPop(self, frange=None):
         fg, bg = self.appState.defaultFgColor, self.appState.defaultBgColor
