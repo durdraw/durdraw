@@ -877,32 +877,52 @@ class UserInterface():  # Separate view (curses) from this controller
         except curses.error:
             pass    # .. if terminal supports it.
 
+    def curses_color_pair(self, pair):
+        """ Dummy method to return self.curses_color_pair(pair) for Python < 3.16,
+            or just pair for python >= 3.16, which uses a different method
+            (wide int instead of 8-bit int) to set color """
+        if sys.version_info >= (3, 16):
+            #if pair != 8:
+            #    pdb.set_trace()
+            #return pair & curses.A_COLOR
+            return pair
+            #if isinstance(pair, int):
+            #    #return pair & curses.A_COLOR
+            #    return pair
+        else:
+            return curses.color_pair(pair)
+
     def addstr(self, y, x, string, attr=None): # addstr(y, x, str[, attr]) and addstr(str[, attr])
-        """ Wraps ncurses addstr in a try;except, prevents addstr from
-            crashing cureses if it fails """
+        """ Wraps ncurses addstr in a try/except, prevents addstr from
+            crashing curses if it fails """
         if not attr:
             try:
                 self.stdscr.addstr(y, x, string.encode(self.appState.charEncoding, 'replace'))
-                #if self.appState.charEncoding == 'utf-8':
-                #    self.stdscr.addstr(y, x, string.encode('utf-8'))
-                #else:
-                #    self.stdscr.addstr(y, x, string)
             except UnicodeEncodeError:
-                # Replace non-ascii characters with ' '
                 string = string.encode('ascii', 'replace').decode('ascii').replace('?', ' ')
                 self.stdscr.addstr(y, x, string) 
             except curses.error:
                 self.testWindowSize()
         else:
             try:
-                self.stdscr.addstr(y, x, string.encode(self.appState.charEncoding, 'replace'), attr)
-                #if self.appState.charEncoding == 'utf-8':
-                #    self.stdscr.addstr(y, x, strng.encode('utf-8'), attr)
-                #else:
-                #    self.stdscr.addstr(y, x, string, attr)
+                if sys.version_info >= (3, 16):
+                    # Extract color pair bits vs text attribute bits (A_BOLD, A_REVERSE, etc.)
+                    color_pair = attr & curses.A_COLOR
+                    text_attr = attr & ~curses.A_COLOR
+
+                    self.stdscr.color_set(color_pair)
+                    self.stdscr.addstr(y, x, string.encode(self.appState.charEncoding, 'replace'), text_attr)
+                else:
+                    self.stdscr.addstr(y, x, string.encode(self.appState.charEncoding, 'replace'), attr)
             except UnicodeEncodeError:
                 string = string.encode('ascii', 'replace').decode('ascii').replace('?', ' ')
-                self.stdscr.addstr(y, x, string, attr)
+                if sys.version_info >= (3, 16):
+                    color_pair = attr & curses.A_COLOR
+                    text_attr = attr & ~curses.A_COLOR
+                    self.stdscr.color_set(color_pair)
+                    self.stdscr.addstr(y, x, string, text_attr)
+                else:
+                    self.stdscr.addstr(y, x, string, attr)
             except curses.error:
                 self.testWindowSize()
 
@@ -917,7 +937,7 @@ class UserInterface():  # Separate view (curses) from this controller
     def notify(self, message, pause=False, wait_time=2500):
         self.cursorOff()
         self.clearStatusLine()
-        self.addstr(self.statusBarLineNum, 0, message, curses.color_pair(self.appState.theme['notificationColor']))
+        self.addstr(self.statusBarLineNum, 0, message, self.curses_color_pair(self.appState.theme['notificationColor']))
         self.stdscr.refresh()
         if pause:
             curses.flushinp()
@@ -1330,7 +1350,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.addstr(lineNum, fileInfoColumn, itemString, fileInfoColor)
                     lineNum += 1
             else:
-                self.addstr(self.realmaxY - 1, 0, infoString, curses.color_pair(fileInfoColor))
+                self.addstr(self.realmaxY - 1, 0, infoString, self.curses_color_pair(fileInfoColor))
 
     def showTransformer(self):
         """ Let the user pick transformations: Bounce, Repeat, Reverse """
@@ -1450,9 +1470,9 @@ class UserInterface():  # Separate view (curses) from this controller
         #self.promptPrint("* Press the any key (or click) to continue *")
         clickColor = self.appState.theme['clickColor']
         promptColor = self.appState.theme['promptColor']
-        #self.addstr(self.statusBarLineNum - 1, 0, "You can use ALT or META instead of ESC. Everything this color is clickable", curses.color_pair(promptColor))
-        #self.addstr(self.statusBarLineNum - 1, 51, "this color", curses.color_pair(clickColor) | curses.A_BOLD)
-        #self.addstr(self.statusBarLineNum - 1, 65, "clickable", curses.color_pair(clickColor) | curses.A_BOLD)
+        #self.addstr(self.statusBarLineNum - 1, 0, "You can use ALT or META instead of ESC. Everything this color is clickable", self.curses_color_pair(promptColor))
+        #self.addstr(self.statusBarLineNum - 1, 51, "this color", self.curses_color_pair(clickColor) | curses.A_BOLD)
+        #self.addstr(self.statusBarLineNum - 1, 65, "clickable", self.curses_color_pair(clickColor) | curses.A_BOLD)
 
         helpMov.search_and_replace(self, '{ver}', f"{self.appState.durVer}")
         helpMov.search_and_replace(self, '{colormode}', f"{self.appState.colorMode}")
@@ -1462,8 +1482,8 @@ class UserInterface():  # Separate view (curses) from this controller
         while self.playingHelpScreen:
             self.move(self.xy[0], self.xy[1])
             self.refresh()
-            #self.addstr(self.statusBarLineNum + 1, 0, "Up/Down, Pgup/Pgdown, Home/End or Mouse Wheel to scroll. Enter or Esc to exit.", curses.color_pair(promptColor)) <- now done in self.refresh()
-            #self.addstr(self.statusBarLineNum - 1, 51, "this color", curses.color_pair(clickColor) | curses.A_BOLD)
+            #self.addstr(self.statusBarLineNum + 1, 0, "Up/Down, Pgup/Pgdown, Home/End or Mouse Wheel to scroll. Enter or Esc to exit.", self.curses_color_pair(promptColor)) <- now done in self.refresh()
+            #self.addstr(self.statusBarLineNum - 1, 51, "this color", self.curses_color_pair(clickColor) | curses.A_BOLD)
             mouseState = False
             c = self.stdscr.getch()
             if c == curses.KEY_MOUSE: # get some mouse input if available
@@ -1575,16 +1595,16 @@ class UserInterface():  # Separate view (curses) from this controller
         self.promptPrint("* Press the any key (or click) to continue *")
         clickColor = self.appState.theme['clickColor']
         promptColor = self.appState.theme['promptColor']
-        self.addstr(self.statusBarLineNum - 1, 0, "You can use ALT or META instead of ESC. Everything this color is clickable", curses.color_pair(promptColor))
-        self.addstr(self.statusBarLineNum - 1, 51, "this color", curses.color_pair(clickColor) | curses.A_BOLD)
-        self.addstr(self.statusBarLineNum - 1, 65, "clickable", curses.color_pair(clickColor) | curses.A_BOLD)
+        self.addstr(self.statusBarLineNum - 1, 0, "You can use ALT or META instead of ESC. Everything this color is clickable", self.curses_color_pair(promptColor))
+        self.addstr(self.statusBarLineNum - 1, 51, "this color", self.curses_color_pair(clickColor) | curses.A_BOLD)
+        self.addstr(self.statusBarLineNum - 1, 65, "clickable", self.curses_color_pair(clickColor) | curses.A_BOLD)
         while self.playingHelpScreen:
             self.move(self.xy[0], self.xy[1])
             self.refresh()
             if page == 2:
-                self.addstr(12, 51, f"{self.appState.durVer}", curses.color_pair(promptColor))
-                self.addstr(13, 54, f"{self.appState.colorMode}", curses.color_pair(promptColor))
-                self.addstr(14, 62, f"{self.appState.charEncoding}", curses.color_pair(promptColor))
+                self.addstr(12, 51, f"{self.appState.durVer}", self.curses_color_pair(promptColor))
+                self.addstr(13, 54, f"{self.appState.colorMode}", self.curses_color_pair(promptColor))
+                self.addstr(14, 62, f"{self.appState.charEncoding}", self.curses_color_pair(promptColor))
             c = self.stdscr.getch()
             if c != -1:   # -1 means no keys are pressed.
                 self.playingHelpScreen = False
@@ -1646,12 +1666,12 @@ class UserInterface():  # Separate view (curses) from this controller
         #self.notify(f"topLine: {topLine}, realmaxY: {realmaxY}, height: {height}, width: {width}", pause=True)
         # draw top border
         for col in range(0, width + 1):
-            self.addstr(topLine - 1, col, ".", curses.color_pair(self.appState.theme['borderColor']))
-        self.addstr(topLine - 1, col + 1, " ", curses.color_pair(self.appState.theme['borderColor']))
+            self.addstr(topLine - 1, col, ".", self.curses_color_pair(self.appState.theme['borderColor']))
+        self.addstr(topLine - 1, col + 1, " ", self.curses_color_pair(self.appState.theme['borderColor']))
         for line in range(0, height):
-            self.addstr(topLine + line, 0, " " * width, curses.color_pair(self.appState.theme['menuItemColor']))
-            self.addstr(topLine + line, 0, pop_items[line], curses.color_pair(self.appState.theme['menuItemColor']))
-            self.addstr(topLine + line, width, ": ", curses.color_pair(self.appState.theme['borderColor']))
+            self.addstr(topLine + line, 0, " " * width, self.curses_color_pair(self.appState.theme['menuItemColor']))
+            self.addstr(topLine + line, 0, pop_items[line], self.curses_color_pair(self.appState.theme['menuItemColor']))
+            self.addstr(topLine + line, width, ": ", self.curses_color_pair(self.appState.theme['borderColor']))
         self.stdscr.refresh()
         self.stdscr.nodelay(0) # wait for input when calling getch
         c = self.stdscr.getch()
@@ -2667,7 +2687,7 @@ class UserInterface():  # Separate view (curses) from this controller
         #    self.statusBar.colorPickerButton.update_real_xy(x = statusBarLineNum + 1)
         canvasSizeBar = f"[{self.mov.sizeX}x{self.mov.sizeY}]"
         canvasSizeOffset = realmaxX - len(canvasSizeBar) - 1     # right of transport
-        self.addstr(statusBarLineNum, canvasSizeOffset, canvasSizeBar, curses.color_pair(mainColor))
+        self.addstr(statusBarLineNum, canvasSizeOffset, canvasSizeBar, self.curses_color_pair(mainColor))
 
         frameBar = "F:%i/%i " % (self.mov.currentFrameNumber, self.mov.frameCount)
         rangeBar = "R:%i-%i " % (self.appState.playbackRange[0], self.appState.playbackRange[1])
@@ -2706,24 +2726,24 @@ class UserInterface():  # Separate view (curses) from this controller
         #    self.statusBar.drawCharPickerButton.show()
 
         # Draw elements that aren't in the GUI framework
-        self.addstr(statusBarLineNum, frameBar_offset, frameBar, curses.color_pair(mainColor))
-        self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
-        self.addstr(statusBarLineNum, delayBar_offset, delayBar, curses.color_pair(mainColor))
-        self.addstr(statusBarLineNum, rangeBar_offset, rangeBar, curses.color_pair(mainColor))
+        self.addstr(statusBarLineNum, frameBar_offset, frameBar, self.curses_color_pair(mainColor))
+        self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, self.curses_color_pair(mainColor))
+        self.addstr(statusBarLineNum, delayBar_offset, delayBar, self.curses_color_pair(mainColor))
+        self.addstr(statusBarLineNum, rangeBar_offset, rangeBar, self.curses_color_pair(mainColor))
         # update elements in UI zones
         self.appState.ui_zones["frameBar"] = (statusBarLineNum, frameBar_offset)
         self.appState.ui_zones["fpsBar"] = (statusBarLineNum, fpsBar_offset)
         #if not self.appState.narrowWindow:    # Wide big window
-        #    self.addstr(statusBarLineNum, frameBar_offset, frameBar, curses.color_pair(mainColor))
-        #    self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
-        #    self.addstr(statusBarLineNum, delayBar_offset, delayBar, curses.color_pair(mainColor))
-        #    self.addstr(statusBarLineNum, rangeBar_offset, rangeBar, curses.color_pair(mainColor))
+        #    self.addstr(statusBarLineNum, frameBar_offset, frameBar, self.curses_color_pair(mainColor))
+        #    self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, self.curses_color_pair(mainColor))
+        #    self.addstr(statusBarLineNum, delayBar_offset, delayBar, self.curses_color_pair(mainColor))
+        #    self.addstr(statusBarLineNum, rangeBar_offset, rangeBar, self.curses_color_pair(mainColor))
         #else:   # Narrow small window
         #    # Draw frame #. that's important.
         #    frameBar_offset = 0
         #    fpsBar_offset = frameBar_offset + len(frameBar) + 1
-        #    self.addstr(statusBarLineNum, frameBar_offset, frameBar, curses.color_pair(mainColor))
-        #    self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, curses.color_pair(mainColor))
+        #    self.addstr(statusBarLineNum, frameBar_offset, frameBar, self.curses_color_pair(mainColor))
+        #    self.addstr(statusBarLineNum, fpsBar_offset, fpsBar, self.curses_color_pair(mainColor))
 
         # Move char button to the left of frameBar_offset
 
@@ -2737,26 +2757,26 @@ class UserInterface():  # Separate view (curses) from this controller
                 extColors = False
             colorValue = curses.color_content(self.colorfg)
             debugstring = f"Fg: {self.colorfg}, bg: {self.colorbg}, cpairs: {cp}, {cp2}, pairs: {pairs}, ext: {extColors}, {colorValue}"
-            self.addstr(statusBarLineNum-1, 0, debugstring, curses.color_pair(mainColor))
+            self.addstr(statusBarLineNum-1, 0, debugstring, self.curses_color_pair(mainColor))
             debugstring2 = f"ButtonPress: {self.pressingButton}, topLine: {self.appState.topLine}, firstCol: {self.appState.firstCol}, resized: {resized}"
-            self.addstr(statusBarLineNum-2, 0, debugstring2, curses.color_pair(mainColor))
+            self.addstr(statusBarLineNum-2, 0, debugstring2, self.curses_color_pair(mainColor))
             colorValue = curses.color_content(self.colorbg)
             debugstring3= f"bg: {colorValue}"
-            self.addstr(statusBarLineNum-3, 0, debugstring3, curses.color_pair(mainColor))
+            self.addstr(statusBarLineNum-3, 0, debugstring3, self.curses_color_pair(mainColor))
         # Draw FG and BG colors
         if self.appState.colorMode == "256":
-            self.addstr(statusBarLineNum+1, 0, "FG:", curses.color_pair(clickColor) | curses.A_BOLD)
+            self.addstr(statusBarLineNum+1, 0, "FG:", self.curses_color_pair(clickColor) | curses.A_BOLD)
             cp = self.ansi.colorPairMap[(self.colorfg, 0)]
-            self.addstr(statusBarLineNum+1, 3, self.appState.colorPickChar * 2, curses.color_pair(cp))
+            self.addstr(statusBarLineNum+1, 3, self.appState.colorPickChar * 2, self.curses_color_pair(cp))
         if self.appState.showBgColorPicker:
-            self.addstr(statusBarLineNum+1, 6, "BG:", curses.color_pair(clickColor) | curses.A_BOLD)
+            self.addstr(statusBarLineNum+1, 6, "BG:", self.curses_color_pair(clickColor) | curses.A_BOLD)
             cp = self.ansi.colorPairMap[(1, self.colorbg)]
             fillChar = ' '
-            self.addstr(statusBarLineNum+1, 9, fillChar * 2, curses.color_pair(cp))
+            self.addstr(statusBarLineNum+1, 9, fillChar * 2, self.curses_color_pair(cp))
 
         # Draw character map for f1-f10 (block characters)
-        self.addstr(statusBarLineNum+1, self.chMap_offset-1, "<", curses.color_pair(clickColor) | curses.A_BOLD)
-        self.addstr(statusBarLineNum+1, self.chMap_offset+31, ">", curses.color_pair(clickColor) | curses.A_BOLD)
+        self.addstr(statusBarLineNum+1, self.chMap_offset-1, "<", self.curses_color_pair(clickColor) | curses.A_BOLD)
+        self.addstr(statusBarLineNum+1, self.chMap_offset+31, ">", self.curses_color_pair(clickColor) | curses.A_BOLD)
 
         #if self.appState.charEncoding == "cp437":
         #    try:
@@ -2766,29 +2786,29 @@ class UserInterface():  # Separate view (curses) from this controller
 
 
         if self.colorfg > 8 and self.appState.colorMode == "16":    # bright color
-            self.addstr(statusBarLineNum+1, self.chMap_offset, self.chMapString, curses.color_pair(self.colorpair) | curses.A_BOLD)
+            self.addstr(statusBarLineNum+1, self.chMap_offset, self.chMapString, self.curses_color_pair(self.colorpair) | curses.A_BOLD)
         else:   # normal color
-            self.addstr(statusBarLineNum+1, self.chMap_offset, self.chMapString, curses.color_pair(self.colorpair))
+            self.addstr(statusBarLineNum+1, self.chMap_offset, self.chMapString, self.curses_color_pair(self.colorpair))
 
         # draw current character set #
         charSetNumberString = f"({self.charMapNumber+1}/{len(self.fullCharMap)})"
         if self.appState.colorMode == "16":   # put it to the right instead of the left, to make room for BG colors
-            self.addstr(statusBarLineNum+1, self.chMap_offset+len(self.chMapString)+2, charSetNumberString, curses.color_pair(mainColor)) 
+            self.addstr(statusBarLineNum+1, self.chMap_offset+len(self.chMapString)+2, charSetNumberString, self.curses_color_pair(mainColor)) 
         #if self.appState.colorMode == 256:
         else:
-            #self.addstr(statusBarLineNum+1, chMap_offset-16, charSetNumberString, curses.color_pair(mainColor)) 
-            self.addstr(statusBarLineNum+1, self.chMap_offset-8, charSetNumberString, curses.color_pair(mainColor)) 
-        #self.addstr(statusBarLineNum+1, chMap_offset+len(self.chMapString)+2, str(self.charMapNumber+1), curses.color_pair(mainColor)) 
+            #self.addstr(statusBarLineNum+1, chMap_offset-16, charSetNumberString, self.curses_color_pair(mainColor)) 
+            self.addstr(statusBarLineNum+1, self.chMap_offset-8, charSetNumberString, self.curses_color_pair(mainColor)) 
+        #self.addstr(statusBarLineNum+1, chMap_offset+len(self.chMapString)+2, str(self.charMapNumber+1), self.curses_color_pair(mainColor)) 
         # overlay draw function key names in normal color
         y = 0
         #for x in range(1,11): 
-        #    self.addstr(statusBarLineNum+1, chMap_offset+y, "F%i" % x, curses.color_pair(mainColor))
+        #    self.addstr(statusBarLineNum+1, chMap_offset+y, "F%i" % x, self.curses_color_pair(mainColor))
         #    y = y + 3
 
         # draw 16-color picker
         if self.appState.colorMode == "16" and self.realmaxX > self.appState.full_ui_width:
             colorPickerFGOffset = 0
-            self.addstr(statusBarLineNum+1, colorPickerFGOffset, "FG:", curses.color_pair(mainColor))
+            self.addstr(statusBarLineNum+1, colorPickerFGOffset, "FG:", self.curses_color_pair(mainColor))
             #hiColor = 7     # for old way, using bold to get high colors
             hiColor = 17     # for old way, using bold to get high colors
             if self.appState.iceColors:
@@ -2797,44 +2817,44 @@ class UserInterface():  # Separate view (curses) from this controller
                 cp = self.ansi.colorPairMap[(c, 0)]
                 if c > 8:
                     if c == self.colorfg:
-                        self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c,'X', curses.color_pair(cp) | curses.A_BOLD)   # block character
+                        self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c,'X', self.curses_color_pair(cp) | curses.A_BOLD)   # block character
                     else:
-                        self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c, self.appState.colorPickChar, curses.color_pair(cp) | curses.A_BOLD)   # block character
+                        self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c, self.appState.colorPickChar, self.curses_color_pair(cp) | curses.A_BOLD)   # block character
                 else:
                     if c == self.colorfg:
                         if c == 1: # black fg
-                            self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c,'X', curses.color_pair(mainColor))
+                            self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c,'X', self.curses_color_pair(mainColor))
                         else:
-                            self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c,'X', curses.color_pair(cp))   # block character
+                            self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c,'X', self.curses_color_pair(cp))   # block character
                     else:
-                        self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c, self.appState.colorPickChar, curses.color_pair(cp))
+                        self.addstr(statusBarLineNum+1, colorPickerFGOffset+2+c, self.appState.colorPickChar, self.curses_color_pair(cp))
             # bg color
             colorPickerBGOffset = 21
-            self.addstr(statusBarLineNum+1, colorPickerBGOffset, "BG:", curses.color_pair(mainColor))
+            self.addstr(statusBarLineNum+1, colorPickerBGOffset, "BG:", self.curses_color_pair(mainColor))
             hiColor = 9     # for old way, using bold to get high colors
             if self.appState.iceColors:
                 hiColor = 16
             for c in range(1,hiColor):
                 cp = self.ansi.colorPairMap[(c, 0)]
                 if c == self.colorbg: #or (c == 8 and self.colorbg == 0):
-                    #self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', curses.color_pair(self.ansi.colorPairMap[(16, c)])) 
+                    #self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', self.curses_color_pair(self.ansi.colorPairMap[(16, c)])) 
                     if not self.appState.iceColors:
                         if c == 9: # black bg
-                            self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', curses.color_pair(mainColor)) 
+                            self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', self.curses_color_pair(mainColor)) 
                         else:
-                            self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', curses.color_pair(self.ansi.colorPairMap[(16, c)])) 
+                            self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', self.curses_color_pair(self.ansi.colorPairMap[(16, c)])) 
                     else:
-                        self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', curses.color_pair(self.ansi.colorPairMap[(16, c)])) 
+                        self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, 'X', self.curses_color_pair(self.ansi.colorPairMap[(16, c)])) 
                 else:
-                    self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, self.appState.colorPickChar, curses.color_pair(cp + 1))
+                    self.addstr(statusBarLineNum+1, colorPickerBGOffset+3+c, self.appState.colorPickChar, self.curses_color_pair(cp + 1))
         # Draw x/y location/position 
         locationString = "(%i,%i)" % (self.xy[1]-1, self.xy[0])
         locationStringOffset = realmaxX - len(locationString) - 1
-        self.addstr(statusBarLineNum+1, locationStringOffset, locationString, curses.color_pair(mainColor))
+        self.addstr(statusBarLineNum+1, locationStringOffset, locationString, self.curses_color_pair(mainColor))
         # Draw mouse mode
         mouseModeString = self.appState.cursorMode
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
-        self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
+        self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, self.curses_color_pair(mainColor))
 
         # Draw Animation Brush frame number
         if self.appState.cursorMode == "ABrush":
@@ -2853,7 +2873,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 elif self.appState.animBrush.mode == "clone":
                     abrushFrameString += " Clone"
 
-                self.addstr(statusBarLineNum-1, abrushFrameStringOffset, abrushFrameString, curses.color_pair(mainColor))
+                self.addstr(statusBarLineNum-1, abrushFrameStringOffset, abrushFrameString, self.curses_color_pair(mainColor))
 
 
 
@@ -2862,28 +2882,28 @@ class UserInterface():  # Separate view (curses) from this controller
         insertModeStringOffset = self.chMap_offset - 15
         if self.appState.insertMode:
             insertModeString = "Ins"
-            self.addstr(statusBarLineNum+1, insertModeStringOffset, insertModeString, curses.color_pair(mainColor))
+            self.addstr(statusBarLineNum+1, insertModeStringOffset, insertModeString, self.curses_color_pair(mainColor))
         else:
             insertModeString = ""
 
 
         # Draw button indicator
         if self.pressingButton:
-            self.addstr(statusBarLineNum + 1, locationStringOffset - 1, "*", curses.color_pair(3) | curses.A_BOLD)
+            self.addstr(statusBarLineNum + 1, locationStringOffset - 1, "*", self.curses_color_pair(3) | curses.A_BOLD)
         else:
-            self.addstr(statusBarLineNum + 1, locationStringOffset - 1, " ", curses.color_pair(3) | curses.A_BOLD)
+            self.addstr(statusBarLineNum + 1, locationStringOffset - 1, " ", self.curses_color_pair(3) | curses.A_BOLD)
         if self.realmaxX >= self.appState.full_ui_width:
             # Draw Range, FPS and Delay buttons
-            self.addstr(statusBarLineNum, fpsBar_offset, "<", curses.color_pair(clickColor) | curses.A_BOLD)  # FPS buttons
-            self.addstr(statusBarLineNum, fpsBar_offset + 4, ">", curses.color_pair(clickColor) | curses.A_BOLD)
+            self.addstr(statusBarLineNum, fpsBar_offset, "<", self.curses_color_pair(clickColor) | curses.A_BOLD)  # FPS buttons
+            self.addstr(statusBarLineNum, fpsBar_offset + 4, ">", self.curses_color_pair(clickColor) | curses.A_BOLD)
             if self.appState.modified:
-                self.addstr(statusBarLineNum + 1, realmaxX - 1, "*", curses.color_pair(4) | curses.A_BOLD)
+                self.addstr(statusBarLineNum + 1, realmaxX - 1, "*", self.curses_color_pair(4) | curses.A_BOLD)
             else:
-                self.addstr(statusBarLineNum + 1, realmaxX - 1, " ", curses.color_pair(4) | curses.A_BOLD)
+                self.addstr(statusBarLineNum + 1, realmaxX - 1, " ", self.curses_color_pair(4) | curses.A_BOLD)
             if not self.playing:
-                self.addstr(statusBarLineNum, frameBar_offset, "F", curses.color_pair(clickColor) | curses.A_BOLD)  # Frame button
-                self.addstr(statusBarLineNum, rangeBar_offset, "R", curses.color_pair(clickColor) | curses.A_BOLD)  # Range button
-                self.addstr(statusBarLineNum, delayBar_offset, "D", curses.color_pair(clickColor) | curses.A_BOLD)  # Delay button
+                self.addstr(statusBarLineNum, frameBar_offset, "F", self.curses_color_pair(clickColor) | curses.A_BOLD)  # Frame button
+                self.addstr(statusBarLineNum, rangeBar_offset, "R", self.curses_color_pair(clickColor) | curses.A_BOLD)  # Range button
+                self.addstr(statusBarLineNum, delayBar_offset, "D", self.curses_color_pair(clickColor) | curses.A_BOLD)  # Delay button
         # draw transport
         transportString = "< |> >" 
         transportOffset = realmaxX - len(transportString) - 9 
@@ -2894,24 +2914,24 @@ class UserInterface():  # Separate view (curses) from this controller
                 playButtonString = "||" 
             else:
                 playButtonString = "|>" 
-            self.addstr(statusBarLineNum, transportOffset, playButtonString, curses.color_pair(clickColor) | curses.A_BOLD)
+            self.addstr(statusBarLineNum, transportOffset, playButtonString, self.curses_color_pair(clickColor) | curses.A_BOLD)
 
         else:   # wide window, show full transport
             if self.playing:
                 transportString = "< || >" 
-                self.addstr(statusBarLineNum, transportOffset, transportString, curses.color_pair(mainColor))
-                self.addstr(statusBarLineNum, transportOffset+2, "||", curses.color_pair(clickColor) | curses.A_BOLD)
+                self.addstr(statusBarLineNum, transportOffset, transportString, self.curses_color_pair(mainColor))
+                self.addstr(statusBarLineNum, transportOffset+2, "||", self.curses_color_pair(clickColor) | curses.A_BOLD)
             else:
                 transportString = "< |> >" 
-            self.addstr(statusBarLineNum, transportOffset, transportString, curses.color_pair(clickColor) | curses.A_BOLD)
+            self.addstr(statusBarLineNum, transportOffset, transportString, self.curses_color_pair(clickColor) | curses.A_BOLD)
         # Draw the new status bar
         if self.commandMode:
             # When we hit esc in the canvas, show tooltips etc.
-            self.addstr(statusBarLineNum, realmaxX - 1, "*", curses.color_pair(2) | curses.A_BOLD)
+            self.addstr(statusBarLineNum, realmaxX - 1, "*", self.curses_color_pair(2) | curses.A_BOLD)
             self.statusBar.showToolTips()
         else:
             self.statusBar.hideToolTips()
-            self.addstr(statusBarLineNum, realmaxX - 1, " ", curses.color_pair(2) | curses.A_BOLD)
+            self.addstr(statusBarLineNum, realmaxX - 1, " ", self.curses_color_pair(2) | curses.A_BOLD)
 
         # More offsets for the tooltips - for transport buttons
         trans_play_offset = transportOffset + 2
@@ -2973,7 +2993,7 @@ class UserInterface():  # Separate view (curses) from this controller
         if not self.statusBar.drawCharPickerButton.hidden:
             drawChar_line = self.statusBar.drawCharPickerButton.realX
             drawChar_col = self.statusBar.drawCharPickerButton.realY + 1
-            self.addstr(drawChar_line, drawChar_col, self.appState.drawChar, curses.color_pair(self.colorpair))
+            self.addstr(drawChar_line, drawChar_col, self.appState.drawChar, self.curses_color_pair(self.colorpair))
 
         if self.appState.cursorMode == "ABrush":
             #pdb.set_trace()
@@ -2995,7 +3015,7 @@ class UserInterface():  # Separate view (curses) from this controller
         mouseModeString = self.appState.cursorMode
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
         self.clickHighlight(mouseModeStringOffset, mouseModeString, bar='bottom')
-        #self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
+        #self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, self.curses_color_pair(mainColor))
 
     def window_big_enough_for_colors(self):
         # Returns true if window is either tall enough or wide enough
@@ -3009,7 +3029,7 @@ class UserInterface():  # Separate view (curses) from this controller
             if realmaxX < self.mov.sizeX + self.appState.sideBar_minimum_width:
                 returnValue = False
         #debugString = f"big enough: {returnValue}"
-        #self.addstr(realmaxY - 3, 0, debugString, curses.color_pair(self.appState.theme['clickHighlightColor']) | curses.A_BOLD)
+        #self.addstr(realmaxY - 3, 0, debugString, self.curses_color_pair(self.appState.theme['clickHighlightColor']) | curses.A_BOLD)
         return returnValue
 
 
@@ -3035,11 +3055,11 @@ class UserInterface():  # Separate view (curses) from this controller
             y = self.statusBarLineNum
         if bar == 'bottom':
             y = self.statusBarLineNum + 1
-        self.addstr(y, pos, buttonString, curses.color_pair(self.appState.theme['clickHighlightColor']) | curses.A_BOLD)
+        self.addstr(y, pos, buttonString, self.curses_color_pair(self.appState.theme['clickHighlightColor']) | curses.A_BOLD)
         curses.curs_set(0)  # turn off cursor
         self.stdscr.refresh()
         time.sleep(0.2)
-        self.addstr(y, pos, buttonString, curses.color_pair(self.appState.theme['clickColor']))
+        self.addstr(y, pos, buttonString, self.curses_color_pair(self.appState.theme['clickColor']))
         curses.curs_set(1)  # turn on cursor
 
 
@@ -3434,11 +3454,11 @@ class UserInterface():  # Separate view (curses) from this controller
                     # clear mouse state lines
                     winHeight,winWidth = self.realstdscr.getmaxyx()
                     blank_line = " " * winWidth
-                    self.addstr(self.statusBarLineNum-3, 0, blank_line, curses.color_pair(3) | curses.A_BOLD)
-                    self.addstr(self.statusBarLineNum-4, 0, blank_line, curses.color_pair(3) | curses.A_BOLD)
+                    self.addstr(self.statusBarLineNum-3, 0, blank_line, self.curses_color_pair(3) | curses.A_BOLD)
+                    self.addstr(self.statusBarLineNum-4, 0, blank_line, self.curses_color_pair(3) | curses.A_BOLD)
                     # print mouse state
                     mouseDebugString = f"mX: {mouseX}, mY: {mouseY}, mState: {mouseState}, press:{b1_press} rel:{b1_release} clk:{b1_click} dclk: {b1_dclick}"
-                    self.addstr(self.statusBarLineNum-4, 0, mouseDebugString, curses.color_pair(3) | curses.A_BOLD)
+                    self.addstr(self.statusBarLineNum-4, 0, mouseDebugString, self.curses_color_pair(3) | curses.A_BOLD)
 
 
                 # did mouse stuff in a status bar element
@@ -3545,7 +3565,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     elif self.appState.cursorMode == "Draw":
                         if self.pressingButton:
                             if self.appState.debug:
-                                self.addstr(self.statusBarLineNum-2, 20, "Draw triggered.", curses.color_pair(6) | curses.A_BOLD)
+                                self.addstr(self.statusBarLineNum-2, 20, "Draw triggered.", self.curses_color_pair(6) | curses.A_BOLD)
                             drawChar = self.appState.drawChar
                             try:
                                 x_param = mouseX + 1 + self.appState.firstCol
@@ -3556,21 +3576,21 @@ class UserInterface():  # Separate view (curses) from this controller
                             #self.refresh()
                         else:
                             if self.appState.debug:
-                                self.addstr(self.statusBarLineNum-2, 20, "Draw untriggered.", curses.color_pair(5) | curses.A_BOLD)
+                                self.addstr(self.statusBarLineNum-2, 20, "Draw untriggered.", self.curses_color_pair(5) | curses.A_BOLD)
 
                     elif self.appState.cursorMode == "Paint":   # Draw Brush under cursor
                         half_brush_height = int(self.appState.brush.sizeX  / 2)
                         half_brush_width = int(self.appState.brush.sizeY  / 2)
                         if self.pressingButton:
                             if self.appState.debug:
-                                self.addstr(self.statusBarLineNum-2, 20, "Paint triggered.", curses.color_pair(6) | curses.A_BOLD)
+                                self.addstr(self.statusBarLineNum-2, 20, "Paint triggered.", self.curses_color_pair(6) | curses.A_BOLD)
                             # Paint brush onto canvas
                             painting = True
                             if not self.appState.brush: # if no brush is set...
                                 painting = False    # don't paint.
                             if painting:
                                 if self.appState.debug:
-                                    self.addstr(self.statusBarLineNum-2, 20, "Paint painting.", curses.color_pair(6) | curses.A_BOLD)
+                                    self.addstr(self.statusBarLineNum-2, 20, "Paint painting.", self.curses_color_pair(6) | curses.A_BOLD)
                                 try:
                                     x_param = mouseX + 1 + self.appState.firstCol
                                     y_param = mouseY + self.appState.topLine
@@ -3580,7 +3600,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.refresh()
                         else:
                             if self.appState.debug:
-                                self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", curses.color_pair(5) | curses.A_BOLD)
+                                self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", self.curses_color_pair(5) | curses.A_BOLD)
 
 
                     elif self.appState.cursorMode == "ABrush" and self.appState.animBrush.is_set():   # Paint animation brush
@@ -3588,13 +3608,13 @@ class UserInterface():  # Separate view (curses) from this controller
                         half_brush_width = int(self.appState.animBrush.current_frame().sizeY  / 2)
                         if self.pressingButton:
                             if self.appState.debug:
-                                self.addstr(self.statusBarLineNum-2, 20, "AnimBrush triggered.", curses.color_pair(6) | curses.A_BOLD)
+                                self.addstr(self.statusBarLineNum-2, 20, "AnimBrush triggered.", self.curses_color_pair(6) | curses.A_BOLD)
                             painting = False 
                             if self.appState.animBrush.is_set():
                                 painting = True
                             if painting:
                                 if self.appState.debug:
-                                    self.addstr(self.statusBarLineNum-2, 20, "Paint painting.", curses.color_pair(6) | curses.A_BOLD)
+                                    self.addstr(self.statusBarLineNum-2, 20, "Paint painting.", self.curses_color_pair(6) | curses.A_BOLD)
                                 try:
                                     x_param = mouseX + 1 + self.appState.firstCol
                                     y_param = mouseY + self.appState.topLine
@@ -3614,7 +3634,7 @@ class UserInterface():  # Separate view (curses) from this controller
                                 self.refresh()
                         else:
                             if self.appState.debug:
-                                self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", curses.color_pair(5) | curses.A_BOLD)
+                                self.addstr(self.statusBarLineNum-2, 20, "Paint untriggered.", self.curses_color_pair(5) | curses.A_BOLD)
 
 
 
@@ -3847,7 +3867,7 @@ class UserInterface():  # Separate view (curses) from this controller
         # Print a message for the user to set the New color
         self.clearStatusLine()
         printMessage = "Please pick the New color."
-        self.addstr(self.statusBarLineNum, 0, printMessage, curses.color_pair(self.appState.theme['notificationColor']))
+        self.addstr(self.statusBarLineNum, 0, printMessage, self.curses_color_pair(self.appState.theme['notificationColor']))
         self.stdscr.refresh()
         # Use color picker to pick new destination color (pair)
         picker_color = self.selectColorPicker()    # picker_color is False if user hits Esc in color picker.
@@ -3893,9 +3913,9 @@ class UserInterface():  # Separate view (curses) from this controller
         old_char = self.mov.currentFrame.content[self.xy[0]][self.xy[1]-1]
         # Print a message for the user to pick a new character
         #self.clearStatusLine()
-        self.addstr(self.statusBarLineNum, 0, " " * 50 , curses.color_pair(self.appState.theme['notificationColor']))
+        self.addstr(self.statusBarLineNum, 0, " " * 50 , self.curses_color_pair(self.appState.theme['notificationColor']))
         printMessage = "Replce with what character? Type or use F1-F10: "
-        self.addstr(self.statusBarLineNum, 0, printMessage, curses.color_pair(self.appState.theme['notificationColor']))
+        self.addstr(self.statusBarLineNum, 0, printMessage, self.curses_color_pair(self.appState.theme['notificationColor']))
         self.stdscr.refresh()
         new_char = self.askForCharacter()
         if new_char == '\0':
@@ -4221,7 +4241,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def promptPrint(self, promptText):
         """ Prints prompting text in a consistent manner """
-        self.addstr(self.statusBarLineNum, 0, promptText, curses.color_pair(self.appState.theme['promptColor']))
+        self.addstr(self.statusBarLineNum, 0, promptText, self.curses_color_pair(self.appState.theme['promptColor']))
 
     def do_nothing(self):
         pass
@@ -4608,14 +4628,14 @@ class UserInterface():  # Separate view (curses) from this controller
                         if block_list[current_line_number] in set_list:
                             # Durdraw custom character set (like durdraw default), not a Unicode block
                             if currentActiveSet:     # currently used character set
-                                self.addstr(current_line_number - top_line, 0, block_label, curses.color_pair(self.appState.theme['menuTitleColor']) | curses.A_BOLD)
+                                self.addstr(current_line_number - top_line, 0, block_label, self.curses_color_pair(self.appState.theme['menuTitleColor']) | curses.A_BOLD)
                             else:
-                                self.addstr(current_line_number - top_line, 0, block_label, curses.color_pair(self.appState.theme['menuTitleColor']))
+                                self.addstr(current_line_number - top_line, 0, block_label, self.curses_color_pair(self.appState.theme['menuTitleColor']))
                         else:
                             if currentActiveSet:
-                                self.addstr(current_line_number - top_line, 0, block_label, curses.color_pair(self.appState.theme['promptColor']) | curses.A_BOLD)
+                                self.addstr(current_line_number - top_line, 0, block_label, self.curses_color_pair(self.appState.theme['promptColor']) | curses.A_BOLD)
                             else:
-                                self.addstr(current_line_number - top_line, 0, block_label, curses.color_pair(self.appState.theme['promptColor']))
+                                self.addstr(current_line_number - top_line, 0, block_label, self.curses_color_pair(self.appState.theme['promptColor']))
 
                             # Draw inline preview characters for the set
                             #previewCharMap = durchar.load_unicode_block(block_list[selected_item_number])
@@ -4639,7 +4659,7 @@ class UserInterface():  # Separate view (curses) from this controller
 
             if search_string != "":
                 self.addstr(realmaxY - 2, 0, f"search: ")
-                self.addstr(realmaxY - 2, 8, f"{search_string}", curses.color_pair(self.appState.theme['menuItemColor']))
+                self.addstr(realmaxY - 2, 8, f"{search_string}", self.curses_color_pair(self.appState.theme['menuItemColor']))
             # print preview characters
             errorLoadingBlock = False
             if block_list[selected_item_number] in set_list:    # not a unicode block
@@ -4920,7 +4940,7 @@ class UserInterface():  # Separate view (curses) from this controller
         progress_string = message
         progress_column = self.appState.realmaxX - len(progress_string)   # anchor right
         progress_line = self.appState.realmaxY  # bottom
-        #self.addstr(progress_line, progress_column, progress_string, curses.color_pair(self.appState.theme['menuItemColor']))
+        #self.addstr(progress_line, progress_column, progress_string, self.curses_color_pair(self.appState.theme['menuItemColor']))
         #self.notify(progress_string, wait_time=0)
         #self.stdscr.refresh()
 
@@ -5248,59 +5268,59 @@ class UserInterface():  # Separate view (curses) from this controller
                             if show_modtime and not self.appState.sixteenc_browsing:
                                 full_path = f"{current_directory}/{file_list[current_line_number]}"
                                 file_modtime_string = durfile.get_file_mod_date_time(full_path)
-                                self.addstr(current_line_number - top_line, 0, file_modtime_string, curses.color_pair(self.appState.theme['menuItemColor']))
+                                self.addstr(current_line_number - top_line, 0, file_modtime_string, self.curses_color_pair(self.appState.theme['menuItemColor']))
                             self.addstr(current_line_number - top_line, file_column_number, file_list[current_line_number], curses.A_REVERSE)
                     else:
                         if file_list[current_line_number] in folders:
                             if file_list[current_line_number] in self.appState.sixteenc_dizcache and self.appState.sixteenc_browsing:
                                 # file_id has been downloaded, so draw in bold
-                                self.addstr(current_line_number - top_line, 0, file_list[current_line_number], curses.color_pair(self.appState.theme['menuTitleColor']) | curses.A_BOLD)
+                                self.addstr(current_line_number - top_line, 0, file_list[current_line_number], self.curses_color_pair(self.appState.theme['menuTitleColor']) | curses.A_BOLD)
                             else:
-                                self.addstr(current_line_number - top_line, 0, file_list[current_line_number], curses.color_pair(self.appState.theme['menuTitleColor']))
+                                self.addstr(current_line_number - top_line, 0, file_list[current_line_number], self.curses_color_pair(self.appState.theme['menuTitleColor']))
                         else:
                             if show_modtime and self.appState.sixteenc_browsing == False:
                                 full_path = f"{current_directory}/{file_list[current_line_number]}"
                                 file_modtime_string = durfile.get_file_mod_date_time(full_path)
-                                self.addstr(current_line_number - top_line, 0, file_modtime_string, curses.color_pair(self.appState.theme['menuItemColor']))
-                            self.addstr(current_line_number - top_line, file_column_number, file_list[current_line_number], curses.color_pair(self.appState.theme['promptColor']))
+                                self.addstr(current_line_number - top_line, 0, file_modtime_string, self.curses_color_pair(self.appState.theme['menuItemColor']))
+                            self.addstr(current_line_number - top_line, file_column_number, file_list[current_line_number], self.curses_color_pair(self.appState.theme['promptColor']))
                 current_line_number += 1
 
             if mask_all:
                 if sections[current_section] == "showall":
                     self.addstr(realmaxY - 4, showall_column, f"[X]", curses.A_REVERSE)
                 else:
-                    self.addstr(realmaxY - 4, showall_column, f"[X]", curses.color_pair(self.appState.theme['clickColor']))
+                    self.addstr(realmaxY - 4, showall_column, f"[X]", self.curses_color_pair(self.appState.theme['clickColor']))
             else:
                 if sections[current_section] == "showall":
                     self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.A_REVERSE)
                 else:
-                    self.addstr(realmaxY - 4, showall_column, f"[ ]", curses.color_pair(self.appState.theme['clickColor']))
-            self.addstr(realmaxY - 4, showall_column + 4, f"Show All Files", curses.color_pair(self.appState.theme['menuItemColor']))
+                    self.addstr(realmaxY - 4, showall_column, f"[ ]", self.curses_color_pair(self.appState.theme['clickColor']))
+            self.addstr(realmaxY - 4, showall_column + 4, f"Show All Files", self.curses_color_pair(self.appState.theme['menuItemColor']))
 
             if self.appState.sixteenc_available:
                 if self.appState.sixteenc_browsing:
                     if sections[current_section] == "sixteenc":
                         self.addstr(realmaxY - 4, sixteen_column, f"[X]", curses.A_REVERSE)
                     else:
-                        self.addstr(realmaxY - 4, sixteen_column, f"[X]", curses.color_pair(self.appState.theme['clickColor']))
+                        self.addstr(realmaxY - 4, sixteen_column, f"[X]", self.curses_color_pair(self.appState.theme['clickColor']))
                 else:
                     if sections[current_section] == "sixteenc":
                         self.addstr(realmaxY - 4, sixteen_column, f"[ ]", curses.A_REVERSE)
                     else:
-                        self.addstr(realmaxY - 4, sixteen_column, f"[ ]", curses.color_pair(self.appState.theme['clickColor']))
-                self.addstr(realmaxY - 4, sixteen_column + 4, f"16colo.rs Archive", curses.color_pair(self.appState.theme['menuItemColor']))
+                        self.addstr(realmaxY - 4, sixteen_column, f"[ ]", self.curses_color_pair(self.appState.theme['clickColor']))
+                self.addstr(realmaxY - 4, sixteen_column + 4, f"16colo.rs Archive", self.curses_color_pair(self.appState.theme['menuItemColor']))
 
-            #self.addstr(realmaxY - 4, 20, f"[PGUP]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 4, 27, f"[PGDOWN]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 4, 36, f"[OK]", curses.color_pair(self.appState.theme['clickColor']))
-            #self.addstr(realmaxY - 4, 41, f"[CANCEL]", curses.color_pair(self.appState.theme['clickColor']))
+            #self.addstr(realmaxY - 4, 20, f"[PGUP]", self.curses_color_pair(self.appState.theme['clickColor']))
+            #self.addstr(realmaxY - 4, 27, f"[PGDOWN]", self.curses_color_pair(self.appState.theme['clickColor']))
+            #self.addstr(realmaxY - 4, 36, f"[OK]", self.curses_color_pair(self.appState.theme['clickColor']))
+            #self.addstr(realmaxY - 4, 41, f"[CANCEL]", self.curses_color_pair(self.appState.theme['clickColor']))
             if self.appState.sixteenc_browsing:
-                self.addstr(realmaxY - 3, 0, f"Year: {self.appState.sixteenc_year}, Pack: {self.appState.sixteenc_pack}, Level: {self.sixteenc_levels[self.sixteenc_level]}", curses.color_pair(self.appState.theme['menuTitleColor']))
+                self.addstr(realmaxY - 3, 0, f"Year: {self.appState.sixteenc_year}, Pack: {self.appState.sixteenc_pack}, Level: {self.sixteenc_levels[self.sixteenc_level]}", self.curses_color_pair(self.appState.theme['menuTitleColor']))
             else:
-                self.addstr(realmaxY - 3, 0, f"Folder: {current_directory}", curses.color_pair(self.appState.theme['menuTitleColor']))
+                self.addstr(realmaxY - 3, 0, f"Folder: {current_directory}", self.curses_color_pair(self.appState.theme['menuTitleColor']))
             if search_string != "":
                 self.addstr(realmaxY - 2, 0, f"search: ")
-                self.addstr(realmaxY - 2, 8, f"{search_string}", curses.color_pair(self.appState.theme['menuItemColor']))
+                self.addstr(realmaxY - 2, 8, f"{search_string}", self.curses_color_pair(self.appState.theme['menuItemColor']))
 
             if self.selected_item_number > len(file_list) - 1:
                 self.selected_item_number = 0
@@ -7046,25 +7066,25 @@ If this persists, You might want to reinstsall Durdraw...
                 except: # Or if we can't, fail to the terminal's default color
                     cursesColorPair = 0
                 if charColor[0] > 8 and charColor[0] <= 16 and self.appState.colorMode == "16":    # bright color
-                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, curses.color_pair(cursesColorPair) | curses.A_BOLD)
+                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, self.curses_color_pair(cursesColorPair) | curses.A_BOLD)
                 elif charColor[0] > 7 and charColor[0] <= 15 and self.appState.colorMode == "256":    # bright color
-                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, curses.color_pair(cursesColorPair) | curses.A_BOLD)
+                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, self.curses_color_pair(cursesColorPair) | curses.A_BOLD)
                 # If the mouse cursor is over Fg: 1 Bg:1 in 16 color mode, aka Black on Black
                 # then print with defualt charaacters instead. This should prevent the cursor from
                 # disappearing, as well as let you preview "invisible" text under the cursor.
                 else:
-                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, curses.color_pair(cursesColorPair))
+                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, self.curses_color_pair(cursesColorPair))
             # draw border on right edge of line
             if not preview and self.appState.drawBorders and screenLineNum + topLine < self.frame.sizeY:
-                self.addstr(screenLineNum, frame.sizeX, ": ", curses.color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum, frame.sizeX, ": ", self.curses_color_pair(self.appState.theme['borderColor']))
             screenLineNum += 1
         # draw bottom border
         #if self.appState.drawBorders and screenLineNum < self.realmaxY - 3 :
         if not preview and self.appState.drawBorders and screenLineNum + topLine == frame.sizeY:
             if screenLineNum < self.statusBarLineNum:
                 borderWidth = min(frame.sizeX, self.realmaxX)
-                self.addstr(screenLineNum, 0, "." * borderWidth, curses.color_pair(self.appState.theme['borderColor']))
-                self.addstr(screenLineNum, frame.sizeX, ": ", curses.color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum, 0, "." * borderWidth, self.curses_color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum, frame.sizeX, ": ", self.curses_color_pair(self.appState.theme['borderColor']))
         screenLineNum += 1
         #spaceMultiplier = mov.sizeX + 1
         spaceMultiplier = self.realmaxY
@@ -7168,7 +7188,7 @@ If this persists, You might want to reinstsall Durdraw...
                 if self.appState.can_inject and self.appState.colorMode == "256":
                     injecting = True
                 if charColor[0] > 8 and charColor[0] <= 16 and self.appState.colorMode == "16":    # bright color
-                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, curses.color_pair(cursesColorPair) | curses.A_BOLD)
+                    self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, self.curses_color_pair(cursesColorPair) | curses.A_BOLD)
                 elif charColor[0] > 7 and charColor[0] <= 15 and self.appState.colorMode == "256":    # bright color
                     # Let's try injecting!
                     if injecting:
@@ -7180,7 +7200,7 @@ If this persists, You might want to reinstsall Durdraw...
                         pass
                         #self.addstr(screenLineNum, colnum - self.appState.firstCol, charContent)
                     else:
-                        self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, curses.color_pair(cursesColorPair) | curses.A_BOLD)
+                        self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, self.curses_color_pair(cursesColorPair) | curses.A_BOLD)
                 # If the mouse cursor is over Fg: 1 Bg:1 in 16 color mode, aka Black on Black
                 # then print with defualt charaacters instead. This should prevent the cursor from
                 # disappearing, as well as let you preview "invisible" text under the cursor.
@@ -7195,9 +7215,9 @@ If this persists, You might want to reinstsall Durdraw...
                             self.addstr(screenLineNum, colnum, charContent, visible_color_pair)
                         # not black on black
                         else:   # 16 color Normal character, under the cursor. No funny business. Print to the screen
-                            self.addstr(screenLineNum, colnum - self.appState.firstCol, charContent, curses.color_pair(cursesColorPair))
+                            self.addstr(screenLineNum, colnum - self.appState.firstCol, charContent, self.curses_color_pair(cursesColorPair))
                     else:   # 256 color Normal character, under the cursor. No funny business. Print to the screen
-                        self.addstr(screenLineNum, colnum - self.appState.firstCol, charContent, curses.color_pair(cursesColorPair))
+                        self.addstr(screenLineNum, colnum - self.appState.firstCol, charContent, self.curses_color_pair(cursesColorPair))
                 else:   # Normal character. No funny business. Print to the screen
                     #injecting = True
                     if injecting and charColor[1] != 0:
@@ -7219,20 +7239,24 @@ If this persists, You might want to reinstsall Durdraw...
                         pass
                         #self.addstr(screenLineNum, colnum - self.appState.firstCol, charContent)
                     else:
-                        self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, curses.color_pair(cursesColorPair))
+                        if sys.version_info >= (3, 16):
+                            self.stdscr.color_set(cursesColorPair)
+                            self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent)
+                        else:
+                            self.addstr(screenLineNum + line_offset, colnum - self.appState.firstCol + col_offset, charContent, self.curses_color_pair(cursesColorPair))
             # draw border on right edge of line
             if not preview and self.appState.drawBorders and screenLineNum + topLine < self.mov.sizeY:
-                self.addstr(screenLineNum, mov.sizeX, ": ", curses.color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum, mov.sizeX, ": ", self.curses_color_pair(self.appState.theme['borderColor']))
             screenLineNum += 1
         # draw bottom border
         #if self.appState.drawBorders and screenLineNum < self.realmaxY - 3 :
         if not preview and self.appState.drawBorders and screenLineNum + topLine == self.mov.sizeY:
             if screenLineNum < self.statusBarLineNum:
                 borderWidth = min(mov.sizeX, self.realmaxX)
-                self.addstr(screenLineNum, 0, "." * borderWidth, curses.color_pair(self.appState.theme['borderColor']))
-                self.addstr(screenLineNum, mov.sizeX, ": ", curses.color_pair(self.appState.theme['borderColor']))
-                self.addstr(screenLineNum + 1, 0, " " * borderWidth, curses.color_pair(self.appState.theme['borderColor']))
-                self.addstr(screenLineNum + 1, mov.sizeX, "  ", curses.color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum, 0, "." * borderWidth, self.curses_color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum, mov.sizeX, ": ", self.curses_color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum + 1, 0, " " * borderWidth, self.curses_color_pair(self.appState.theme['borderColor']))
+                self.addstr(screenLineNum + 1, mov.sizeX, "  ", self.curses_color_pair(self.appState.theme['borderColor']))
         screenLineNum += 1
         #spaceMultiplier = mov.sizeX + 1
         spaceMultiplier = self.realmaxY
@@ -7241,7 +7265,7 @@ If this persists, You might want to reinstsall Durdraw...
         if not preview:
             curses.panel.update_panels()
         if self.appState.playingHelpScreen:
-            self.addstr(self.statusBarLineNum + 1, 0, "Up/Down, Pgup/Pgdown, Home/End or Mouse Wheel to scroll. Enter or Esc to exit.", curses.color_pair(self.appState.theme['promptColor']))
+            self.addstr(self.statusBarLineNum + 1, 0, "Up/Down, Pgup/Pgdown, Home/End or Mouse Wheel to scroll. Enter or Esc to exit.", self.curses_color_pair(self.appState.theme['promptColor']))
         #if not self.appState.playOnlyMode:
         #    self.cursorOn()
         if refreshScreen:
@@ -7439,7 +7463,7 @@ If this persists, You might want to reinstsall Durdraw...
                         cursesColorPair = self.ansi.colorPairMap[tuple(charColor)] 
                     except: # Or if we can't, fail to the terminal's default color
                         cursesColorPair = 0
-                    self.addstr(linenum - self.appState.topLine, colnum - self.appState.firstCol, mov.currentFrame.content[linenum][colnum], curses.color_pair(cursesColorPair) | curses.A_REVERSE)
+                    self.addstr(linenum - self.appState.topLine, colnum - self.appState.firstCol, mov.currentFrame.content[linenum][colnum], self.curses_color_pair(cursesColorPair) | curses.A_REVERSE)
             width = lastColNum - firstColNum + 1
             height = lastLineNum - firstLineNum + 1
             # end draw block area
@@ -7569,7 +7593,7 @@ If this persists, You might want to reinstsall Durdraw...
                     cursesColorPair = self.ansi.colorPairMap[tuple(charColor)] 
                 except: # Or if we can't, fail to the terminal's default color
                     cursesColorPair = 0
-                self.addstr(linenum - self.appState.topLine, colnum - self.appState.firstCol, self.mov.currentFrame.content[linenum][colnum], curses.color_pair(cursesColorPair) | curses.A_REVERSE)
+                self.addstr(linenum - self.appState.topLine, colnum - self.appState.firstCol, self.mov.currentFrame.content[linenum][colnum], self.curses_color_pair(cursesColorPair) | curses.A_REVERSE)
 
 
         while prompting:

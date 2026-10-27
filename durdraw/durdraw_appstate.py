@@ -93,7 +93,10 @@ class AppState():
         self.insertMode = False # When the user presses Insert. Insert mode like a text editor
         self.can_inject = False # Allow injecting color codes to override ncurses colors (for BG 256 colors)
         self.sleep_time = 0     # Use this as a delay for playback mode, dictated in ui_curses.py from FPS
-        self.showBgColorPicker = False # until BG colors work in 256 color mode. (ncurses 5 color pair limits)
+        if  sys.version_info >= (3, 16):
+            self.showBgColorPicker = True
+        else:
+            self.showBgColorPicker = False # until BG colors work in 256 color mode. (ncurses 5 color pair limits)
         self.scrollColors = False   # When true, scroll wheel in canvas changes color instead of moving cursor
         self.editorRunning = True
         self.screenCursorMode = "default"   # can be block, underscore, pipe

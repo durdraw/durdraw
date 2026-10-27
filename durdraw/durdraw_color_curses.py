@@ -1,6 +1,7 @@
 import curses
 import time
 import pdb
+import sys
 from functools import lru_cache
 
 legacy_256_to_256 = {   # used when loading an old 256 color file in 256 color mode
@@ -371,7 +372,10 @@ class AnsiArtStuff():
             return False
 
     def initColorPairs_256color(self):   # High color pairs, 256 color
-        return self.initColorPairs_general(fg_count=256, bg_count=1)
+        if sys.version_info >= (3, 15):
+            return self.initColorPairs_general(fg_count=256, bg_count=256)
+        else:
+            return self.initColorPairs_general(fg_count=256, bg_count=1)
 
     def initColorPairs_256color_dead_again(self):   # High color pairs, 256 color
         """ Initialize 256 color mode color pairs """
