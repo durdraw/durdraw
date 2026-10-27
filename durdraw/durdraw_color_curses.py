@@ -372,7 +372,7 @@ class AnsiArtStuff():
             return False
 
     def initColorPairs_256color(self):   # High color pairs, 256 color
-        if sys.version_info >= (3, 15):
+        if sys.version_info >= (3, 16):
             return self.initColorPairs_general(fg_count=256, bg_count=256)
         else:
             return self.initColorPairs_general(fg_count=256, bg_count=1)
