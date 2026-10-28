@@ -3978,6 +3978,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.appState.topLine = 0
         oldDrawBorders = self.appState.drawBorders  # to turn back on when done
         self.appState.playOnlyMode = True
+        self.statusBar.mouseBar.hide()
         self.startPlaying(mov=mov, opts=opts)
 
         # Return to normal when done
@@ -6960,6 +6961,7 @@ class UserInterface():  # Separate view (curses) from this controller
     def showHelp(self):
         self.stopPlaying()
         self.disableMouseReporting()
+        self.statusBar.mouseBar.hide()
         self.stdscr.clear()
         if self.appState.hasHelpFile:
             #self.showAnimatedHelpScreen()

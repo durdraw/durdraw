@@ -213,7 +213,8 @@ class Menu():
     def hide(self):
         self.handler.hide()
         for button in self.buttons:
-            self.gui.del_button(button)
+            if button in self.gui.buttons:
+                self.gui.del_button(button)
         self.hidden = True
 
     def showHide(self):
@@ -629,7 +630,10 @@ class StatusBar():
         self.mouseBar.pinned_to_statusbar = False
         #self.mouseBar.set_highlighted_item('⌶')
         self.mouseBar.set_highlighted_item('⬚')
-        if not self.appState.durview_running and not self.appState.fetchMode:
+        if not self.appState.durview_running \
+                and not self.appState.fetchMode \
+                and not self.appState.playOnlyMode \
+                and self.appState.editorRunning:
             self.mouseBar.show_not_selected()
 
         # Make cursor tool selector button
