@@ -20,6 +20,7 @@ class SauceParser():
         self.fileType = None
         self.tinfo1 = None
         self.tinfo2 = None
+        self.comment = None
         self.width = 80
         self.height = 25
 
@@ -64,6 +65,7 @@ class SauceParser():
             self.year = self.date[:4]
             self.month = self.date[4:][:2]
             self.day = self.date[4:][2:]
+            self.comment = ''
 
             self.comnt_lines = struct.unpack_from('B', sauce_blob, offset=self.comnt_lines_offset)[0]
             if self.comnt_lines > 0:
@@ -79,8 +81,6 @@ class SauceParser():
                 # and reset sauce length, to keep parsing from breaking.
                 sauce_blob = file_blob[-128:]
                 self.sauce_blob = sauce_blob
-            else:
-                self.comment = ''
 
             # turn bytes into nicer strings
             try:
