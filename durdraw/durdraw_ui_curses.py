@@ -1255,6 +1255,7 @@ class UserInterface():  # Separate view (curses) from this controller
         year = self.appState.sauce.year
         month = self.appState.sauce.month
         day = self.appState.sauce.day
+        comment = self.appState.sauce.comment
         sixteenc_year = self.appState.sixteenc_year
         sixteenc_pack = self.appState.sixteenc_pack
         colorMode = self.appState.colorMode
@@ -1284,6 +1285,9 @@ class UserInterface():  # Separate view (curses) from this controller
 
         if date:
             infoStringList += textwrap.wrap(f"Date: {year}/{month}/{day}", width=fileInfoWidth, subsequent_indent='  ')
+
+        if comment:
+            infoStringList += textwrap.wrap(f"Comment: {comment}", width=fileInfoWidth, subsequent_indent='  ')
 
         # 16c 
         if self.appState.sixteenc_browsing:

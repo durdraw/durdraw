@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import pdb
 import struct
 
 class SauceParser():
@@ -31,8 +32,10 @@ class SauceParser():
         self.tinfo1_offset = 96
         self.tinfo2_offset = 98
         # Number of lines in the extra SAUCE comment block. 1 byte.  0 indicates no comment block is present. 
-        self.comnt_lines = 105
-        self.comnt_first_line = 133 # comment lines are 64 bytes long
+        #self.comnt_lines_offset = 105
+        #self.comnt_first_line_offset = 133 # comment lines are 64 bytes long
+        self.comnt_lines_offset = 104
+        self.comnt_first_line_offset = 106 # comment lines are 64 bytes long
 
         # other stuff
         self.sauce_blob = None
@@ -62,19 +65,40 @@ class SauceParser():
             self.month = self.date[4:][:2]
             self.day = self.date[4:][2:]
 
+            self.comnt_lines = struct.unpack_from('B', sauce_blob, offset=self.comnt_lines_offset)[0]
+            if self.comnt_lines > 0:
+                # 64 bytes * number of comment lines = all comments
+                count = 64 * self.comnt_lines
+                pack_type = str(count) + 's'    # eg: '64s' for 1 line
+                # make sauce blob larger before reading, to include comment lines
+                new_sauce_length = 128 + count
+                sauce_blob = file_blob[-new_sauce_length:]
+                self.sauce_blob = sauce_blob
+                # then read the comments.
+                self.comment = struct.unpack_from(pack_type, sauce_blob, offset=0)[0]
+                # and reset sauce length, to keep parsing from breaking.
+                sauce_blob = file_blob[-128:]
+                self.sauce_blob = sauce_blob
+            else:
+                self.comment = ''
+
             # turn bytes into nicer strings
             try:
                 self.title = self.title.decode().rstrip(' ').strip('\x00')
             except UnicodeDecodeError:
                 self.title = self.title.decode('cp437').rstrip(' ').strip('\x00')
             try:
-                self.author= self.author.decode().rstrip(' ').strip('\x00')
+                self.author = self.author.decode().rstrip(' ').strip('\x00')
             except UnicodeDecodeError:
-                self.author= self.author.decode('cp437').rstrip(' ').strip('\x00')
+                self.author = self.author.decode('cp437').rstrip(' ').strip('\x00')
             try:
                 self.group= self.group.decode().rstrip(' ').strip('\x00')
             except UnicodeDecodeError:
                 self.group= self.group.decode('cp437').rstrip(' ').strip('\x00')
+            try:
+                self.comment = self.comment.decode().rstrip(' ').strip('\x00')
+            except UnicodeDecodeError:
+                self.comment = self.comment.decode('cp437').rstrip(' ').strip('\x00')
      
             self.tinfo1 = struct.unpack_from('H', sauce_blob, offset=self.tinfo1_offset)[0]
             if self.tinfo1 > 1:
