@@ -99,6 +99,8 @@ class SauceParser():
                 self.comment = self.comment.decode().rstrip(' ').strip('\x00')
             except UnicodeDecodeError:
                 self.comment = self.comment.decode('cp437').rstrip(' ').strip('\x00')
+            except AttributeError:
+                self.comment = self.comment.rstrip(' ').strip('\x00')
      
             self.tinfo1 = struct.unpack_from('H', sauce_blob, offset=self.tinfo1_offset)[0]
             if self.tinfo1 > 1:
