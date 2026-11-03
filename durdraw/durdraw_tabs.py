@@ -47,17 +47,22 @@ class TabsManager:
 
 
     def close_current_tab(self):
-        pass
-
-    def close_tab(self, tab):
-        self.delete_tab_from_list(tab)
-
-    def render_tab(self, line, col):
-        # Maybe put this in an tabs ncurses handler object?
-        # Or: Use a menu object, put it on the right edge/toolbar.
-        # Maybe a TabsUI class makes sense instead for this stuff. Then
-        # it can make a menu, or horizontal menu, etc.
-        pass
+        if not self.tabs or len(self.tabs) == 1:
+            # no tabs are open, so do nothing
+            self.appState.ui.notify("No other tabs open! Exit to close.")
+            return
+        closing = self.appState.ui.close_tab_modified_check()
+        if not closing:
+            return
+        tab_index = self.tabs.index(self.current_tab)
+        self.tabs.remove(self.current_tab)
+        tab_index -= 1
+        if tab_index < 0:
+            tab_index = 0
+        self.current_tab = self.tabs[tab_index]
+        self.current_tab.load_tab_state_to_ui()
+        self.appState.ui.stdscr.clear()
+        self.appState.ui.hardRefresh()
 
     def next_tab(self):
         if not self.tabs:

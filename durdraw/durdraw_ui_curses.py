@@ -4173,6 +4173,26 @@ class UserInterface():  # Separate view (curses) from this controller
             # Preview Exeutor thread dispatch running. Kill em
             self.appState.pool_executor.shutdown(wait=True, cancel_futures=True)
 
+    def close_tab_modified_check(self):
+        self.clearStatusLine()
+        if self.appState.modified:
+            self.promptPrint("Changes have not been saved! Are you sure you want to close this tab? (Y/N) " )
+        else:
+            return True
+        prompting = True
+        while prompting:
+            time.sleep(0.01)
+            c = self.stdscr.getch()
+            if c == 121:   # 121 = y
+                closing = True
+                prompting = False
+            elif c == 110: # 110 = n
+                closing = False
+                prompting = False
+            time.sleep(0.01)
+        self.clearStatusLine()
+        return closing
+
     def safeQuit(self):
         self.stdscr.nodelay(0) # wait for input when calling getch
         self.clearStatusLine()
