@@ -550,6 +550,8 @@ class StatusBar():
         mainMenu.add_item("Open Examples", caller.openExamples, "")
         mainMenu.add_item("Save", caller.save, "s", shortcut="esc-s")
         mainMenu.add_item("Export", caller.openExportMenu, "x", has_submenu=True)
+        mainMenu.add_item("New Tab", caller.tabs.make_new_tab , "t", shortcut="esc-t")
+        mainMenu.add_item("Next Tab", caller.tabs.next_tab, "`", shortcut="esc-`")
         mainMenu.add_item("Info/Sauce", caller.clickedInfoButton, "i", shortcut="esc-i")
         mainMenu.add_item("Viewer Mode", caller.enterViewMode, "v", shortcut="esc-V")
         #mainMenu.add_item("Edit", caller.openEditMenu, "e", has_submenu=True)

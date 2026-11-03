@@ -45,6 +45,7 @@ import durdraw.durdraw_ansiparse as dur_ansiparse
 import durdraw.durdraw_sauce as dursauce
 import durdraw.durdraw_charsets as durchar
 import durdraw.durdraw_plugin as durplug
+import durdraw.durdraw_tabs as durtabs
 import durdraw.plugins.reverse_movie as reverse_plugin # transform_movie
 import durdraw.plugins.repeat_movie as repeat_plugin # transform_movie
 import durdraw.plugins.bounce_movie as bounce_plugin # transform_movie
@@ -71,6 +72,7 @@ class UserInterface():  # Separate view (curses) from this controller
         self.chMapString = ""
         self.chMap_offset = 0
         self.statusBar = None
+        self.tabs = durtabs.TabsManager(self.appState)
         self.appState.unicodeBlockList = durchar.get_unicode_blocks_list()
         self.initCharSet()  # sometimes later options can store a char set to init - utf-8, cp437, etc.
         os.environ.setdefault('ESCDELAY', '10')
@@ -703,7 +705,7 @@ class UserInterface():  # Separate view (curses) from this controller
                 self.statusBar.drawCharPickerButton.show()
             self.switchToColorMode("256")
 
-    def switchToColorMode(self, newMode: str):
+    def switchToColorMode(self, newMode: str, tab_switching = False):
         """ newMode, eg: '16' or '256' """
         self.appState.inferno = None
         if newMode == "16":
@@ -712,8 +714,9 @@ class UserInterface():  # Separate view (curses) from this controller
             self.ansi.initColorPairs_cga()
             self.init_16_colors_misc()
             #self.mov.change_palette_256_to_16()
-            if self.clipBoard and isinstance(self.clipBoard, durmovie.Frame):
-                self.mov.change_palette_256_to_16(frame=self.clipBoard)
+            if not tab_switching:
+                if self.clipBoard and isinstance(self.clipBoard, durmovie.Frame):
+                    self.mov.change_palette_256_to_16(frame=self.clipBoard)
             self.appState.loadThemeFromConfig("Theme-16")
             self.statusBar.colorPickerButton.hide()
             #self.statusBar.charSetButton.hide()
@@ -731,7 +734,8 @@ class UserInterface():  # Separate view (curses) from this controller
             self.appState.colorMode = "256"
             self.ansi.initColorPairs_256color()
             self.init_256_colors_misc()
-            self.mov.change_palette_16_to_256()
+            if not tab_switching:
+                self.mov.change_palette_16_to_256()
             self.appState.loadThemeFromConfig("Theme-256")
             self.statusBar.colorPickerButton.show()
             self.appState.totalFgColors = 255
@@ -1277,6 +1281,9 @@ class UserInterface():  # Separate view (curses) from this controller
         if title:
             infoStringList += textwrap.wrap(f"Title: {title}", width=fileInfoWidth, subsequent_indent='  ')
 
+        if comment:
+            infoStringList += textwrap.wrap(f"Comment: {comment}", width=fileInfoWidth, subsequent_indent='  ')
+
         if author:
             infoStringList += textwrap.wrap(f"Artist: {author}", width=fileInfoWidth, subsequent_indent='  ')
 
@@ -1286,8 +1293,6 @@ class UserInterface():  # Separate view (curses) from this controller
         if date:
             infoStringList += textwrap.wrap(f"Date: {year}/{month}/{day}", width=fileInfoWidth, subsequent_indent='  ')
 
-        if comment:
-            infoStringList += textwrap.wrap(f"Comment: {comment}", width=fileInfoWidth, subsequent_indent='  ')
 
         # 16c 
         if self.appState.sixteenc_browsing:
@@ -3170,6 +3175,13 @@ class UserInterface():  # Separate view (curses) from this controller
                 elif c == 99:     # alt-c - color picker
                     self.commandMode = False
                     self.statusBar.colorPickerButton.on_click()
+                # Tab switching
+                elif c == ord('t'):    # alt-t - open new tab
+                    self.tabs.make_new_tab()
+                elif c == ord('`'):    # alt-` - next tab
+                    self.tabs.next_tab()
+                elif c == ord('w'):    # alt-` - close tab
+                    self.tabs.close_current_tab()
                 # Animation Keystrokes
                 elif c == 68:     #alt-D - set delay for current frame
                     self.getDelayValue()
