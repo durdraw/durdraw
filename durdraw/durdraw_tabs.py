@@ -92,6 +92,9 @@ class Tab:
         self.undoState = None
         self.sauce = None
         self.colorMode = None
+        self.xy = [0, 0] # cursor position
+        self.topLine = None
+        self.firstCol = None
 
         # Run-time tab stuff
         self.name = None
@@ -107,6 +110,10 @@ class Tab:
         self.undoState = self.appState.ui.undo
         self.sauce = self.appState.sauce
         self.colorMode = self.appState.colorMode
+        self.xy[0] = self.appState.ui.xy[0]
+        self.xy[1] = self.appState.ui.xy[1]
+        self.topLine = self.appState.topLine
+        self.firstCol = self.appState.firstCol
 
     def load_tab_state_to_ui(self):
         # takes state from tab object, loads it into UI/appstate
@@ -117,7 +124,11 @@ class Tab:
         self.appState.curOpenFileName = self.fileName
         self.appState.ui.undo = self.undoState
         self.appState.sauce = self.sauce
+        self.appState.topLine = self.topLine
+        self.appState.firstCol = self.firstCol
         if self.appState.colorMode != self.colorMode:
             self.appState.ui.switchToColorMode(self.colorMode, tab_switching = True)
+        self.appState.ui.xy[0] = self.xy[0]
+        self.appState.ui.xy[1] = self.xy[1]
 
 
