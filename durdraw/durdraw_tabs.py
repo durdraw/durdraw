@@ -1,11 +1,50 @@
 # Manage tabs
 
 import pdb
+import textwrap
 
 from durdraw.durdraw_ui_widgets import Menu
 
 class TabsUI:
-    def __init__(self):
+    def __init__(self, appState, tabs_manager):
+        self.appState = appState
+        self.tabs_manager = tabs_manager
+        self.menu = None
+        self.menu = Menu(self.appState.ui.stdscr, x=0, y=0, caller=self.appState.ui, appState=self.appState, name="TabSwitcher", narrow=True)
+        self.refresh()
+
+        if not self.appState.durview_running \
+                and not self.appState.fetchMode \
+                and not self.appState.playOnlyMode \
+                and self.appState.editorRunning:
+            self.menu.show_not_selected()
+
+    def refresh(self):
+        """ Update based on the open tabs. """
+        #self.menu = None
+        self.menu.items = {}
+        self.menu.pinned_to_statusbar = False
+        self.menu.set_title("Open Files")
+        #self.mouseBar.set_highlighted_item('⬚')
+        if len(self.tabs_manager.tabs) == 0:
+            long_filename = self.appState.fileShortPath
+            if not long_filename:
+                long_filename = "Untitled"
+            short_filename = textwrap.shorten(long_filename, width=10, placeholder="...")
+        for tab in self.tabs_manager.tabs:
+            long_filename = tab.fileName
+            if not long_filename:
+                long_filename = "Untitled"
+            short_filename = textwrap.shorten(long_filename, width=10, placeholder="...")
+        if long_filename == self.appState.fileShortPath:
+            self.menu.add_item(short_filename, self.test, "")
+            self.menu.set_highlighted_item(short_filename)
+        else:
+            self.menu.add_item(short_filename, self.test, "")
+        
+
+    def test(self):
+        self.appState.ui.notify("Fnord!")
         pass
 
 
@@ -15,6 +54,7 @@ class TabsManager:
         self.appState = appState
         #self.current_tab_index = None   # int of currently selected tab
         self.current_tab = None
+        #self.tabs_ui = TabsUI(appState, self)
 
     #@property
     #def current_tab(self):
@@ -49,13 +89,15 @@ class TabsManager:
     def close_current_tab(self):
         if not self.tabs or len(self.tabs) == 1:
             # no tabs are open, so do nothing
-            self.appState.ui.notify("No other tabs open! Exit to close.")
+            self.appState.ui.notify("No other tabs open! Exit or clear the canvas to close.")
             return
         closing = self.appState.ui.close_tab_modified_check()
         if not closing:
             return
         tab_index = self.tabs.index(self.current_tab)
         self.tabs.remove(self.current_tab)
+        #self.current_tab.clear()
+        #self.appState.ui.mov = None
         tab_index -= 1
         if tab_index < 0:
             tab_index = 0
@@ -99,6 +141,19 @@ class Tab:
         # Run-time tab stuff
         self.name = None
         self.appState = appState    # Contains the UI object which we'll be interacting with
+
+    def clear(self):
+        self.mov = None
+        self.opts = None
+        self.playbackRange = None
+        self.modified = None
+        self.fileName = None
+        self.undoState = None
+        self.sauce = None
+        self.colorMode = None
+        self.xy = [0, 0] # cursor position
+        self.topLine = None
+        self.firstCol = None
 
     def save_ui_state_to_tab(self):
         # Takes state from UI/appstate, saves it into tab object

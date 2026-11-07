@@ -259,11 +259,13 @@ class ColorPicker:
         self.appState = caller.appState
         if colorMode == "256":
             self.height = 8
-            self.width = 38
+            #self.width = 38
+            self.width = 36
             self.totalColors = 255
         elif colorMode == "16":
             self.height = 2
-            self.width = 10
+            #self.width = 10
+            self.width = 8
 
             self.totalColors = 16
             if self.appState.iceColors:

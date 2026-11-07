@@ -62,7 +62,7 @@ class MenuHandler:
         self.menu = menu
         self.window = window
         self.appState=appState
-        self.parentWindow = self.menu.caller.window
+        self.parentWindow = self.appState.ui.window
         self.x = menu.x
         self.y = menu.y
         self.width = None
@@ -129,7 +129,7 @@ class MenuHandler:
                 curses_addstr(self.curses_win, line, width - 7, shortcut, shortcutColor)
             if has_submenu:
                 curses_addstr(self.curses_win, line, width - 2, ">", shortcutColor)
-            top_of_menu = self.menu.caller.y - len(self.menu.buttons)
+            #top_of_menu = self.menu.caller.y - len(self.menu.buttons)
             button.update_real_xy(x=self.originLine + line, y=self.menu.y) # working for putting menu on first line
             button.window = self.window
             line += 1
@@ -533,7 +533,7 @@ class ColorPickerHandler:
                     color_pair = curses.color_pair(color_pair_number)
                 except KeyError:
                     pdb.set_trace()
-            if col >= self.width - 2:
+            if col >= self.width:
                 col = 0
                 line += 1
             if self.colorMode == "256":
@@ -837,7 +837,7 @@ class ColorPickerHandler:
                     self.colorPicker.caller.setFgColor(color)
                     self.updateFgPicker()
                     self.colorPicker.caller.drawStatusBar()
-                elif mouseY >= self.origin and mouseX > self.x and mouseX < self.x + len(self.colorGrid[0])-2:   # cpicked in the color picker
+                elif mouseY >= self.origin and mouseX > self.x and mouseX < self.x + len(self.colorGrid[0]):   # cpicked in the color picker
                     self.hideBorder()
                     #self.colorPicker.caller.notify(f"DEBUG: self.origin={self.origin}, self.x = {self.x}. mouseX={mouseX}, mouseY={mouseY}", pause=True)
                     self.gotClick(mouseX, mouseY)
@@ -915,14 +915,18 @@ class ColorPickerHandler:
 
     def in_area(self, mouseX, mouseY):
         # If clicked on a color, set an FG color
-        if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < self.x + len(self.colorGrid[0])-2 and mouseX >= self.x:   # cpicked in the color picker
+        if not self.colorPicker.hidden \
+                and mouseY >= self.origin \
+                and mouseY <= self.origin + self.height - 1 \
+                and mouseX < self.x + len(self.colorGrid[0])\
+                and mouseX >= self.x:   # cpicked in the color picker
             return True
         else:
             return False
 
     def gotClick(self, mouseX, mouseY):
         # If clicked on a color, set an FG color
-        if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < + self.x + len(self.colorGrid[0])-2:   # cpicked in the color picker
+        if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < + self.x + len(self.colorGrid[0]):   # cpicked in the color picker
             clickedCol = mouseX - self.x
             clickedLine = mouseY - self.origin
             if mouseY < self.origin + self.height:
@@ -945,7 +949,7 @@ class ColorPickerHandler:
 
     def gotDoubleClick(self, mouseX, mouseY):
         # set a BG color
-        if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < + self.x + len(self.colorGrid[0])-2:   # cpicked in the color picker
+        if not self.colorPicker.hidden and mouseY >= self.origin and mouseX < + self.x + len(self.colorGrid[0]):   # cpicked in the color picker
             clickedCol = mouseX - self.x - 1
             clickedLine = mouseY - self.origin
             if mouseY < self.origin + self.height:

@@ -72,7 +72,6 @@ class UserInterface():  # Separate view (curses) from this controller
         self.chMapString = ""
         self.chMap_offset = 0
         self.statusBar = None
-        self.tabs = durtabs.TabsManager(self.appState)
         self.appState.unicodeBlockList = durchar.get_unicode_blocks_list()
         self.initCharSet()  # sometimes later options can store a char set to init - utf-8, cp437, etc.
         os.environ.setdefault('ESCDELAY', '10')
@@ -113,6 +112,9 @@ class UserInterface():  # Separate view (curses) from this controller
         curses.mouseinterval(230);  # make clicking a bit easier. Default 166 according to ai lol.
         self.colorbg = 0    # default bg black
         self.colorfg = 7    # default fg white. These are overriden by the following self.init_x_colors_misc():
+
+        self.tabs = durtabs.TabsManager(self.appState)
+
         if sys.version_info.major == 3:
             if sys.version_info.minor < 10:
                 self.appState.hasMouseScroll = False
@@ -2640,14 +2642,22 @@ class UserInterface():  # Separate view (curses) from this controller
         new_colorPicker_x = realmaxX - self.statusBar.colorPicker.handler.width
         self.statusBar.colorPicker.handler.move(new_colorPicker_x, new_colorPicker_y)
 
-        #new_mouseBar_y = new_colorPicker_x - 2
-        new_mouseBar_y = realmaxX - 5
-        #new_mouseBar_x = realmaxX - 18
-        new_mouseBar_x = 3
-        self.statusBar.mouseBar.set_y(new_mouseBar_y)
-        self.statusBar.mouseBar.set_x(new_mouseBar_x)
+
+
         if not self.appState.durview_running and not self.appState.fetchMode:
+            #self.tabs.tabs_ui.refresh()
+            new_tabs_y = realmaxX - 14
+            new_tabs_x = new_colorPicker_y 
+            #self.tabs.tabs_ui.menu.set_y(new_tabs_y)
+            #self.tabs.tabs_ui.menu.set_x(new_tabs_x)
+
+            new_mouseBar_y = realmaxX - 5
+            #new_mouseBar_x = new_tabs_x - len(self.tabs.tabs_ui.menu.items) - 3
+            new_mouseBar_x = new_colorPicker_y 
+            self.statusBar.mouseBar.set_y(new_mouseBar_y)
+            self.statusBar.mouseBar.set_x(new_mouseBar_x)
             self.statusBar.mouseBar.show_not_selected()
+            #self.tabs.tabs_ui.menu.show_not_selected()
 
         #if self.appState.colorMode == "16":
         #    new_colorPicker_y = realmaxY - self.statusBar.colorPicker_bg_16.handler.height - 2
@@ -3748,24 +3758,26 @@ class UserInterface():  # Separate view (curses) from this controller
                     if cmode == "Draw" or cmode == "Paint":
                         self.enableMouseReporting()
 
+                # If we clicked in the sidebar area, aka to the right of the canvas
+                # and above the status bar:
+                if self.appState.sideBarEnabled:
+                    # If we're in the right toolbar sort of area
+                    #if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
+                    if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
+                        # We did mouse stuff in the color picker.
+                        if self.appState.colorMode == "16": # set BG color
+                            if mouseState == curses.BUTTON1_DOUBLE_CLICKED or \
+                                    mouseState == curses.BUTTON3_PRESSED or \
+                                    mouseState == curses.BUTTON3_CLICKED:
+                                self.statusBar.colorPicker.handler.gotDoubleClick(mouseX, mouseY)
+                                #self.notify(f"double clicked: {mouseX}, {mouseY}")
+                        elif mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
+                            self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
+                        elif mouseState & curses.BUTTON4_PRESSED: # scroll wheel down
+                            self.statusBar.colorPicker.handler.prev_color()
+                        elif mouseState & curses.BUTTON5_PRESSED: # scroll wheel up
+                            self.statusBar.colorPicker.handler.next_color()
 
-                    # If we clicked in the sidebar area, aka to the right of the canvas
-                    # and above the status bar:
-                    if self.appState.sideBarEnabled:
-                        # If we're in the right toolbar sort of area
-                        #if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
-                        if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
-                            if self.appState.colorMode == "16": # set BG color
-                                if mouseState == curses.BUTTON1_DOUBLE_CLICKED:
-                                    self.statusBar.colorPicker.handler.gotDoubleClick(mouseX, mouseY)
-                            elif mouseState in [curses.BUTTON1_CLICKED, curses.BUTTON1_PRESSED, curses.BUTTON1_DOUBLE_CLICKED]:
-                                self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
-                            elif mouseState & curses.BUTTON4_PRESSED: # scroll wheel down
-                                if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
-                                    self.statusBar.colorPicker.handler.prev_color()
-                            elif mouseState & curses.BUTTON5_PRESSED: # scroll wheel up
-                                if self.statusBar.colorPicker.handler.in_area(mouseX, mouseY):
-                                    self.statusBar.colorPicker.handler.next_color()
 
                 if mouseState == curses.BUTTON1_CLICKED:
                     self.pressingButton = False
