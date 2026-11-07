@@ -216,6 +216,8 @@ class Menu():
         for button in self.buttons:
             if button in self.gui.buttons:
                 self.gui.del_button(button)
+            if button in self.appState.ui.gui.buttons:
+                self.appState.ui.gui.buttons.remove(button)
         self.hidden = True
 
     def showHide(self):
@@ -640,7 +642,8 @@ class StatusBar():
                 and not self.appState.fetchMode \
                 and not self.appState.playOnlyMode \
                 and self.appState.editorRunning:
-            self.mouseBar.show_not_selected()
+            pass
+            #self.mouseBar.show_not_selected()
 
         # Make cursor tool selector button
         # offset is how far right to put the button in the statusbar:
