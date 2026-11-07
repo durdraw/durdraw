@@ -2651,7 +2651,7 @@ class UserInterface():  # Separate view (curses) from this controller
             #self.tabs.tabs_ui.menu.set_y(new_tabs_y)
             #self.tabs.tabs_ui.menu.set_x(new_tabs_x)
 
-            new_mouseBar_y = realmaxX - 5
+            new_mouseBar_y = realmaxX - 3
             #new_mouseBar_x = new_tabs_x - len(self.tabs.tabs_ui.menu.items) - 3
             new_mouseBar_x = new_colorPicker_y 
             self.statusBar.mouseBar.set_y(new_mouseBar_y)

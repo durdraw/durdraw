@@ -73,11 +73,15 @@ class MenuHandler:
 
     def rebuild(self):
         height = len(self.menu.items) + 2  # 2 for top and bottom border lines
+        if self.menu.sidebar:
+            height = len(self.menu.items) + 2  # 1 less for no bottom border
         if self.title:
             height += 1
         # find widest item in list, go a few characters larger 
         if self.narrow:
-            width = len(max(self.menu.items, key = len)) + 4 # 4 for padding and side borders, more for shortcuts
+            width = len(max(self.menu.items, key = len)) + 4 # 4 for padding and side borders 
+        elif self.menu.sidebar:
+            width = len(max(self.menu.items, key = len)) + 2 # 2 for borders
         else:
             width = len(max(self.menu.items, key = len)) + 4  + 7 # 4 for padding and side borders, more for shortcuts
         if self.menu.title:
@@ -96,7 +100,10 @@ class MenuHandler:
         clickColor = curses.color_pair(self.appState.theme['clickColor']) | curses.A_BOLD
         buttonColor = curses.color_pair(self.appState.theme['clickColor'])
         shortcutColor = curses.color_pair(self.appState.theme['menuBorderColor'])
-        borderColor = curses.color_pair(self.appState.theme['menuBorderColor'])
+        if self.menu.sidebar:
+            borderColor = curses.color_pair(self.appState.theme['borderColor'])
+        else:
+            borderColor = curses.color_pair(self.appState.theme['menuBorderColor'])
         menuTitleColor = curses.color_pair(self.appState.theme['menuTitleColor']) | curses.A_BOLD | curses.A_UNDERLINE
         maxX, maxY = self.parentWindow.getmaxyx()
         if self.menu.pinned_to_statusbar:
@@ -105,25 +112,35 @@ class MenuHandler:
             self.originLine = self.x
         # Draw a pretty border
         curses_addstr(self.curses_win, 0, 0, ".", borderColor)
-        curses_addstr(self.curses_win, 0, 1, ("." * (self.width - 2)), borderColor)
-        curses_addstr(self.curses_win, 0, width - 1, ".", borderColor)
+        curses_addstr(self.curses_win, 0, 1, ("." * (self.width - 1)), borderColor)
+        if not self.menu.sidebar:
+            curses_addstr(self.curses_win, 0, width - 1, ".", borderColor)
         if self.title:
             curses_addstr(self.curses_win, 1, 0, ':', borderColor)
             curses_addstr(self.curses_win, 1, 2, self.menu.title, menuTitleColor) # Menu title
-            curses_addstr(self.curses_win, 1, width - 1, ':', borderColor)
+            if not self.menu.sidebar:
+                curses_addstr(self.curses_win, 1, width - 1, ':', borderColor)
         for (item, button) in zip(self.menu.items, self.menu.buttons):
             shortcut = self.menu.items[item]["shortcut"]
             has_submenu = self.menu.items[item]["has_submenu"]
 
             if self.menu.items[item]["highlight"]:
                 curses_addstr(self.curses_win, line, 0, ':', clickColor)
-                curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
+                if not self.menu.sidebar:
+                    curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
                 #curses_addstr(self.curses_win, line, 2, item, menuTitleColor ^ curses.A_UNDERLINE)    # Menu item
-                curses_addstr(self.curses_win, line, 2, item, clickColor)    # Menu item
+                if self.menu.sidebar:
+                    curses_addstr(self.curses_win, line, 1, item, clickColor)    # Menu item
+                else:
+                    curses_addstr(self.curses_win, line, 2, item, clickColor)    # Menu item
             else:
                 curses_addstr(self.curses_win, line, 0, ':', borderColor)
-                curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
-                curses_addstr(self.curses_win, line, 2, item, textColor)    # Menu item
+                if not self.menu.sidebar:
+                    curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
+                if self.menu.sidebar:
+                    curses_addstr(self.curses_win, line, 1, item, textColor)    # Menu item
+                else:
+                    curses_addstr(self.curses_win, line, 2, item, textColor)    # Menu item
 
             if shortcut:
                 curses_addstr(self.curses_win, line, width - 7, shortcut, shortcutColor)
@@ -134,8 +151,9 @@ class MenuHandler:
             button.window = self.window
             line += 1
         curses_addstr(self.curses_win, line, 0, ':', borderColor)
-        curses_addstr(self.curses_win, line,  width - 1, ':', borderColor)
-        curses_addstr(self.curses_win, line, 1, ("." * (width - 2)), borderColor)
+        curses_addstr(self.curses_win, line, 1, ("." * (width - 1)), borderColor)
+        if not self.menu.sidebar:
+            curses_addstr(self.curses_win, line,  width - 1, ':', borderColor)
         self.panel = curses.panel.new_panel(self.curses_win)
         try:
             self.panel.hide()

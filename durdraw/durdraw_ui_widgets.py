@@ -124,7 +124,7 @@ class Button():
         return self.handler.handle_event(event)
 
 class Menu():
-    def __init__(self, window, x=0, y=0, caller=None, appState=None, statusBar=None, name=None, narrow=False):
+    def __init__(self, window, x=0, y=0, caller=None, appState=None, statusBar=None, name=None, narrow=False, sidebar=False):
         """ init menu items """ 
         self.window = window
         self.name = name
@@ -140,6 +140,7 @@ class Menu():
         self.y = y
         self.handler = MenuHandler(self, window, appState=appState)
         self.handler.narrow=narrow
+        self.sidebar = sidebar
         self.pinned_to_statusbar = True
         self.gui = Gui(window=self.window)
 
@@ -618,7 +619,7 @@ class StatusBar():
         self.toolMenu = toolMenu
 
         # Mouse toolbar menu
-        mouseBar = Menu(self.window, x=3, y=self.y, caller=self, appState=self.appState, statusBar=self, name="MouseBar", narrow=True)
+        mouseBar = Menu(self.window, x=3, y=self.y, caller=self, appState=self.appState, statusBar=self, name="MouseBar", sidebar=True)
         #self.menus["MouseBar"] = mouseBar
         #mouseBar.set_title("🖱")
         #mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
