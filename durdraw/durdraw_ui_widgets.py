@@ -625,15 +625,15 @@ class StatusBar():
         #self.menus["MouseBar"] = mouseBar
         #mouseBar.set_title("🖱")
         #mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
-        mouseBar.add_item("⬚", self.setCursorModeSelect, "s")
-        mouseBar.add_item("↖", self.setCursorModeMove, "m")
-        mouseBar.add_item("✎", self.setCursorModeDraw, "d")
-        mouseBar.add_item("🖌", caller.setCursorModePaint, "p")
-        mouseBar.add_item("🎥", caller.setCursorModeAnimBrush, "a")
-        mouseBar.add_item("🎨", self.setCursorModeCol, "c")
-        mouseBar.add_item("💧", self.setCursorModeEyedrop, "y")
+        mouseBar.add_item("⬚", self.setCursorModeSelectBar, "s")
+        mouseBar.add_item("↖", self.setCursorModeMoveBar, "m")
+        mouseBar.add_item("✎", self.setCursorModeDrawBar, "d")
+        mouseBar.add_item("🖌", caller.setCursorModePaintBar, "p")
+        mouseBar.add_item("🎥", caller.setCursorModeAnimBrushBar, "a")
+        mouseBar.add_item("🎨", self.setCursorModeColBar, "c")
+        mouseBar.add_item("💧", self.setCursorModeEyedropBar, "y")
         #mouseBar.add_item("𝓐", caller.setCursorModeAnimBrush, "a") # for future text tool
-        mouseBar.add_item("⌫", self.setCursorModeErase, "e")
+        mouseBar.add_item("⌫", self.setCursorModeEraseBar, "e")
         self.mouseBar = mouseBar
         self.mouseBar.pinned_to_statusbar = False
         #self.mouseBar.set_highlighted_item('⌶')
@@ -782,12 +782,39 @@ class StatusBar():
     def disableColorPicker(self):
         pass
 
+    # mouseBar wrapper functions
+
+    def setCursorModeMoveBar(self):
+        self.setCursorModeMove()
+        self.appState.ui.highlight_mouse_mode()
+
+    def setCursorModeSelectBar(self):
+        self.setCursorModeSelect()
+        self.appState.ui.highlight_mouse_mode()
+
+    def setCursorModeDrawBar(self):
+        self.setCursorModeDraw()
+        self.appState.ui.highlight_mouse_mode()
+
+    def setCursorModeColBar(self):
+        self.setCursorModeCol()
+        self.appState.ui.highlight_mouse_mode()
+
+    def setCursorModeEraseBar(self):
+        self.setCursorModeErase()
+        self.appState.ui.highlight_mouse_mode()
+
+    def setCursorModeEyedropBar(self):
+        self.setCursorModeEyedrop()
+        self.appState.ui.highlight_mouse_mode()
+
+    # Change cursor mode
+
     def setCursorModeMove(self):
         self.caller.appState.setCursorModeMove()
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('↖')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeSelect(self):
@@ -795,14 +822,12 @@ class StatusBar():
         self.caller.disableMouseReporting()
         #self.mouseBar.set_highlighted_item('⌶')
         self.mouseBar.set_highlighted_item('⬚')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeDraw(self):
         self.caller.appState.setCursorModeDraw()
         self.caller.enableMouseReporting()
         self.mouseBar.set_highlighted_item('✎')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
 
@@ -810,7 +835,6 @@ class StatusBar():
         self.caller.appState.setCursorModeAnimBrush()
         self.caller.enableMouseReporting()
         self.mouseBar.set_highlighted_item('🎥')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModePaint(self):
@@ -819,7 +843,6 @@ class StatusBar():
         if self.caller.appState.cursorMode == "Paint":
             self.caller.enableMouseReporting()
         self.mouseBar.set_highlighted_item('🖌')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeCol(self):
@@ -827,7 +850,6 @@ class StatusBar():
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('🎨')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeErase(self):
@@ -835,7 +857,6 @@ class StatusBar():
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('⌫')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeEyedrop(self):
@@ -843,7 +864,6 @@ class StatusBar():
         #self.caller.disableMouseReporting(hard=True)
         self.caller.disableMouseReporting()
         self.mouseBar.set_highlighted_item('💧')
-        self.appState.ui.highlight_mouse_mode()
         #self.toolButton.set_label("Eye")
 
     def updateLocation(self, x, y):

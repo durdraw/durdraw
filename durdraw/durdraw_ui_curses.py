@@ -1860,6 +1860,7 @@ class UserInterface():  # Separate view (curses) from this controller
             by drawing if current time == greater than a delta plus the time
             the last frame was drawn.
         """
+        self.statusBar.mouseBar.hide()
         tempMovie = None
         tempOpts = None
         if mov != None: # playing a movie other than the main or help file
@@ -1888,6 +1889,7 @@ class UserInterface():  # Separate view (curses) from this controller
             #self.statusBar.colorPicker_bg_16.hide()
             self.appState.sideBarShowing = False
             self.statusBar.hide()
+            self.statusBar.mouseBar.hide()
             self.setWindowTitle(self.appState.curOpenFileName)
         self.playing = True
         self.metaKey = 0
@@ -2644,7 +2646,9 @@ class UserInterface():  # Separate view (curses) from this controller
 
 
 
-        if not self.appState.durview_running and not self.appState.fetchMode:
+        if not self.appState.durview_running \
+            and not self.appState.fetchMode \
+            and not self.playing:
             #self.tabs.tabs_ui.refresh()
             new_tabs_y = realmaxX - 14
             new_tabs_x = new_colorPicker_y 
@@ -3012,7 +3016,8 @@ class UserInterface():  # Separate view (curses) from this controller
         # Draw mouse mode
         mouseModeString = self.appState.cursorMode
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
-        self.clickHighlight(mouseModeStringOffset, mouseModeString, bar='bottom')
+        #self.clickHighlight(mouseModeStringOffset, mouseModeString, bar='bottom')
+        self.clickHighlight(self.appState.mouse_col - len(mouseModeString) - 2, mouseModeString, bar='bottom', y=self.appState.mouse_line, clear_after=True, sleep_time=0.3)
         #self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
 
     def window_big_enough_for_colors(self):
@@ -3045,19 +3050,22 @@ class UserInterface():  # Separate view (curses) from this controller
             self.setPlaybackRange(1, self.mov.frameCount)
         self.hardRefresh()
 
-    def clickHighlight(self, pos, buttonString, bar='top'):    # Visual feedback
+    def clickHighlight(self, pos, buttonString, bar='top', y=None, clear_after=False, sleep_time=0.2):    # Visual feedback
         # example: self.clickHighlight(52, "|>")
         # Highlight clicked item at "pos" by drawing it as "str" in bright white or yellow, sleep a moment,
         # then back to green
-        if bar == 'top':
-            y = self.statusBarLineNum
-        if bar == 'bottom':
-            y = self.statusBarLineNum + 1
+        if not y:
+            if bar == 'top':
+                y = self.statusBarLineNum
+            if bar == 'bottom':
+                y = self.statusBarLineNum + 1
         self.addstr(y, pos, buttonString, curses.color_pair(self.appState.theme['clickHighlightColor']) | curses.A_BOLD)
         curses.curs_set(0)  # turn off cursor
         self.stdscr.refresh()
-        time.sleep(0.2)
+        time.sleep(sleep_time)
         self.addstr(y, pos, buttonString, curses.color_pair(self.appState.theme['clickColor']))
+        if clear_after:
+            self.addstr(y, pos, " " * len(buttonString), curses.color_pair(0))
         curses.curs_set(1)  # turn on cursor
 
 
@@ -3231,7 +3239,7 @@ class UserInterface():  # Separate view (curses) from this controller
                     self.enterViewMode()
                 elif c == 82:   # alt-R = set playback range
                     self.getPlaybackRange()
-                elif c == 112:    # esc-p - start playing, any key exits
+                elif c == 112:    # alt-p - start playing, any key exits
                     self.commandMode = False
                     self.metaKey = 0
                     self.startPlaying()
@@ -4400,6 +4408,18 @@ class UserInterface():  # Separate view (curses) from this controller
 
     def openMouseToolsMenu(self):
         self.openMenu("Mouse Tools")
+
+    def setCursorModeAnimBrushBar(self):
+        last_cursor_mode = self.appState.cursorMode
+        self.setCursorModeAnimBrush()
+        if self.appState.cursorMode != last_cursor_mode:
+            self.highlight_mouse_mode()
+
+    def setCursorModePaintBar(self):
+        last_cursor_mode = self.appState.cursorMode
+        self.setCursorModePaint()
+        if self.appState.cursorMode != last_cursor_mode:
+            self.highlight_mouse_mode()
 
     def setCursorModeAnimBrush(self):
         self.clearStatusLine()
@@ -7045,7 +7065,7 @@ class UserInterface():  # Separate view (curses) from this controller
       alt-g - Go to frame #               alt-pgup - prev character set
 
 Help file could not be found or hasn't loaded yet.
-If this persists, You might want to reinstsall Durdraw...
+If this persists, You might want to reinstall Durdraw...
 ''' % self.appState.durVer 
         # remove the blank first line from helpScreenText..
         # it's easier to edit here with the blank first line.
