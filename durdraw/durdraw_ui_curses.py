@@ -2663,6 +2663,9 @@ class UserInterface():  # Separate view (curses) from this controller
             self.statusBar.mouseBar.show_not_selected()
             #self.tabs.tabs_ui.menu.show_not_selected()
 
+        elif self.playing:
+            self.statusBar.mouseBar.hide()
+
         #if self.appState.colorMode == "16":
         #    new_colorPicker_y = realmaxY - self.statusBar.colorPicker_bg_16.handler.height - 2
         #    new_colorPicker_x = realmaxX - self.statusBar.colorPicker_bg_16.handler.width
