@@ -115,7 +115,7 @@ uv tool install durdraw
 
 ### Via pip
 
-Alternatively, you can install the pip package pip directly (_Please note that this installation method does not include everything, i.e. the example dur files under `examples/`_, or the entrypoint scripts in the section below)
+Alternatively, you can install the pip package pip directly:
 
 ```shell
 # install `master` branch version:
@@ -179,7 +179,7 @@ You can run Durdraw with:
 To look at some included example animations:
 
 ```shell
-./start-durdraw -p examples/*.dur
+./start-durdraw -p durdraw/examples/*.dur
 ```
 
 ## Gallery
