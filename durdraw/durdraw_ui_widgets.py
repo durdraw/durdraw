@@ -880,7 +880,7 @@ class StatusBar():
         self.caller.appState.setCursorModeSelect()
         self.caller.disableMouseReporting()
         #self.mouseBar.set_highlighted_item('⌶')
-        self.mouseBar.set_highlighted_item('⬚')
+        self.mouseBar.set_highlighted_item('⛶')
         #self.toolButton.set_label(self.caller.appState.cursorMode)
 
     def setCursorModeDraw(self):
