@@ -1861,6 +1861,8 @@ class UserInterface():  # Separate view (curses) from this controller
             the last frame was drawn.
         """
         self.statusBar.mouseBar.hide()
+        self.clearStatusLine()
+        self.refresh()
         tempMovie = None
         tempOpts = None
         if mov != None: # playing a movie other than the main or help file
@@ -1880,7 +1882,7 @@ class UserInterface():  # Separate view (curses) from this controller
         if not self.statusBar.animButton.hidden:
             self.statusBar.animButton.draw()
             self.statusBar.animButton.hide()
-        self.drawStatusBar()
+        self.playing = True
         self.stdscr.nodelay(1) # do not wait for input when calling getch
         last_time = time.perf_counter()
         #self.statusBar.drawCharPickerButton.hide()
@@ -1891,7 +1893,8 @@ class UserInterface():  # Separate view (curses) from this controller
             self.statusBar.hide()
             self.statusBar.mouseBar.hide()
             self.setWindowTitle(self.appState.curOpenFileName)
-        self.playing = True
+        else:
+            self.drawStatusBar()
         self.metaKey = 0
         if self.appState.playOnlyMode: 
             self.appState.drawBorders = False
@@ -2857,7 +2860,10 @@ class UserInterface():  # Separate view (curses) from this controller
         locationStringOffset = realmaxX - len(locationString) - 1
         self.addstr(statusBarLineNum+1, locationStringOffset, locationString, curses.color_pair(mainColor))
         # Draw mouse mode
-        mouseModeString = self.appState.cursorMode
+        if self.playing:
+            mouseModeString = "Move"    # Move is the only mode available in play+edit mode
+        else:
+            mouseModeString = self.appState.cursorMode
         mouseModeStringOffset = realmaxX - len(locationString) - 2 - len(mouseModeString)
         self.addstr(statusBarLineNum+1, mouseModeStringOffset, mouseModeString, curses.color_pair(mainColor))
 
