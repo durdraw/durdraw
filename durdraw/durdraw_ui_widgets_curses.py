@@ -697,7 +697,7 @@ class ColorPickerHandler:
             elif color > 31 and color < 52:
                 color = 15
             else:
-                color -= self.width - 2
+                color -= self.width 
             if color < 1:
                 color = 1
             self.colorPicker.caller.setFgColor(color)
@@ -708,7 +708,7 @@ class ColorPickerHandler:
             if color < 16:
                 color += 16
             else:
-                color += self.width - 2
+                color += self.width
             if color >= self.totalColors:
                 color = self.totalColors
             self.colorPicker.caller.setFgColor(color)
@@ -784,7 +784,7 @@ class ColorPickerHandler:
                     elif color > 31 and color < 52:
                         color = 15
                     else:
-                        color -= self.width - 2
+                        color -= self.width 
                 elif self.colorMode == "16":
                     self.colorPicker.caller.nextBgColor()
                     #color -= self.width - 2
@@ -798,7 +798,7 @@ class ColorPickerHandler:
                     if color < 16:
                         color += 16
                     else:
-                        color += self.width - 2
+                        color += self.width 
                     if color >= self.totalColors:
                         color = self.totalColors
                     self.colorPicker.caller.setFgColor(color)
