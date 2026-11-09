@@ -1862,7 +1862,7 @@ class UserInterface():  # Separate view (curses) from this controller
         """
         self.statusBar.mouseBar.hide()
         self.clearStatusLine()
-        self.refresh()
+        #self.refresh()
         tempMovie = None
         tempOpts = None
         if mov != None: # playing a movie other than the main or help file
