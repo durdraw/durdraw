@@ -158,9 +158,11 @@ class MenuHandler:
             button.update_real_xy(x=self.originLine + line, y=self.menu.y) # working for putting menu on first line
             button.window = self.window
             line += 1
-        curses_addstr(self.curses_win, line, 0, ':', borderColor)
-        curses_addstr(self.curses_win, line, 1, ("." * (width - 1)), borderColor)
+        if self.menu.sidebar:
+            curses_addstr(self.curses_win, line, 0, ("`" * (width + 1)), borderColor)
         if not self.menu.sidebar:
+            curses_addstr(self.curses_win, line, 0, ':', borderColor)
+            curses_addstr(self.curses_win, line, 1, ("." * (width - 1)), borderColor)
             curses_addstr(self.curses_win, line,  width - 1, ':', borderColor)
         self.panel = curses.panel.new_panel(self.curses_win)
         try:
@@ -297,7 +299,7 @@ class MenuHandler:
             elif c == 27:  # normal esc
                 self.hide()
                 prompting = False
-            elif c == curses.KEY_MOUSE and self.menu.items[item]["separator"]:
+            elif c == curses.KEY_MOUSE:
                 try:
                     _, mouseX, mouseY, _, mouseState = curses.getmouse()
                 except:
