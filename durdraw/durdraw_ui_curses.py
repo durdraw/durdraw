@@ -3823,6 +3823,14 @@ class UserInterface():  # Separate view (curses) from this controller
                             #self.notify(f"Got a click: X {mouseX}, Y {mouseY}")
                             self.gui.got_click("Click", mouseX, mouseY)
                             #self.notify("Done with click.")
+                elif mouseState == curses.BUTTON1_PRESSED:
+                    if self.appState.sideBarEnabled:
+                        if mouseX >= self.appState.sideBarColumn and mouseY < self.statusBarLineNum:
+                            self.statusBar.colorPicker.handler.gotClick(mouseX, mouseY)
+
+                            # handle any gui shit
+                            self.gui.got_click("Click", mouseX, mouseY)
+
 
 
             elif c in [curses.KEY_SLEFT, curses.KEY_SRIGHT, 337, 336, 520, 513]:

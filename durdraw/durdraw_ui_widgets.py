@@ -156,8 +156,8 @@ class Menu():
         self.title = title
         self.handler.title = self.title
 
-    def add_item(self, label, on_click, hotkey, shortcut=None, has_submenu=False, plugin=False, highlight=False):
-        props = {"on_click": on_click, "hotkey": hotkey, "shortcut": shortcut, "has_submenu": has_submenu, "highlight": highlight}
+    def add_item(self, label, on_click, hotkey, shortcut=None, has_submenu=False, plugin=False, highlight=False, separator=False):
+        props = {"on_click": on_click, "hotkey": hotkey, "shortcut": shortcut, "has_submenu": has_submenu, "highlight": highlight, "separator": separator}
         item = {label: props}
         self.items.update(item)
         # add button
@@ -625,7 +625,21 @@ class StatusBar():
         #self.menus["MouseBar"] = mouseBar
         #mouseBar.set_title("🖱")
         #mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
-        mouseBar.add_item("⬚", self.setCursorModeSelectBar, "s")
+        mouseBar.add_item("🗁", self.openFileBar, "")
+        mouseBar.add_item("🖫", self.saveFileBar, "")
+        mouseBar.add_item("🗖", self.makeNewTabBar, "")
+        mouseBar.add_item("🗗", self.nextTabBar, "")
+        mouseBar.add_item("🗙", self.closeTabBar, "")
+        mouseBar.add_item("", self.do_nothing, "", separator=True)
+        mouseBar.add_item("↻", self.undoBar, "")
+        mouseBar.add_item("↷", self.redoBar, "")
+        mouseBar.add_item("a", self.do_nothing, "", separator=True)
+        mouseBar.add_item("⧉", self.cloneToNewFrameBar, "")
+        mouseBar.add_item("🠈", self.prevFrameBar, "")
+        mouseBar.add_item("🠊", self.nextFrameBar, "")
+        mouseBar.add_item("b", self.do_nothing, "", separator=True)
+        #mouseBar.add_item("⬚", self.setCursorModeSelectBar, "s")
+        mouseBar.add_item("⛶", self.setCursorModeSelectBar, "s")
         mouseBar.add_item("↖", self.setCursorModeMoveBar, "m")
         mouseBar.add_item("✎", self.setCursorModeDrawBar, "d")
         mouseBar.add_item("🖌", caller.setCursorModePaintBar, "p")
@@ -637,7 +651,8 @@ class StatusBar():
         self.mouseBar = mouseBar
         self.mouseBar.pinned_to_statusbar = False
         #self.mouseBar.set_highlighted_item('⌶')
-        self.mouseBar.set_highlighted_item('⬚')
+        #self.mouseBar.set_highlighted_item('⬚')
+        self.mouseBar.set_highlighted_item('⛶')
         if not self.appState.durview_running \
                 and not self.appState.fetchMode \
                 and not self.appState.playOnlyMode \
@@ -731,6 +746,9 @@ class StatusBar():
             self.buttons.append(charSetButton)
         # Add them to the items
 
+    def do_nothing(self):
+        pass
+
     def initThemesMenu(self):
         # system themes
         themesMenuColumn = 47
@@ -783,6 +801,39 @@ class StatusBar():
         pass
 
     # mouseBar wrapper functions
+
+    def cloneToNewFrameBar(self):
+        self.appState.ui.cloneToNewFrame()
+
+    def nextFrameBar(self):
+        self.appState.ui.mov.nextFrame()
+        self.appState.ui.refresh()
+
+    def prevFrameBar(self):
+        self.appState.ui.mov.prevFrame()
+        self.appState.ui.refresh()                                                
+
+    def openFileBar(self):
+        self.appState.ui.stopPlaying()
+        self.appState.ui.openFromMenu()
+
+    def saveFileBar(self):
+        self.appState.ui.save()
+
+    def makeNewTabBar(self):
+        self.appState.ui.tabs.make_new_tab()
+
+    def nextTabBar(self):
+        self.appState.ui.tabs.next_tab()
+
+    def closeTabBar(self):
+        self.appState.ui.tabs.close_current_tab()
+
+    def undoBar(self):
+        self.appState.ui.clickedUndo()
+
+    def redoBar(self):
+        self.appState.ui.clickedRedo()
 
     def setCursorModeMoveBar(self):
         self.setCursorModeMove()

@@ -124,7 +124,15 @@ class MenuHandler:
             shortcut = self.menu.items[item]["shortcut"]
             has_submenu = self.menu.items[item]["has_submenu"]
 
-            if self.menu.items[item]["highlight"]:
+            if self.menu.items[item]["separator"]:
+                curses_addstr(self.curses_win, line, 0, ':', borderColor)
+                if not self.menu.sidebar:
+                    curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
+                if self.menu.sidebar:
+                    curses_addstr(self.curses_win, line, 1, "--", borderColor)    # Menu item
+                else:
+                    curses_addstr(self.curses_win, line, 2, "--", borderColor)    # Menu item
+            elif self.menu.items[item]["highlight"]:
                 curses_addstr(self.curses_win, line, 0, ':', clickColor)
                 if not self.menu.sidebar:
                     curses_addstr(self.curses_win, line, width - 1, ':', borderColor)
@@ -289,7 +297,7 @@ class MenuHandler:
             elif c == 27:  # normal esc
                 self.hide()
                 prompting = False
-            elif c == curses.KEY_MOUSE:
+            elif c == curses.KEY_MOUSE and self.menu.items[item]["separator"]:
                 try:
                     _, mouseX, mouseY, _, mouseState = curses.getmouse()
                 except:
