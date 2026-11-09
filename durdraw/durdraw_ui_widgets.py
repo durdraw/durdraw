@@ -625,9 +625,14 @@ class StatusBar():
         #self.menus["MouseBar"] = mouseBar
         #mouseBar.set_title("🖱")
         #mouseBar.add_item("⌶", self.setCursorModeSelect, "s")
+        mouseBar.add_item("🗋", self.clearCanvasBar, "")
         mouseBar.add_item("🗁", self.openFileBar, "")
         mouseBar.add_item("🖫", self.saveFileBar, "")
-        mouseBar.add_item("🗖", self.makeNewTabBar, "")
+        mouseBar.add_item("c", self.do_nothing, "", separator=True)
+        #mouseBar.add_item("🗖", self.makeNewTabBar, "")
+        mouseBar.add_item("❐", self.makeNewTabBar, "")
+        #mouseBar.add_item("➕", self.makeNewTabBar, "")
+        #mouseBar.add_item("+", self.makeNewTabBar, "")
         mouseBar.add_item("🗗", self.nextTabBar, "")
         mouseBar.add_item("🗙", self.closeTabBar, "")
         mouseBar.add_item("", self.do_nothing, "", separator=True)
@@ -801,6 +806,9 @@ class StatusBar():
         pass
 
     # mouseBar wrapper functions
+
+    def clearCanvasBar(self):
+        self.appState.ui.clearCanvas(prompting=True)
 
     def cloneToNewFrameBar(self):
         self.appState.ui.cloneToNewFrame()
