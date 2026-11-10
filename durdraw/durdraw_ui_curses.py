@@ -4280,17 +4280,36 @@ class UserInterface():  # Separate view (curses) from this controller
         exit(0)
 
     def sigint_handler(self, signum, frame): # when the user inevitably presess ctrl-c
-        self.disableMouseReporting()
-        curses.nocbreak()
-        self.stdscr.keypad(0)
-        curses.echo()
-        curses.endwin()
-        #print("Waiting for threads to die...")
-        self.killAllHumans()
-        print("User pressed ctrl-c. Exiting. Here is the execution stack:\n")
-        traceback.print_stack()
-        #print("Done.")
-        exit(0)
+        # Attempt to give the user a fair warning
+        self.clearStatusLine()
+        self.window.nodelay(0) # wait for input when calling getch
+        self.promptPrint("Pressed ctrl-C! Hard exit? (Changes won't be saved!) ")
+        prompting = True
+        while prompting:
+            time.sleep(0.01)
+            c = self.stdscr.getch()
+            if c == 121:   # 121 = y
+                exiting = True
+                prompting = False
+            elif c == 110: # 110 = n
+                exiting = False
+                prompting = False
+            time.sleep(0.01)
+        if not exiting:
+            self.clearStatusLine()
+            curses.flushinp()
+
+        if exiting:
+            # Clean up terminal, attempt to clean up threads, print stack trace, and exit.
+            self.disableMouseReporting()
+            curses.nocbreak()
+            self.stdscr.keypad(0)
+            curses.echo()
+            curses.endwin()
+            self.killAllHumans()
+            print("User pressed ctrl-c. Exiting. Here is the execution stack:\n")
+            traceback.print_stack()
+            exit(0)
 
     def promptPrint(self, promptText):
         """ Prints prompting text in a consistent manner """
@@ -7676,9 +7695,12 @@ If this persists, You might want to reinstall Durdraw...
                     # otherwise, cancel.
                     else:
                         prompting = False
-            if chr(prompt_ch) in ['c', 'C']:    # Copy
-                self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
-                prompting = False
+            try:
+                if chr(prompt_ch) in ['c', 'C']:    # Copy
+                    self.copySegmentToClipboard([firstLineNum, firstColNum], height, width)
+                    prompting = False
+            except ValueError:
+                break
             if chr(prompt_ch) in ['m', 'M']:    # Copy Animation
                 self.copyAnimToClipboard([firstLineNum, firstColNum], height, width)
                 prompting = False
