@@ -20,6 +20,7 @@ class ArgumentChecker:
     """ Place to hold any methods for verifying CLI arguments, beyond
         what argparse can do on its own. Call these methods via
         argparse.add_argument(.. type= ..) paramaters. """
+    @staticmethod
     def undosize(size_s):
         size = int(size_s)  # because it comes as a string
         if size >= 1 and size <= 1000:
@@ -59,7 +60,7 @@ def main(fetch_args=None):
     #parser.add_argument("-A", "--ibmpc", "--cp437", help="Use Code Page 437 (IBM-PC/MS-DOS) block character encoding instead of Unicode. (Needs CP437 capable terminal and font)", action="store_true")
     parser.add_argument("--cp437", help="Display extended characters on the screen using Code Page 437 (IBM-PC/MS-DOS) encoding instead of Utf-8. (Requires CP437 capable terminal and font) (beta)", action="store_true")
     parser.add_argument("--export-ansi", action="store_true", help="Export loaded art to an .ansi file and exit")
-    parser.add_argument("-u", "--undosize", help="Set the number of undo history states - default is 100. More requires more RAM, less saves RAM.", nargs=1, type=int)
+    parser.add_argument("-u", "--undosize", help="Set the number of undo history states - default is 100. More requires more RAM, less saves RAM.", nargs=1, type=argChecker.undosize)
     #--mental -- Enable experimental (not ready for prime time) options
     parser.add_argument("--mental", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--fetch", help="Replace fetch strings with Neofetch output", action="store_true")
